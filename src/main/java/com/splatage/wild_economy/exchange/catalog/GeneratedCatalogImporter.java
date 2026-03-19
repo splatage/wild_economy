@@ -107,7 +107,7 @@ public final class GeneratedCatalogImporter {
     private GeneratedPolicyMapping mapPolicy(final String rawPolicy) {
         final String normalized = rawPolicy == null ? "DISABLED" : rawPolicy.trim().toUpperCase(Locale.ROOT);
         return switch (normalized) {
-            case "ALWAYS_AVAILABLE" -> new GeneratedPolicyMapping(ItemPolicyMode.UNLIMITED_BUY, true, false);
+            case "ALWAYS_AVAILABLE" -> new GeneratedPolicyMapping(ItemPolicyMode.UNLIMITED_BUY, true, true);
             case "EXCHANGE" -> new GeneratedPolicyMapping(ItemPolicyMode.PLAYER_STOCKED, true, true);
             case "SELL_ONLY" -> new GeneratedPolicyMapping(ItemPolicyMode.PLAYER_STOCKED, false, true);
             case "DISABLED" -> new GeneratedPolicyMapping(ItemPolicyMode.DISABLED, false, false);
