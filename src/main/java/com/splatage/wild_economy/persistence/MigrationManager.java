@@ -1,9 +1,5 @@
 package com.splatage.wild_economy.persistence;
 
-public final class MigrationManager {
-}
-package com.splatage.wild_economy.persistence;
-
 import com.splatage.wild_economy.exchange.repository.SchemaVersionRepository;
 import java.io.BufferedReader;
 import java.io.IOException;

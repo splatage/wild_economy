@@ -1,9 +1,5 @@
 package com.splatage.wild_economy.exchange.stock;
 
-public final class StockStateResolver {
-}
-package com.splatage.wild_economy.exchange.stock;
-
 import com.splatage.wild_economy.exchange.domain.StockState;
 
 public final class StockStateResolver {

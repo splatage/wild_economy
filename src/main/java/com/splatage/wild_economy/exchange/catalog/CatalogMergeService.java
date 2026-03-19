@@ -1,9 +1,5 @@
 package com.splatage.wild_economy.exchange.catalog;
 
-public final class CatalogMergeService {
-}
-package com.splatage.wild_economy.exchange.catalog;
-
 import com.splatage.wild_economy.config.ExchangeItemsConfig;
 import com.splatage.wild_economy.config.WorthImportConfig;
 import com.splatage.wild_economy.exchange.domain.ItemKey;

@@ -1,9 +1,5 @@
 package com.splatage.wild_economy.persistence;
 
-public final class DatabaseProvider {
-}
-package com.splatage.wild_economy.persistence;
-
 import com.splatage.wild_economy.config.DatabaseConfig;
 import java.nio.file.Path;
 import java.sql.Connection;

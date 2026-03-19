@@ -13,18 +13,3 @@ commands:
 
 logging:
   debug: false
-turnover:
-  interval-ticks: 72000
-
-gui:
-  page-size: 45
-  title-root: "Shop"
-  title-browse-prefix: "Shop - "
-  title-detail-prefix: "Buy - "
-
-commands:
-  base-command: shop
-  admin-command: shopadmin
-
-logging:
-  debug: false

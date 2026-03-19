@@ -11,16 +11,3 @@ mysql:
   password: change-me
   ssl: false
   maximum-pool-size: 10
-backend: sqlite
-
-sqlite:
-  file: plugins/wild_economy/data.db
-
-mysql:
-  host: 127.0.0.1
-  port: 3306
-  database: wild_economy
-  username: root
-  password: change-me
-  ssl: false
-  maximum-pool-size: 10

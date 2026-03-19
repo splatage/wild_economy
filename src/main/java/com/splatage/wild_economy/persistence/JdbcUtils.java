@@ -1,9 +1,5 @@
 package com.splatage.wild_economy.persistence;
 
-public final class JdbcUtils {
-}
-package com.splatage.wild_economy.persistence;
-
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;

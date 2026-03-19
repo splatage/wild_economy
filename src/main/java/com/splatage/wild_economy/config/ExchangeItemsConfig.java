@@ -1,9 +1,5 @@
 package com.splatage.wild_economy.config;
 
-public final class ExchangeItemsConfig {
-}
-package com.splatage.wild_economy.config;
-
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;

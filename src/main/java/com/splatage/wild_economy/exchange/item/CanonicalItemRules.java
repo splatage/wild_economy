@@ -1,9 +1,5 @@
 package com.splatage.wild_economy.exchange.item;
 
-public final class CanonicalItemRules {
-}
-package com.splatage.wild_economy.exchange.item;
-
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;

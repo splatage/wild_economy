@@ -1,9 +1,5 @@
 package com.splatage.wild_economy.exchange.catalog;
 
-public final class WorthImporter {
-}
-package com.splatage.wild_economy.exchange.catalog;
-
 import com.splatage.wild_economy.config.WorthImportConfig;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import java.io.File;

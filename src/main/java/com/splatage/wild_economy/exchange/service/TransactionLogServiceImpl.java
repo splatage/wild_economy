@@ -1,9 +1,5 @@
 package com.splatage.wild_economy.exchange.service;
 
-public final class TransactionLogServiceImpl implements TransactionLogService {
-}
-package com.splatage.wild_economy.exchange.service;
-
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.TransactionType;
 import com.splatage.wild_economy.exchange.repository.ExchangeTransactionRepository;

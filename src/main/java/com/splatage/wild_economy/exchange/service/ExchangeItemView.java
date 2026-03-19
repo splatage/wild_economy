@@ -13,18 +13,3 @@ public record ExchangeItemView(
     StockState stockState,
     boolean buyEnabled
 ) {}
-package com.splatage.wild_economy.exchange.service;
-
-import com.splatage.wild_economy.exchange.domain.ItemKey;
-import com.splatage.wild_economy.exchange.domain.StockState;
-import java.math.BigDecimal;
-
-public record ExchangeItemView(
-    ItemKey itemKey,
-    String displayName,
-    BigDecimal buyPrice,
-    long stockCount,
-    long stockCap,
-    StockState stockState,
-    boolean buyEnabled
-) {}
