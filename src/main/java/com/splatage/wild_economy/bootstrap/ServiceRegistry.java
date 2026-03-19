@@ -1,7 +1,5 @@
 package com.splatage.wild_economy.bootstrap;
 
-import com.splatage.wild_economy.exchange.catalog.RootValueImporter;
-import java.io.File;
 import com.splatage.wild_economy.WildEconomyPlugin;
 import com.splatage.wild_economy.command.ShopAdminCommand;
 import com.splatage.wild_economy.command.ShopCommand;
@@ -17,6 +15,7 @@ import com.splatage.wild_economy.economy.VaultEconomyGateway;
 import com.splatage.wild_economy.exchange.catalog.CatalogLoader;
 import com.splatage.wild_economy.exchange.catalog.CatalogMergeService;
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalog;
+import com.splatage.wild_economy.exchange.catalog.RootValueImporter;
 import com.splatage.wild_economy.exchange.item.BukkitItemNormalizer;
 import com.splatage.wild_economy.exchange.item.CanonicalItemRules;
 import com.splatage.wild_economy.exchange.item.ItemNormalizer;
@@ -55,6 +54,8 @@ import com.splatage.wild_economy.gui.ShopMenuListener;
 import com.splatage.wild_economy.gui.ShopMenuRouter;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
 import com.splatage.wild_economy.persistence.MigrationManager;
+import java.io.File;
+import java.util.Objects;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -69,16 +70,19 @@ public final class ServiceRegistry {
 
     private DatabaseProvider databaseProvider;
     private ExchangeCatalog exchangeCatalog;
+
     private ItemNormalizer itemNormalizer;
     private ItemValidationService itemValidationService;
+
     private ExchangeStockRepository exchangeStockRepository;
     private ExchangeTransactionRepository exchangeTransactionRepository;
-    private EconomyGateway economyGateway;
 
+    private EconomyGateway economyGateway;
     private StockService stockService;
     private PricingService pricingService;
     private TransactionLogService transactionLogService;
     private StockTurnoverService stockTurnoverService;
+
     private ExchangeBrowseService exchangeBrowseService;
     private ExchangeBuyService exchangeBuyService;
     private ExchangeSellService exchangeSellService;
@@ -116,6 +120,16 @@ public final class ServiceRegistry {
             case MYSQL -> new MysqlExchangeTransactionRepository(this.databaseProvider);
         };
 
+        final File rootValuesFile = new File(this.plugin.getDataFolder(), "root-values.yml");
+        final RootValueImporter rootValueImporter = new RootValueImporter();
+        final CatalogMergeService catalogMergeService = new CatalogMergeService();
+        final CatalogLoader catalogLoader = new CatalogLoader(rootValueImporter, catalogMergeService);
+
+        this.exchangeCatalog = Objects.requireNonNull(
+            catalogLoader.load(this.exchangeItemsConfig, rootValuesFile),
+            "exchangeCatalog"
+        );
+
         final CanonicalItemRules canonicalItemRules = new CanonicalItemRules();
         this.itemNormalizer = new BukkitItemNormalizer(canonicalItemRules);
         this.itemValidationService = new ItemValidationServiceImpl(this.itemNormalizer, this.exchangeCatalog);
@@ -126,12 +140,15 @@ public final class ServiceRegistry {
         this.stockService = new StockServiceImpl(this.exchangeStockRepository, this.exchangeCatalog, stockStateResolver);
         this.pricingService = new PricingServiceImpl(this.exchangeCatalog);
         this.transactionLogService = new TransactionLogServiceImpl(this.exchangeTransactionRepository);
+
         this.stockTurnoverService = new StockTurnoverServiceImpl(
             this.exchangeCatalog,
             this.stockService,
             this.transactionLogService
         );
+
         this.exchangeBrowseService = new ExchangeBrowseServiceImpl(this.exchangeCatalog, this.stockService);
+
         this.exchangeBuyService = new ExchangeBuyServiceImpl(
             this.exchangeCatalog,
             this.itemValidationService,
@@ -140,6 +157,7 @@ public final class ServiceRegistry {
             this.economyGateway,
             this.transactionLogService
         );
+
         this.exchangeSellService = new ExchangeSellServiceImpl(
             this.exchangeCatalog,
             this.itemValidationService,
@@ -148,25 +166,18 @@ public final class ServiceRegistry {
             this.economyGateway,
             this.transactionLogService
         );
+
         this.exchangeService = new ExchangeServiceImpl(
             this.exchangeBrowseService,
             this.exchangeBuyService,
             this.exchangeSellService
         );
 
-        final File rootValuesFile = new File(this.plugin.getDataFolder(), "root-values.yml");
-
-        final RootValueImporter rootValueImporter = new RootValueImporter();
-        final CatalogMergeService catalogMergeService = new CatalogMergeService();
-        final CatalogLoader catalogLoader = new CatalogLoader(rootValueImporter, catalogMergeService);
-
-        this.exchangeCatalog = catalogLoader.load(this.exchangeItemsConfig, rootValuesFile);
-
         final ExchangeRootMenu rootMenu = new ExchangeRootMenu();
         final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService);
         final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService);
-        this.shopMenuRouter = new ShopMenuRouter(rootMenu, browseMenu, itemDetailMenu);
 
+        this.shopMenuRouter = new ShopMenuRouter(rootMenu, browseMenu, itemDetailMenu);
         rootMenu.setShopMenuRouter(this.shopMenuRouter);
         browseMenu.setShopMenuRouter(this.shopMenuRouter);
         itemDetailMenu.setShopMenuRouter(this.shopMenuRouter);
@@ -207,10 +218,13 @@ public final class ServiceRegistry {
     }
 
     private EconomyGateway resolveVaultEconomy() {
-        final RegisteredServiceProvider<Economy> registration = this.plugin.getServer().getServicesManager().getRegistration(Economy.class);
+        final RegisteredServiceProvider<Economy> registration =
+            this.plugin.getServer().getServicesManager().getRegistration(Economy.class);
+
         if (registration == null || registration.getProvider() == null) {
             throw new IllegalStateException("Vault economy provider not found");
         }
+
         return new VaultEconomyGateway(registration.getProvider());
     }
 }
