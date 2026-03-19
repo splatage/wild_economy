@@ -22,7 +22,8 @@ public final class ShopAdminCommand implements CommandExecutor {
 
         if ("reload".equalsIgnoreCase(args[0])) {
             this.plugin.reloadConfig();
-            sender.sendMessage("wild_economy config.yml reloaded. Full runtime reload wiring still pending.");
+            this.plugin.getBootstrap().reload();
+            sender.sendMessage("wild_economy reloaded.");
             return true;
         }
 

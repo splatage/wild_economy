@@ -19,6 +19,10 @@ public final class WildEconomyPlugin extends JavaPlugin {
         this.bootstrap.enable();
     }
 
+    public PluginBootstrap getBootstrap() {
+        return this.bootstrap;
+    }
+
     @Override
     public void onDisable() {
         if (this.bootstrap != null) {

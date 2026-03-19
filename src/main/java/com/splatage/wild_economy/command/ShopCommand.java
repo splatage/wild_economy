@@ -8,13 +8,16 @@ import org.bukkit.command.CommandSender;
 
 public final class ShopCommand implements CommandExecutor {
 
+    private final ShopOpenSubcommand openSubcommand;
     private final ShopSellHandSubcommand sellHandSubcommand;
     private final ShopSellAllSubcommand sellAllSubcommand;
 
     public ShopCommand(
+        final ShopOpenSubcommand openSubcommand,
         final ShopSellHandSubcommand sellHandSubcommand,
         final ShopSellAllSubcommand sellAllSubcommand
     ) {
+        this.openSubcommand = Objects.requireNonNull(openSubcommand, "openSubcommand");
         this.sellHandSubcommand = Objects.requireNonNull(sellHandSubcommand, "sellHandSubcommand");
         this.sellAllSubcommand = Objects.requireNonNull(sellAllSubcommand, "sellAllSubcommand");
     }
@@ -22,8 +25,7 @@ public final class ShopCommand implements CommandExecutor {
     @Override
     public boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
         if (args.length == 0) {
-            sender.sendMessage("Shop buy GUI is coming soon. Current commands: /shop sellhand, /shop sellall");
-            return true;
+            return this.openSubcommand.execute(sender);
         }
 
         final String subcommand = args[0].toLowerCase(Locale.ROOT);
@@ -31,7 +33,7 @@ public final class ShopCommand implements CommandExecutor {
             case "sellhand" -> this.sellHandSubcommand.execute(sender);
             case "sellall" -> this.sellAllSubcommand.execute(sender);
             default -> {
-                sender.sendMessage("Unknown subcommand. Use /shop sellhand or /shop sellall.");
+                sender.sendMessage("Unknown subcommand. Use /shop, /shop sellhand, or /shop sellall.");
                 yield true;
             }
         };

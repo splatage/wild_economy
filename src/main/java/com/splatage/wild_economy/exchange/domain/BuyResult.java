@@ -6,6 +6,8 @@ public record BuyResult(
     boolean success,
     ItemKey itemKey,
     int amountBought,
+    BigDecimal unitPrice,
     BigDecimal totalCost,
+    RejectionReason rejectionReason,
     String message
 ) {}

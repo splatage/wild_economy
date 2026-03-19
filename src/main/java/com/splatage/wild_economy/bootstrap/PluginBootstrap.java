@@ -18,6 +18,13 @@ public final class PluginBootstrap {
         this.services.registerTasks();
     }
 
+    public void reload() {
+        if (this.services != null) {
+            this.services.shutdown();
+        }
+        this.enable();
+    }
+
     public void disable() {
         if (this.services != null) {
             this.services.shutdown();
