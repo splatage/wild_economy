@@ -3,25 +3,38 @@ package com.splatage.wild_economy.catalog.rootvalue;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 public final class RootValueLoader implements RootValueLookup {
 
-    private final Map<String, BigDecimal> rootValuesByKey;
+    private final Map<String, BigDecimal> exactRootValuesByKey;
+    private final List<WildcardRule> wildcardRules;
+    private final Set<String> configuredKeys;
 
-    private RootValueLoader(final Map<String, BigDecimal> rootValuesByKey) {
-        this.rootValuesByKey = Map.copyOf(rootValuesByKey);
+    private RootValueLoader(
+        final Map<String, BigDecimal> exactRootValuesByKey,
+        final List<WildcardRule> wildcardRules,
+        final Set<String> configuredKeys
+    ) {
+        this.exactRootValuesByKey = Map.copyOf(exactRootValuesByKey);
+        this.wildcardRules = List.copyOf(wildcardRules);
+        this.configuredKeys = Set.copyOf(configuredKeys);
     }
 
     public static RootValueLoader empty() {
-        return new RootValueLoader(Collections.emptyMap());
+        return new RootValueLoader(Collections.emptyMap(), Collections.emptyList(), Collections.emptySet());
     }
 
     public static RootValueLoader fromFile(final File rootValuesFile) throws IOException {
@@ -38,16 +51,41 @@ public final class RootValueLoader implements RootValueLookup {
             return empty();
         }
 
-        final Map<String, BigDecimal> rootValues = new LinkedHashMap<>();
+        final Map<String, BigDecimal> exactValues = new LinkedHashMap<>();
+        final List<WildcardRule> wildcardRules = new ArrayList<>();
+        final Set<String> configuredKeys = new LinkedHashSet<>();
+
+        int order = 0;
         for (final String rawKey : itemsSection.getKeys(false)) {
             final BigDecimal value = parseDecimal(itemsSection.get(rawKey));
             if (value == null) {
                 continue;
             }
-            rootValues.put(normalizeKey(rawKey), value);
+
+            final String normalizedKey = normalizeKey(rawKey);
+            configuredKeys.add(normalizedKey);
+
+            if (isWildcardPattern(normalizedKey)) {
+                wildcardRules.add(new WildcardRule(
+                    normalizedKey,
+                    compileGlob(normalizedKey),
+                    value,
+                    wildcardSpecificity(normalizedKey),
+                    order++
+                ));
+                continue;
+            }
+
+            exactValues.put(normalizedKey, value);
+            order++;
         }
 
-        return new RootValueLoader(rootValues);
+        wildcardRules.sort(
+            Comparator.comparingInt(WildcardRule::specificity).reversed()
+                .thenComparingInt(WildcardRule::order)
+        );
+
+        return new RootValueLoader(exactValues, wildcardRules, configuredKeys);
     }
 
     @Override
@@ -55,15 +93,29 @@ public final class RootValueLoader implements RootValueLookup {
         if (itemKey == null || itemKey.isBlank()) {
             return Optional.empty();
         }
-        return Optional.ofNullable(this.rootValuesByKey.get(normalizeKey(itemKey)));
+
+        final String normalizedItemKey = normalizeKey(itemKey);
+
+        final BigDecimal exactValue = this.exactRootValuesByKey.get(normalizedItemKey);
+        if (exactValue != null) {
+            return Optional.of(exactValue);
+        }
+
+        for (final WildcardRule rule : this.wildcardRules) {
+            if (rule.matches(normalizedItemKey)) {
+                return Optional.of(rule.value());
+            }
+        }
+
+        return Optional.empty();
     }
 
     public int size() {
-        return this.rootValuesByKey.size();
+        return this.exactRootValuesByKey.size() + this.wildcardRules.size();
     }
 
     public Set<String> keys() {
-        return this.rootValuesByKey.keySet();
+        return this.configuredKeys;
     }
 
     private static BigDecimal parseDecimal(final Object value) {
@@ -93,5 +145,49 @@ public final class RootValueLoader implements RootValueLookup {
             key = key.substring("minecraft:".length());
         }
         return key.replace('-', '_');
+    }
+
+    private static boolean isWildcardPattern(final String key) {
+        return key.indexOf('*') >= 0;
+    }
+
+    private static int wildcardSpecificity(final String key) {
+        int specificity = 0;
+        for (int i = 0; i < key.length(); i++) {
+            if (key.charAt(i) != '*') {
+                specificity++;
+            }
+        }
+        return specificity;
+    }
+
+    private static Pattern compileGlob(final String glob) {
+        final StringBuilder regex = new StringBuilder(glob.length() * 2);
+        regex.append('^');
+        for (int i = 0; i < glob.length(); i++) {
+            final char ch = glob.charAt(i);
+            if (ch == '*') {
+                regex.append(".*");
+                continue;
+            }
+            if ("\\.^$|?+()[]{}".indexOf(ch) >= 0) {
+                regex.append('\\');
+            }
+            regex.append(ch);
+        }
+        regex.append('$');
+        return Pattern.compile(regex.toString());
+    }
+
+    private record WildcardRule(
+        String pattern,
+        Pattern regex,
+        BigDecimal value,
+        int specificity,
+        int order
+    ) {
+        private boolean matches(final String itemKey) {
+            return this.regex.matcher(itemKey).matches();
+        }
     }
 }
