@@ -1,15 +1,15 @@
 package com.splatage.wild_economy.catalog.generate;
 
 import com.splatage.wild_economy.catalog.classify.CategoryClassifier;
+import com.splatage.wild_economy.catalog.derive.DerivedItemResult;
+import com.splatage.wild_economy.catalog.derive.RootAnchoredDerivationService;
 import com.splatage.wild_economy.catalog.model.CatalogCategory;
 import com.splatage.wild_economy.catalog.model.CatalogGenerationResult;
 import com.splatage.wild_economy.catalog.model.CatalogPolicy;
 import com.splatage.wild_economy.catalog.model.GeneratedCatalogEntry;
 import com.splatage.wild_economy.catalog.model.ItemFacts;
 import com.splatage.wild_economy.catalog.policy.PolicySuggestionService;
-import com.splatage.wild_economy.catalog.rootvalue.RootValueLookup;
 import com.splatage.wild_economy.catalog.scan.MaterialScanner;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -17,20 +17,20 @@ import java.util.List;
 public final class CatalogGenerationService {
 
     private final MaterialScanner materialScanner;
-    private final RootValueLookup rootValueLookup;
     private final CategoryClassifier categoryClassifier;
     private final PolicySuggestionService policySuggestionService;
+    private final RootAnchoredDerivationService derivationService;
 
     public CatalogGenerationService(
         final MaterialScanner materialScanner,
-        final RootValueLookup rootValueLookup,
         final CategoryClassifier categoryClassifier,
-        final PolicySuggestionService policySuggestionService
+        final PolicySuggestionService policySuggestionService,
+        final RootAnchoredDerivationService derivationService
     ) {
         this.materialScanner = materialScanner;
-        this.rootValueLookup = rootValueLookup;
         this.categoryClassifier = categoryClassifier;
         this.policySuggestionService = policySuggestionService;
+        this.derivationService = derivationService;
     }
 
     public CatalogGenerationResult generate() {
@@ -38,28 +38,35 @@ public final class CatalogGenerationService {
         final List<GeneratedCatalogEntry> generated = new ArrayList<>(scanned.size());
 
         int disabledCount = 0;
-        int missingRootValueCount = 0;
+        int rootAnchoredCount = 0;
+        int derivedIncludedCount = 0;
 
         for (final ItemFacts facts : scanned) {
             final CatalogCategory category = this.categoryClassifier.classify(facts);
-            final BigDecimal rootValue = this.rootValueLookup.findRootValue(facts.key()).orElse(null);
-            final CatalogPolicy policy = this.policySuggestionService.suggest(facts, category, rootValue);
-            final String includeReason = this.policySuggestionService.includeReason(facts, category, rootValue, policy);
-            final String excludeReason = this.policySuggestionService.excludeReason(facts, category, rootValue, policy);
+            final DerivedItemResult derivation = this.derivationService.resolve(facts.key());
+            final CatalogPolicy policy = this.policySuggestionService.suggest(facts, category, derivation);
+            final String includeReason = this.policySuggestionService.includeReason(facts, category, derivation, policy);
+            final String excludeReason = this.policySuggestionService.excludeReason(facts, category, derivation, policy);
 
             if (policy == CatalogPolicy.DISABLED) {
                 disabledCount++;
             }
-            if (!facts.hasRootValue()) {
-                missingRootValueCount++;
+            if (derivation.reason() == com.splatage.wild_economy.catalog.derive.DerivationReason.ROOT_ANCHOR) {
+                rootAnchoredCount++;
+            }
+            if (derivation.reason() == com.splatage.wild_economy.catalog.derive.DerivationReason.DERIVED_FROM_ROOT) {
+                derivedIncludedCount++;
             }
 
             generated.add(new GeneratedCatalogEntry(
                 facts.key(),
                 category,
                 policy,
-                facts.hasRootValue(),
-                rootValue,
+                derivation.rootValuePresent(),
+                derivation.rootValue(),
+                derivation.derivationDepth(),
+                derivation.derivedValue(),
+                derivation.reason().name(),
                 includeReason,
                 excludeReason,
                 buildNotes(facts)
@@ -76,7 +83,8 @@ public final class CatalogGenerationService {
             scanned.size(),
             generated.size(),
             disabledCount,
-            missingRootValueCount
+            rootAnchoredCount,
+            derivedIncludedCount
         );
     }
 

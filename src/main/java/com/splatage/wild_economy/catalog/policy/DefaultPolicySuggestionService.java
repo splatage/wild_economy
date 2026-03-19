@@ -1,9 +1,10 @@
 package com.splatage.wild_economy.catalog.policy;
 
+import com.splatage.wild_economy.catalog.derive.DerivationReason;
+import com.splatage.wild_economy.catalog.derive.DerivedItemResult;
 import com.splatage.wild_economy.catalog.model.CatalogCategory;
 import com.splatage.wild_economy.catalog.model.CatalogPolicy;
 import com.splatage.wild_economy.catalog.model.ItemFacts;
-import java.math.BigDecimal;
 import java.util.Set;
 
 public final class DefaultPolicySuggestionService implements PolicySuggestionService {
@@ -44,41 +45,53 @@ public final class DefaultPolicySuggestionService implements PolicySuggestionSer
     );
 
     @Override
-    public CatalogPolicy suggest(final ItemFacts facts, final CatalogCategory category, final BigDecimal basePrice) {
+    public CatalogPolicy suggest(
+        final ItemFacts facts,
+        final CatalogCategory category,
+        final DerivedItemResult derivation
+    ) {
         final String key = facts.key();
 
         if (isHardDisabled(key)) {
             return CatalogPolicy.DISABLED;
         }
+        if (!derivation.included()) {
+            return CatalogPolicy.DISABLED;
+        }
         if (ALWAYS_AVAILABLE.contains(key)) {
             return CatalogPolicy.ALWAYS_AVAILABLE;
         }
-        if (facts.hasRootValue()) {
-            return CatalogPolicy.EXCHANGE;
-        }
-        return CatalogPolicy.DISABLED;
+        return CatalogPolicy.EXCHANGE;
     }
 
     @Override
     public String includeReason(
         final ItemFacts facts,
         final CatalogCategory category,
-        final BigDecimal basePrice,
+        final DerivedItemResult derivation,
         final CatalogPolicy policy
     ) {
-        return switch (policy) {
-            case ALWAYS_AVAILABLE -> "always-available allowlist";
-            case EXCHANGE -> facts.hasRootValue() ? "root-value present default exchange" : "policy override required";
-            case SELL_ONLY -> "sell-only fallback";
-            case DISABLED -> "";
-        };
+        if (policy == CatalogPolicy.ALWAYS_AVAILABLE) {
+            return "always-available allowlist";
+        }
+        if (policy == CatalogPolicy.EXCHANGE) {
+            return switch (derivation.reason()) {
+                case ROOT_ANCHOR -> "root-anchor";
+                case DERIVED_FROM_ROOT -> "derived-from-root";
+                default -> "policy override required";
+            };
+        }
+        if (policy == CatalogPolicy.SELL_ONLY) {
+            return "sell-only fallback";
+        }
+        return "";
     }
 
     @Override
     public String excludeReason(
         final ItemFacts facts,
         final CatalogCategory category,
-        final BigDecimal basePrice,
+        final DerivedItemResult derivation,
         final CatalogPolicy policy
     ) {
         if (policy != CatalogPolicy.DISABLED) {
@@ -87,10 +100,14 @@ public final class DefaultPolicySuggestionService implements PolicySuggestionSer
         if (isHardDisabled(facts.key())) {
             return "hard-disabled non-standard or admin item";
         }
-        if (!facts.hasRootValue()) {
-            return "missing root value";
-        }
-        return "disabled by policy rules";
+        return switch (derivation.reason()) {
+            case DEPTH_LIMIT -> "depth-limit";
+            case ALL_PATHS_BLOCKED -> "all-paths-blocked";
+            case NO_RECIPE_AND_NO_ROOT -> "no-recipe-and-no-root";
+            case CYCLE_DETECTED -> "cycle-detected";
+            case HARD_DISABLED -> "hard-disabled";
+            case ROOT_ANCHOR, DERIVED_FROM_ROOT -> "disabled by policy rules";
+        };
     }
 
     private boolean isHardDisabled(final String key) {

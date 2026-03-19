@@ -30,7 +30,8 @@ public final class CatalogFileWriter {
         yaml.set("summary.total-scanned", result.totalScanned());
         yaml.set("summary.total-generated", result.totalGenerated());
         yaml.set("summary.total-disabled", result.totalDisabled());
-        yaml.set("summary.missing-root-value-count", result.missingRootValueCount());
+        yaml.set("summary.root-anchored-count", result.rootAnchoredCount());
+        yaml.set("summary.derived-included-count", result.derivedIncludedCount());
 
         for (final GeneratedCatalogEntry entry : result.entries()) {
             final String path = "entries." + entry.key();
@@ -38,6 +39,9 @@ public final class CatalogFileWriter {
             yaml.set(path + ".policy", entry.policy().name());
             yaml.set(path + ".root-value-present", entry.rootValuePresent());
             yaml.set(path + ".root-value", entry.rootValue() != null ? entry.rootValue().toPlainString() : null);
+            yaml.set(path + ".derivation-depth", entry.derivationDepth());
+            yaml.set(path + ".derived-value", entry.derivedValue() != null ? entry.derivedValue().toPlainString() : null);
+            yaml.set(path + ".derivation-reason", entry.derivationReason());
             yaml.set(path + ".include-reason", entry.includeReason());
             yaml.set(path + ".exclude-reason", entry.excludeReason());
             yaml.set(path + ".notes", entry.notes());
@@ -60,7 +64,8 @@ public final class CatalogFileWriter {
         yaml.set("total-scanned", result.totalScanned());
         yaml.set("total-generated", result.totalGenerated());
         yaml.set("total-disabled", result.totalDisabled());
-        yaml.set("missing-root-value-count", result.missingRootValueCount());
+        yaml.set("root-anchored-count", result.rootAnchoredCount());
+        yaml.set("derived-included-count", result.derivedIncludedCount());
 
         yaml.save(summaryFile);
         return summaryFile;

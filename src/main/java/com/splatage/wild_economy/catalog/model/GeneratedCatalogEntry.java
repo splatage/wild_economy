@@ -8,6 +8,9 @@ public record GeneratedCatalogEntry(
     CatalogPolicy policy,
     boolean rootValuePresent,
     BigDecimal rootValue,
+    Integer derivationDepth,
+    BigDecimal derivedValue,
+    String derivationReason,
     String includeReason,
     String excludeReason,
     String notes
