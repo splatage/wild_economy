@@ -1,3 +1,28 @@
+# wild_economy Recipe Fallback Patch Files
+
+These are complete files for the next recipe-graph improvement pass.
+
+Goals of this patch:
+
+* keep compatibility with the repo's current Paper API target
+* broaden raw Bukkit recipe choice handling to includ([jd.papermc.io](https://jd.papermc.io/paper/1.21.1/org/bukkit/inventory/RecipeChoice.html))malization/fallback layer for common wood-family recipes
+* immediately cover:
+
+  * planks from log/stem
+  * wood/hyphae from logs/stems
+  * wooden signs from planks + stick
+
+This patch is intentionally conservative:
+
+* it only injects fallback recipes when the output currently has **no** raw extracted recipes
+* it avoids speculative family rules for patterns that have not been locked yet
+* later phases can extend the fallback layer to fences, gates, stairs, slabs, doors, trapdoors, boats, and hanging signs
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/catalog/recipe/BukkitRecipeGraphBuilder.java`
+
+```java
 package com.splatage.wild_economy.catalog.recipe;
 
 import com.splatage.wild_economy.catalog.scan.BukkitMaterialScanner;
@@ -250,3 +275,191 @@ public final class BukkitRecipeGraphBuilder {
         return List.copyOf(ingredients);
     }
 }
+```
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/catalog/recipe/WoodFamilyRecipeFallbacks.java`
+
+```java
+package com.splatage.wild_economy.catalog.recipe;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import org.bukkit.Material;
+
+public final class WoodFamilyRecipeFallbacks {
+
+    private static final List<WoodFamily> WOOD_FAMILIES = List.of(
+        WoodFamily.normal("oak"),
+        WoodFamily.normal("spruce"),
+        WoodFamily.normal("birch"),
+        WoodFamily.normal("jungle"),
+        WoodFamily.normal("acacia"),
+        WoodFamily.normal("dark_oak"),
+        WoodFamily.normal("mangrove"),
+        WoodFamily.normal("cherry"),
+        WoodFamily.nether("crimson"),
+        WoodFamily.nether("warped")
+    );
+
+    private WoodFamilyRecipeFallbacks() {
+    }
+
+    public static void apply(final Map<String, List<RecipeDefinition>> recipesByOutput) {
+        for (final WoodFamily family : WOOD_FAMILIES) {
+            applyPlanksFromLog(recipesByOutput, family);
+            applyWoodFromLogs(recipesByOutput, family);
+            applyWoodenSign(recipesByOutput, family);
+        }
+    }
+
+    private static void applyPlanksFromLog(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final WoodFamily family
+    ) {
+        if (!hasMaterial(family.inputLogKey()) || !hasMaterial(family.planksKey())) {
+            return;
+        }
+        if (hasRecipes(recipesByOutput, family.planksKey())) {
+            return;
+        }
+
+        addRecipe(
+            recipesByOutput,
+            new RecipeDefinition(
+                family.planksKey(),
+                4,
+                "fallback_planks_from_log",
+                List.of(new RecipeIngredient(family.inputLogKey(), 1))
+            )
+        );
+    }
+
+    private static void applyWoodFromLogs(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final WoodFamily family
+    ) {
+        if (!hasMaterial(family.inputLogKey()) || !hasMaterial(family.woodLikeOutputKey())) {
+            return;
+        }
+        if (hasRecipes(recipesByOutput, family.woodLikeOutputKey())) {
+            return;
+        }
+
+        addRecipe(
+            recipesByOutput,
+            new RecipeDefinition(
+                family.woodLikeOutputKey(),
+                3,
+                "fallback_wood_from_logs",
+                List.of(new RecipeIngredient(family.inputLogKey(), 4))
+            )
+        );
+    }
+
+    private static void applyWoodenSign(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final WoodFamily family
+    ) {
+        if (!hasMaterial(family.planksKey()) || !hasMaterial(family.signKey()) || !hasMaterial("stick")) {
+            return;
+        }
+        if (hasRecipes(recipesByOutput, family.signKey())) {
+            return;
+        }
+
+        addRecipe(
+            recipesByOutput,
+            new RecipeDefinition(
+                family.signKey(),
+                3,
+                "fallback_wooden_sign",
+                List.of(
+                    new RecipeIngredient(family.planksKey(), 6),
+                    new RecipeIngredient("stick", 1)
+                )
+            )
+        );
+    }
+
+    private static boolean hasRecipes(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final String outputKey
+    ) {
+        final List<RecipeDefinition> definitions = recipesByOutput.get(outputKey);
+        return definitions != null && !definitions.isEmpty();
+    }
+
+    private static void addRecipe(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final RecipeDefinition recipeDefinition
+    ) {
+        recipesByOutput.computeIfAbsent(recipeDefinition.outputKey(), ignored -> new ArrayList<>())
+            .add(recipeDefinition);
+    }
+
+    private static boolean hasMaterial(final String itemKey) {
+        final String enumName = itemKey.toUpperCase(Locale.ROOT);
+        return Material.matchMaterial(enumName) != null;
+    }
+
+    private record WoodFamily(
+        String familyKey,
+        String inputLogKey,
+        String planksKey,
+        String woodLikeOutputKey,
+        String signKey
+    ) {
+        private static WoodFamily normal(final String familyKey) {
+            return new WoodFamily(
+                familyKey,
+                familyKey + "_log",
+                familyKey + "_planks",
+                familyKey + "_wood",
+                familyKey + "_sign"
+            );
+        }
+
+        private static WoodFamily nether(final String familyKey) {
+            return new WoodFamily(
+                familyKey,
+                familyKey + "_stem",
+                familyKey + "_planks",
+                familyKey + "_hyphae",
+                familyKey + "_sign"
+            );
+        }
+    }
+}
+```
+
+---
+
+## Notes
+
+This patch should improve the graph immediately for the locked immediate targets:
+
+* `jungle_planks`
+* `jungle_wood`
+* `jungle_sign`
+
+Expected outcome after this pass:
+
+* `jungle_sign` should stop falling through as `NO_RECIPE_AND_NO_ROOT`
+* it should instead derive through planks + stick if the rest of the derivation chain is available
+* depth/inclusion policy remains a separate concern from recipe existence
+
+A later pass can extend the same helper to:
+
+* fences
+* fence gates
+* stairs
+* slabs
+* doors
+* trapdoors
+* boats
+* hanging signs
