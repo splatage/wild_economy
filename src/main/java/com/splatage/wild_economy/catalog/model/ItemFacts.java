@@ -11,6 +11,6 @@ public record ItemFacts(
     int maxStackSize,
     boolean edible,
     boolean fuelCandidate,
-    boolean hasWorthEntry
+    boolean hasRootValue
 ) {
 }

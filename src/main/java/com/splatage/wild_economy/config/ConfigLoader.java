@@ -49,17 +49,6 @@ public final class ConfigLoader {
         );
     }
 
-    public WorthImportConfig loadWorthImportConfig() {
-        final FileConfiguration config = this.loadYaml("worth-import.yml");
-        return new WorthImportConfig(
-            config.getBoolean("enabled", true),
-            config.getString("essentials-worth-file", "plugins/Essentials/worth.yml"),
-            config.getBoolean("import.use-worth-as-base-value", true),
-            config.getBoolean("import.explicit-item-config-overrides-worth", true),
-            config.getBoolean("import.ignore-missing-worth", true)
-        );
-    }
-
     public ExchangeItemsConfig loadExchangeItemsConfig() {
         final FileConfiguration config = this.loadYaml("exchange-items.yml");
         final ConfigurationSection itemsSection = config.getConfigurationSection("items");

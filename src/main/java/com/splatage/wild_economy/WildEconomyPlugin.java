@@ -12,7 +12,7 @@ public final class WildEconomyPlugin extends JavaPlugin {
         this.saveDefaultConfig();
         this.saveResource("database.yml", false);
         this.saveResource("exchange-items.yml", false);
-        this.saveResource("worth-import.yml", false);
+        this.saveResource("root-values.yml", false);
         this.saveResource("messages.yml", false);
 
         this.bootstrap = new PluginBootstrap(this);

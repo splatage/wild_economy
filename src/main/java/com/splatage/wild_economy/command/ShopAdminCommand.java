@@ -4,8 +4,6 @@ import com.splatage.wild_economy.WildEconomyPlugin;
 import com.splatage.wild_economy.catalog.generate.CatalogGenerationReportFormatter;
 import com.splatage.wild_economy.catalog.generate.CatalogGeneratorFacade;
 import com.splatage.wild_economy.catalog.model.CatalogGenerationResult;
-import com.splatage.wild_economy.config.ConfigLoader;
-import com.splatage.wild_economy.config.WorthImportConfig;
 import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
@@ -48,23 +46,15 @@ public final class ShopAdminCommand implements CommandExecutor {
     }
 
     private boolean handleGenerateCatalog(final CommandSender sender) {
-        final ConfigLoader configLoader = new ConfigLoader(this.plugin);
-        final WorthImportConfig worthImportConfig = configLoader.loadWorthImportConfig();
-
-        if (!worthImportConfig.enabled()) {
-            sender.sendMessage("Catalog generation aborted: worth import is disabled in worth-import.yml.");
-            return true;
-        }
-
-        final File worthFile = new File(worthImportConfig.essentialsWorthFile());
-        if (!worthFile.exists() || !worthFile.isFile()) {
-            sender.sendMessage("Catalog generation aborted: worth file not found at " + worthFile.getPath());
+        final File rootValuesFile = new File(this.plugin.getDataFolder(), "root-values.yml");
+        if (!rootValuesFile.exists() || !rootValuesFile.isFile()) {
+            sender.sendMessage("Catalog generation aborted: root-values.yml not found at " + rootValuesFile.getPath());
             return true;
         }
 
         try {
             final CatalogGeneratorFacade facade = new CatalogGeneratorFacade(this.plugin);
-            final CatalogGenerationResult result = facade.generateFromWorthFile(worthFile);
+            final CatalogGenerationResult result = facade.generateFromRootValuesFile(rootValuesFile);
             facade.writeOutputs(result);
 
             final File generatedDir = new File(this.plugin.getDataFolder(), "generated");

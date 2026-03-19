@@ -1,7 +1,7 @@
 package com.splatage.wild_economy.catalog.scan;
 
 import com.splatage.wild_economy.catalog.model.ItemFacts;
-import com.splatage.wild_economy.catalog.worth.WorthPriceLookup;
+import com.splatage.wild_economy.catalog.rootvalue.RootValueLookup;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -9,10 +9,10 @@ import org.bukkit.Material;
 
 public final class BukkitMaterialScanner implements MaterialScanner {
 
-    private final WorthPriceLookup worthPriceLookup;
+    private final RootValueLookup rootValueLookup;
 
-    public BukkitMaterialScanner(final WorthPriceLookup worthPriceLookup) {
-        this.worthPriceLookup = worthPriceLookup;
+    public BukkitMaterialScanner(final RootValueLookup rootValueLookup) {
+        this.rootValueLookup = rootValueLookup;
     }
 
     @Override
@@ -25,7 +25,7 @@ public final class BukkitMaterialScanner implements MaterialScanner {
             }
 
             final String key = normalizeKey(material);
-            final boolean hasWorthEntry = this.worthPriceLookup.findPrice(key).isPresent();
+            final boolean hasRootValue = this.rootValueLookup.findRootValue(key).isPresent();
 
             results.add(new ItemFacts(
                 material,
@@ -36,7 +36,7 @@ public final class BukkitMaterialScanner implements MaterialScanner {
                 material.getMaxStackSize(),
                 material.isEdible(),
                 material.isFuel(),
-                hasWorthEntry
+                hasRootValue
             ));
         }
 

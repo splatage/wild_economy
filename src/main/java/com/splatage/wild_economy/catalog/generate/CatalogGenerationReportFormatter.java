@@ -11,6 +11,6 @@ public final class CatalogGenerationReportFormatter {
         return "generated=" + result.totalGenerated()
             + ", scanned=" + result.totalScanned()
             + ", disabled=" + result.totalDisabled()
-            + ", missingWorth=" + result.missingWorthCount();
+            + ", missingRootValue=" + result.missingRootValueCount();
     }
 }

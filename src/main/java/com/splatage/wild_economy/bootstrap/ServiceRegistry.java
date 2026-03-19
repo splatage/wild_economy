@@ -1,5 +1,7 @@
 package com.splatage.wild_economy.bootstrap;
 
+import com.splatage.wild_economy.exchange.catalog.RootValueImporter;
+import java.io.File;
 import com.splatage.wild_economy.WildEconomyPlugin;
 import com.splatage.wild_economy.command.ShopAdminCommand;
 import com.splatage.wild_economy.command.ShopCommand;
@@ -10,13 +12,11 @@ import com.splatage.wild_economy.config.ConfigLoader;
 import com.splatage.wild_economy.config.DatabaseConfig;
 import com.splatage.wild_economy.config.ExchangeItemsConfig;
 import com.splatage.wild_economy.config.GlobalConfig;
-import com.splatage.wild_economy.config.WorthImportConfig;
 import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.VaultEconomyGateway;
 import com.splatage.wild_economy.exchange.catalog.CatalogLoader;
 import com.splatage.wild_economy.exchange.catalog.CatalogMergeService;
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalog;
-import com.splatage.wild_economy.exchange.catalog.WorthImporter;
 import com.splatage.wild_economy.exchange.item.BukkitItemNormalizer;
 import com.splatage.wild_economy.exchange.item.CanonicalItemRules;
 import com.splatage.wild_economy.exchange.item.ItemNormalizer;
@@ -65,7 +65,6 @@ public final class ServiceRegistry {
 
     private GlobalConfig globalConfig;
     private DatabaseConfig databaseConfig;
-    private WorthImportConfig worthImportConfig;
     private ExchangeItemsConfig exchangeItemsConfig;
 
     private DatabaseProvider databaseProvider;
@@ -95,7 +94,6 @@ public final class ServiceRegistry {
         final ConfigLoader configLoader = new ConfigLoader(this.plugin);
         this.globalConfig = configLoader.loadGlobalConfig();
         this.databaseConfig = configLoader.loadDatabaseConfig();
-        this.worthImportConfig = configLoader.loadWorthImportConfig();
         this.exchangeItemsConfig = configLoader.loadExchangeItemsConfig();
 
         this.databaseProvider = new DatabaseProvider(this.databaseConfig);
@@ -117,11 +115,6 @@ public final class ServiceRegistry {
             case SQLITE -> new SqliteExchangeTransactionRepository(this.databaseProvider);
             case MYSQL -> new MysqlExchangeTransactionRepository(this.databaseProvider);
         };
-
-        final WorthImporter worthImporter = new WorthImporter();
-        final CatalogMergeService catalogMergeService = new CatalogMergeService();
-        final CatalogLoader catalogLoader = new CatalogLoader(worthImporter, catalogMergeService);
-        this.exchangeCatalog = catalogLoader.load(this.exchangeItemsConfig, this.worthImportConfig);
 
         final CanonicalItemRules canonicalItemRules = new CanonicalItemRules();
         this.itemNormalizer = new BukkitItemNormalizer(canonicalItemRules);
@@ -160,6 +153,14 @@ public final class ServiceRegistry {
             this.exchangeBuyService,
             this.exchangeSellService
         );
+
+        final File rootValuesFile = new File(this.plugin.getDataFolder(), "root-values.yml");
+
+        final RootValueImporter rootValueImporter = new RootValueImporter();
+        final CatalogMergeService catalogMergeService = new CatalogMergeService();
+        final CatalogLoader catalogLoader = new CatalogLoader(rootValueImporter, catalogMergeService);
+
+        this.exchangeCatalog = catalogLoader.load(this.exchangeItemsConfig, rootValuesFile);
 
         final ExchangeRootMenu rootMenu = new ExchangeRootMenu();
         final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService);

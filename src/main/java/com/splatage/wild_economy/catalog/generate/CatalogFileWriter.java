@@ -30,14 +30,14 @@ public final class CatalogFileWriter {
         yaml.set("summary.total-scanned", result.totalScanned());
         yaml.set("summary.total-generated", result.totalGenerated());
         yaml.set("summary.total-disabled", result.totalDisabled());
-        yaml.set("summary.missing-worth-count", result.missingWorthCount());
+        yaml.set("summary.missing-root-value-count", result.missingRootValueCount());
 
         for (final GeneratedCatalogEntry entry : result.entries()) {
             final String path = "entries." + entry.key();
             yaml.set(path + ".category", entry.category().name());
             yaml.set(path + ".policy", entry.policy().name());
-            yaml.set(path + ".worth-present", entry.worthPresent());
-            yaml.set(path + ".base-price", entry.basePrice() != null ? entry.basePrice().toPlainString() : null);
+            yaml.set(path + ".root-value-present", entry.rootValuePresent());
+            yaml.set(path + ".root-value", entry.rootValue() != null ? entry.rootValue().toPlainString() : null);
             yaml.set(path + ".include-reason", entry.includeReason());
             yaml.set(path + ".exclude-reason", entry.excludeReason());
             yaml.set(path + ".notes", entry.notes());
@@ -60,7 +60,7 @@ public final class CatalogFileWriter {
         yaml.set("total-scanned", result.totalScanned());
         yaml.set("total-generated", result.totalGenerated());
         yaml.set("total-disabled", result.totalDisabled());
-        yaml.set("missing-worth-count", result.missingWorthCount());
+        yaml.set("missing-root-value-count", result.missingRootValueCount());
 
         yaml.save(summaryFile);
         return summaryFile;

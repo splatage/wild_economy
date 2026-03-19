@@ -7,6 +7,6 @@ public record CatalogGenerationResult(
     int totalScanned,
     int totalGenerated,
     int totalDisabled,
-    int missingWorthCount
+    int missingRootValueCount
 ) {
 }

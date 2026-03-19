@@ -6,8 +6,8 @@ public record GeneratedCatalogEntry(
     String key,
     CatalogCategory category,
     CatalogPolicy policy,
-    boolean worthPresent,
-    BigDecimal basePrice,
+    boolean rootValuePresent,
+    BigDecimal rootValue,
     String includeReason,
     String excludeReason,
     String notes

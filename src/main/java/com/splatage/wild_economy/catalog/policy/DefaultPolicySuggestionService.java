@@ -53,7 +53,7 @@ public final class DefaultPolicySuggestionService implements PolicySuggestionSer
         if (ALWAYS_AVAILABLE.contains(key)) {
             return CatalogPolicy.ALWAYS_AVAILABLE;
         }
-        if (facts.hasWorthEntry()) {
+        if (facts.hasRootValue()) {
             return CatalogPolicy.EXCHANGE;
         }
         return CatalogPolicy.DISABLED;
@@ -68,9 +68,7 @@ public final class DefaultPolicySuggestionService implements PolicySuggestionSer
     ) {
         return switch (policy) {
             case ALWAYS_AVAILABLE -> "always-available allowlist";
-            case EXCHANGE -> facts.hasWorthEntry()
-                ? "worth-present default exchange"
-                : "policy override required";
+            case EXCHANGE -> facts.hasRootValue() ? "root-value present default exchange" : "policy override required";
             case SELL_ONLY -> "sell-only fallback";
             case DISABLED -> "";
         };
@@ -89,8 +87,8 @@ public final class DefaultPolicySuggestionService implements PolicySuggestionSer
         if (isHardDisabled(facts.key())) {
             return "hard-disabled non-standard or admin item";
         }
-        if (!facts.hasWorthEntry()) {
-            return "missing worth entry";
+        if (!facts.hasRootValue()) {
+            return "missing root value";
         }
         return "disabled by policy rules";
     }
