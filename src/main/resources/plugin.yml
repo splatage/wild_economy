@@ -3,11 +3,11 @@ version: ${version}
 main: com.splatage.wild_economy.WildEconomyPlugin
 api-version: '1.21'
 author: splatage
-description: Curated Exchange-first economy plugin for The Wild.
+description: Curated Exchange-first economy plugin for Minecraft
 depend:
-  - Vault
+- Vault
 softdepend:
-  - Essentials
+- Essentials
 commands:
   shop:
     description: Open the shop or use sell commands.
@@ -16,7 +16,7 @@ commands:
     permission: wild_economy.shop
   shopadmin:
     description: Admin commands for wild_economy.
-    usage: /shopadmin <reload|stock|turnover|quote>
+    usage: /shopadmin <reload|generatecatalog>
     permission: wild_economy.admin
 permissions:
   wild_economy.shop:

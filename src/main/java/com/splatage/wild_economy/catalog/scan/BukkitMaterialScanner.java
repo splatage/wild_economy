@@ -35,7 +35,7 @@ public final class BukkitMaterialScanner implements MaterialScanner {
                 material.getMaxStackSize() > 1,
                 material.getMaxStackSize(),
                 material.isEdible(),
-                material.getBurnTime() > 0,
+                material.isFuel(),
                 hasWorthEntry
             ));
         }

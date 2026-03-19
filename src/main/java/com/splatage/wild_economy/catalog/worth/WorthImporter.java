@@ -33,13 +33,31 @@ public final class WorthImporter implements WorthPriceLookup {
         }
 
         final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(worthFile);
+        final Map<String, BigDecimal> prices = new LinkedHashMap<>();
+
         final ConfigurationSection worthSection = yaml.getConfigurationSection("worth");
-        if (worthSection == null) {
+        if (worthSection != null) {
+            loadSectionRecursive(worthSection, "", prices);
+        }
+
+        for (final String key : yaml.getKeys(false)) {
+            final Object value = yaml.get(key);
+            if (value instanceof ConfigurationSection) {
+                continue;
+            }
+
+            final BigDecimal price = parseDecimal(value);
+            if (price == null) {
+                continue;
+            }
+
+            prices.put(normalizeKey(key), price);
+        }
+
+        if (prices.isEmpty()) {
             return empty();
         }
 
-        final Map<String, BigDecimal> prices = new LinkedHashMap<>();
-        loadSectionRecursive(worthSection, "", prices);
         return new WorthImporter(prices);
     }
 
