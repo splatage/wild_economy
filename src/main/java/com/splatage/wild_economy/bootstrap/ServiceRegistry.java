@@ -15,6 +15,7 @@ import com.splatage.wild_economy.economy.VaultEconomyGateway;
 import com.splatage.wild_economy.exchange.catalog.CatalogLoader;
 import com.splatage.wild_economy.exchange.catalog.CatalogMergeService;
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalog;
+import com.splatage.wild_economy.exchange.catalog.GeneratedCatalogImporter;
 import com.splatage.wild_economy.exchange.catalog.RootValueImporter;
 import com.splatage.wild_economy.exchange.item.BukkitItemNormalizer;
 import com.splatage.wild_economy.exchange.item.CanonicalItemRules;
@@ -121,12 +122,25 @@ public final class ServiceRegistry {
         };
 
         final File rootValuesFile = new File(this.plugin.getDataFolder(), "root-values.yml");
+        final File generatedCatalogFile = new File(new File(this.plugin.getDataFolder(), "generated"), "generated-catalog.yml");
+
+        if (!generatedCatalogFile.exists()) {
+            this.plugin.getLogger().warning(
+                "generated/generated-catalog.yml not found. Runtime catalog will fall back to exchange-items.yml overrides only."
+            );
+        }
+
+        final GeneratedCatalogImporter generatedCatalogImporter = new GeneratedCatalogImporter();
         final RootValueImporter rootValueImporter = new RootValueImporter();
         final CatalogMergeService catalogMergeService = new CatalogMergeService();
-        final CatalogLoader catalogLoader = new CatalogLoader(rootValueImporter, catalogMergeService);
+        final CatalogLoader catalogLoader = new CatalogLoader(
+            generatedCatalogImporter,
+            rootValueImporter,
+            catalogMergeService
+        );
 
         this.exchangeCatalog = Objects.requireNonNull(
-            catalogLoader.load(this.exchangeItemsConfig, rootValuesFile),
+            catalogLoader.load(this.exchangeItemsConfig, rootValuesFile, generatedCatalogFile),
             "exchangeCatalog"
         );
 

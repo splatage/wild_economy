@@ -8,34 +8,54 @@ import java.util.Map;
 public final class CatalogMergeService {
 
     public ExchangeCatalogEntry merge(
-        final ExchangeItemsConfig.RawItemEntry rawEntry,
+        final ExchangeCatalogEntry baseEntry,
+        final ExchangeItemsConfig.RawItemEntry overrideEntry,
         final Map<ItemKey, BigDecimal> importedRootValues
     ) {
-        final BigDecimal rootValue = importedRootValues.get(rawEntry.itemKey());
-        final BigDecimal baseWorth = rootValue != null ? rootValue : BigDecimal.ZERO;
-
-        final BigDecimal buyPrice = this.resolvePrice(rawEntry.buyPrice(), rootValue);
-        final BigDecimal sellPrice = this.resolvePrice(rawEntry.sellPrice(), rootValue);
+        final BigDecimal rootValue = importedRootValues.get(overrideEntry.itemKey());
+        final BigDecimal baseWorth = this.resolveBaseWorth(baseEntry, rootValue);
+        final BigDecimal buyPrice = this.resolvePrice(overrideEntry.buyPrice(), baseEntry != null ? baseEntry.buyPrice() : null, rootValue);
+        final BigDecimal sellPrice = this.resolvePrice(overrideEntry.sellPrice(), baseEntry != null ? baseEntry.sellPrice() : null, rootValue);
 
         return new ExchangeCatalogEntry(
-            rawEntry.itemKey(),
-            rawEntry.displayName(),
-            rawEntry.category(),
-            rawEntry.policyMode(),
+            overrideEntry.itemKey(),
+            overrideEntry.displayName(),
+            overrideEntry.category(),
+            overrideEntry.policyMode(),
             baseWorth,
             buyPrice,
             sellPrice,
-            rawEntry.stockCap(),
-            rawEntry.turnoverAmountPerInterval(),
-            rawEntry.sellPriceBands(),
-            rawEntry.buyEnabled(),
-            rawEntry.sellEnabled()
+            overrideEntry.stockCap(),
+            overrideEntry.turnoverAmountPerInterval(),
+            overrideEntry.sellPriceBands(),
+            overrideEntry.buyEnabled(),
+            overrideEntry.sellEnabled()
         );
     }
 
-    private BigDecimal resolvePrice(final BigDecimal explicitPrice, final BigDecimal rootValueFallback) {
+    private BigDecimal resolveBaseWorth(
+        final ExchangeCatalogEntry baseEntry,
+        final BigDecimal rootValue
+    ) {
+        if (baseEntry != null && baseEntry.baseWorth() != null) {
+            return baseEntry.baseWorth();
+        }
+        if (rootValue != null) {
+            return rootValue;
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private BigDecimal resolvePrice(
+        final BigDecimal explicitPrice,
+        final BigDecimal baseCatalogPrice,
+        final BigDecimal rootValueFallback
+    ) {
         if (explicitPrice != null) {
             return explicitPrice;
+        }
+        if (baseCatalogPrice != null) {
+            return baseCatalogPrice;
         }
         if (rootValueFallback != null) {
             return rootValueFallback;

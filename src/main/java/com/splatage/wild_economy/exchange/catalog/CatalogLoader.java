@@ -9,20 +9,33 @@ import java.util.Map;
 
 public final class CatalogLoader {
 
+    private final GeneratedCatalogImporter generatedCatalogImporter;
     private final RootValueImporter rootValueImporter;
     private final CatalogMergeService mergeService;
 
-    public CatalogLoader(final RootValueImporter rootValueImporter, final CatalogMergeService mergeService) {
+    public CatalogLoader(
+        final GeneratedCatalogImporter generatedCatalogImporter,
+        final RootValueImporter rootValueImporter,
+        final CatalogMergeService mergeService
+    ) {
+        this.generatedCatalogImporter = generatedCatalogImporter;
         this.rootValueImporter = rootValueImporter;
         this.mergeService = mergeService;
     }
 
-    public ExchangeCatalog load(final ExchangeItemsConfig exchangeItemsConfig, final File rootValuesFile) {
+    public ExchangeCatalog load(
+        final ExchangeItemsConfig exchangeItemsConfig,
+        final File rootValuesFile,
+        final File generatedCatalogFile
+    ) {
         final Map<ItemKey, BigDecimal> importedRootValues = this.rootValueImporter.importRootValues(rootValuesFile);
-        final Map<ItemKey, ExchangeCatalogEntry> entries = new LinkedHashMap<>();
+        final Map<ItemKey, ExchangeCatalogEntry> entries = new LinkedHashMap<>(
+            this.generatedCatalogImporter.importGeneratedCatalog(generatedCatalogFile)
+        );
 
         for (final ExchangeItemsConfig.RawItemEntry rawEntry : exchangeItemsConfig.items().values()) {
-            final ExchangeCatalogEntry mergedEntry = this.mergeService.merge(rawEntry, importedRootValues);
+            final ExchangeCatalogEntry baseEntry = entries.get(rawEntry.itemKey());
+            final ExchangeCatalogEntry mergedEntry = this.mergeService.merge(baseEntry, rawEntry, importedRootValues);
             entries.put(rawEntry.itemKey(), mergedEntry);
         }
 
