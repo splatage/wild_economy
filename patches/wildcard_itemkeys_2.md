@@ -1,3 +1,31 @@
+# wild_economy Exchange Items Wildcard Patch Files
+
+This patch extends `exchange-items.yml` to support wildcard item keys, based on the current pushed repo shape.
+
+Current repo behavior:
+
+* `ConfigLoader.loadExchangeItemsConfig()` reads `exchange-items.yml` into exact `ItemKey -> RawItemEntry` values only. ([raw repo source])
+* `ExchangeItemsConfig` is already just a map wrapper, so the cleanest patch is to expand wildcard entries into exact `RawItemEntry` entries at load time.
+
+This means:
+
+* exact override keys still win over wildcard matches
+* more specific wildcard patterns beat broader wildcard patterns
+* wildcard entries are expanded over the Bukkit `Material` universe
+* the rest of the runtime code can stay unchanged
+
+Supported examples:
+
+* `minecraft:*_sapling`
+* `minecraft:*_sign`
+* `*_sapling`
+* `oak_*`
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/config/ConfigLoader.java`
+
+```java
 package com.splatage.wild_economy.config;
 
 import com.splatage.wild_economy.WildEconomyPlugin;
@@ -300,3 +328,51 @@ public final class ConfigLoader {
         }
     }
 }
+```
+
+---
+
+## Example `exchange-items.yml`
+
+```yaml
+items:
+  minecraft:*_sapling:
+    category: WOODS
+    policy: PLAYER_STOCKED
+    buy-enabled: true
+    sell-enabled: true
+    stock-cap: 5000
+    turnover-amount-per-interval: 100
+    buy-price: 8.0
+    sell-price: 5.0
+    sell-price-bands: []
+
+  minecraft:jungle_sapling:
+    category: WOODS
+    policy: DISABLED
+    buy-enabled: false
+    sell-enabled: false
+    stock-cap: 0
+    turnover-amount-per-interval: 0
+    buy-price: 0.0
+    sell-price: 0.0
+    sell-price-bands: []
+```
+
+Expected behavior:
+
+* all saplings match the wildcard rule
+* `minecraft:jungle_sapling` exact entry wins over the wildcard
+
+---
+
+## Notes
+
+This patch keeps `ExchangeItemsConfig.java` unchanged.
+
+Reason:
+
+* the pushed repo already treats `ExchangeItemsConfig` as a plain map wrapper
+* wildcard expansion in `ConfigLoader` lets the rest of the runtime continue using exact `ItemKey -> RawItemEntry` maps without further changes
+
+If you later move fully to `generated base + override merge`, this loader can still serve as the override-expansion layer before merge.
