@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.exchange.catalog;
 
+import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
@@ -29,7 +30,6 @@ public final class GeneratedCatalogImporter {
         }
 
         final Map<ItemKey, ExchangeCatalogEntry> entries = new LinkedHashMap<>();
-
         for (final String rawItemKey : entriesSection.getKeys(false)) {
             final ConfigurationSection section = entriesSection.getConfigurationSection(rawItemKey);
             if (section == null) {
@@ -37,20 +37,24 @@ public final class GeneratedCatalogImporter {
             }
 
             final ItemKey itemKey = new ItemKey(this.normalizeItemKey(rawItemKey));
+            final GeneratedItemCategory generatedCategory = this.mapGeneratedCategory(
+                section.getString("category", "MISC")
+            );
+            final ItemCategory topLevelCategory = this.mapTopLevelCategory(generatedCategory);
+
             final BigDecimal derivedValue = this.getBigDecimal(section, "derived-value");
             final BigDecimal rootValue = this.getBigDecimal(section, "root-value");
             final BigDecimal baseValue = derivedValue != null
                 ? derivedValue
                 : rootValue != null ? rootValue : BigDecimal.ZERO;
 
-            final GeneratedPolicyMapping policyMapping = this.mapPolicy(
-                section.getString("policy", "DISABLED")
-            );
+            final GeneratedPolicyMapping policyMapping = this.mapPolicy(section.getString("policy", "DISABLED"));
 
             entries.put(itemKey, new ExchangeCatalogEntry(
                 itemKey,
                 this.prettyDisplayName(itemKey.value()),
-                this.mapCategory(section.getString("category", "MISC")),
+                topLevelCategory,
+                generatedCategory,
                 policyMapping.policyMode(),
                 baseValue,
                 baseValue,
@@ -66,15 +70,37 @@ public final class GeneratedCatalogImporter {
         return Map.copyOf(entries);
     }
 
-    private ItemCategory mapCategory(final String rawCategory) {
+    private GeneratedItemCategory mapGeneratedCategory(final String rawCategory) {
         final String normalized = rawCategory == null ? "MISC" : rawCategory.trim().toUpperCase(Locale.ROOT);
         return switch (normalized) {
-            case "FARMING", "FOOD" -> ItemCategory.FARMING;
-            case "ORES_AND_MINERALS", "REDSTONE" -> ItemCategory.MINING;
-            case "MOB_DROPS" -> ItemCategory.MOB_DROPS;
-            case "WOODS", "STONE", "DECORATION" -> ItemCategory.BUILDING;
-            case "NETHER", "END", "TOOLS", "COMBAT", "BREWING", "TRANSPORT", "MISC" -> ItemCategory.UTILITY;
-            default -> ItemCategory.UTILITY;
+            case "FARMING" -> GeneratedItemCategory.FARMING;
+            case "FOOD" -> GeneratedItemCategory.FOOD;
+            case "ORES_AND_MINERALS" -> GeneratedItemCategory.ORES_AND_MINERALS;
+            case "MOB_DROPS" -> GeneratedItemCategory.MOB_DROPS;
+            case "WOODS" -> GeneratedItemCategory.WOODS;
+            case "STONE" -> GeneratedItemCategory.STONE;
+            case "REDSTONE" -> GeneratedItemCategory.REDSTONE;
+            case "TOOLS" -> GeneratedItemCategory.TOOLS;
+            case "BREWING" -> GeneratedItemCategory.BREWING;
+            case "TRANSPORT" -> GeneratedItemCategory.TRANSPORT;
+            case "COMBAT" -> GeneratedItemCategory.COMBAT;
+            case "NETHER" -> GeneratedItemCategory.NETHER;
+            case "END" -> GeneratedItemCategory.END;
+            case "DECORATION" -> GeneratedItemCategory.DECORATION;
+            case "MISC" -> GeneratedItemCategory.MISC;
+            default -> GeneratedItemCategory.MISC;
+        };
+    }
+
+    private ItemCategory mapTopLevelCategory(final GeneratedItemCategory generatedCategory) {
+        return switch (generatedCategory) {
+            case FARMING, FOOD -> ItemCategory.FARMING_AND_FOOD;
+            case ORES_AND_MINERALS -> ItemCategory.MINING_AND_MINERALS;
+            case MOB_DROPS -> ItemCategory.MOB_DROPS;
+            case WOODS, STONE -> ItemCategory.BUILDING_MATERIALS;
+            case REDSTONE, TOOLS, BREWING, TRANSPORT -> ItemCategory.REDSTONE_AND_UTILITY;
+            case COMBAT, NETHER, END -> ItemCategory.COMBAT_AND_ADVENTURE;
+            case DECORATION, MISC -> ItemCategory.MISC;
         };
     }
 
@@ -125,16 +151,16 @@ public final class GeneratedCatalogImporter {
         final String plain = itemKey.replace("minecraft:", "");
         final String[] parts = plain.split("_");
         final StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < parts.length; i++) {
-            if (parts[i].isEmpty()) {
+        for (final String part : parts) {
+            if (part.isEmpty()) {
                 continue;
             }
             if (builder.length() > 0) {
                 builder.append(' ');
             }
-            builder.append(Character.toUpperCase(parts[i].charAt(0)));
-            if (parts[i].length() > 1) {
-                builder.append(parts[i].substring(1));
+            builder.append(Character.toUpperCase(part.charAt(0)));
+            if (part.length() > 1) {
+                builder.append(part.substring(1));
             }
         }
         return builder.toString();

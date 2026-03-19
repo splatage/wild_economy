@@ -1,6 +1,7 @@
 package com.splatage.wild_economy.exchange.service;
 
 import com.splatage.wild_economy.exchange.domain.BuyResult;
+import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.SellAllResult;
@@ -41,8 +42,23 @@ public final class ExchangeServiceImpl implements ExchangeService {
     }
 
     @Override
-    public List<ExchangeCatalogView> browseCategory(final ItemCategory category, final int page, final int pageSize) {
-        return this.exchangeBrowseService.browseCategory(category, page, pageSize);
+    public List<ExchangeCatalogView> browseCategory(
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory,
+        final int page,
+        final int pageSize
+    ) {
+        return this.exchangeBrowseService.browseCategory(category, generatedCategory, page, pageSize);
+    }
+
+    @Override
+    public int countVisibleItems(final ItemCategory category, final GeneratedItemCategory generatedCategory) {
+        return this.exchangeBrowseService.countVisibleItems(category, generatedCategory);
+    }
+
+    @Override
+    public List<GeneratedItemCategory> listVisibleSubcategories(final ItemCategory category) {
+        return this.exchangeBrowseService.listVisibleSubcategories(category);
     }
 
     @Override

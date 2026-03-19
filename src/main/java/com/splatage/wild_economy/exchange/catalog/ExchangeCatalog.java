@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.exchange.catalog;
 
+import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import java.util.Collection;
@@ -27,6 +28,16 @@ public final class ExchangeCatalog {
     public List<ExchangeCatalogEntry> byCategory(final ItemCategory category) {
         return this.entries.values().stream()
             .filter(entry -> entry.category() == category)
+            .collect(Collectors.toList());
+    }
+
+    public List<ExchangeCatalogEntry> byCategoryAndGeneratedCategory(
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory
+    ) {
+        return this.entries.values().stream()
+            .filter(entry -> entry.category() == category)
+            .filter(entry -> entry.generatedCategory() == generatedCategory)
             .collect(Collectors.toList());
     }
 }

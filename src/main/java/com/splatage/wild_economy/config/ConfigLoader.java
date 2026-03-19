@@ -1,6 +1,7 @@
 package com.splatage.wild_economy.config;
 
 import com.splatage.wild_economy.WildEconomyPlugin;
+import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
@@ -71,7 +72,7 @@ public final class ConfigLoader {
             }
 
             final String normalizedItemKey = this.normalizeItemKey(rawItemKey);
-            final RawItemSpec spec = this.parseRawItemSpec(section, normalizedItemKey);
+            final RawItemSpec spec = this.parseRawItemSpec(section);
 
             if (this.isWildcardPattern(normalizedItemKey)) {
                 wildcardRules.add(new WildcardItemRule(
@@ -116,15 +117,10 @@ public final class ConfigLoader {
         return new ExchangeItemsConfig(expandedEntries);
     }
 
-    private RawItemSpec parseRawItemSpec(final ConfigurationSection section, final String normalizedItemKey) {
-        final String displayName = section.contains("display-name")
-            ? section.getString("display-name")
-            : normalizedItemKey;
-
-        final ItemCategory category = ItemCategory.valueOf(
-            section.getString("category", "UTILITY").toUpperCase(Locale.ROOT)
-        );
-
+    private RawItemSpec parseRawItemSpec(final ConfigurationSection section) {
+        final String displayName = section.contains("display-name") ? section.getString("display-name") : null;
+        final ItemCategory category = this.parseTopLevelCategory(section.getString("category", null));
+        final GeneratedItemCategory generatedCategory = this.parseGeneratedCategory(section.getString("generated-category", null));
         final ItemPolicyMode policyMode = ItemPolicyMode.valueOf(
             section.getString("policy", "DISABLED").toUpperCase(Locale.ROOT)
         );
@@ -140,6 +136,7 @@ public final class ConfigLoader {
         return new RawItemSpec(
             displayName,
             category,
+            generatedCategory,
             policyMode,
             buyEnabled,
             sellEnabled,
@@ -151,15 +148,57 @@ public final class ConfigLoader {
         );
     }
 
+    private ItemCategory parseTopLevelCategory(final String rawCategory) {
+        if (rawCategory == null || rawCategory.isBlank()) {
+            return null;
+        }
+        final String normalized = rawCategory.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
+        return switch (normalized) {
+            case "FARMING", "FOOD", "FARMING_AND_FOOD" -> ItemCategory.FARMING_AND_FOOD;
+            case "MINING", "ORES_AND_MINERALS", "MINING_AND_MINERALS" -> ItemCategory.MINING_AND_MINERALS;
+            case "MOB_DROPS" -> ItemCategory.MOB_DROPS;
+            case "BUILDING", "WOODS", "STONE", "BUILDING_MATERIALS" -> ItemCategory.BUILDING_MATERIALS;
+            case "UTILITY", "REDSTONE", "TOOLS", "BREWING", "TRANSPORT", "REDSTONE_AND_UTILITY" -> ItemCategory.REDSTONE_AND_UTILITY;
+            case "COMBAT", "NETHER", "END", "COMBAT_AND_ADVENTURE" -> ItemCategory.COMBAT_AND_ADVENTURE;
+            case "DECORATION", "MISC" -> ItemCategory.MISC;
+            default -> null;
+        };
+    }
+
+    private GeneratedItemCategory parseGeneratedCategory(final String rawCategory) {
+        if (rawCategory == null || rawCategory.isBlank()) {
+            return null;
+        }
+        final String normalized = rawCategory.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
+        return switch (normalized) {
+            case "FARMING" -> GeneratedItemCategory.FARMING;
+            case "FOOD" -> GeneratedItemCategory.FOOD;
+            case "ORES_AND_MINERALS" -> GeneratedItemCategory.ORES_AND_MINERALS;
+            case "MOB_DROPS" -> GeneratedItemCategory.MOB_DROPS;
+            case "WOODS" -> GeneratedItemCategory.WOODS;
+            case "STONE" -> GeneratedItemCategory.STONE;
+            case "REDSTONE" -> GeneratedItemCategory.REDSTONE;
+            case "TOOLS" -> GeneratedItemCategory.TOOLS;
+            case "BREWING" -> GeneratedItemCategory.BREWING;
+            case "TRANSPORT" -> GeneratedItemCategory.TRANSPORT;
+            case "COMBAT" -> GeneratedItemCategory.COMBAT;
+            case "NETHER" -> GeneratedItemCategory.NETHER;
+            case "END" -> GeneratedItemCategory.END;
+            case "DECORATION" -> GeneratedItemCategory.DECORATION;
+            case "MISC" -> GeneratedItemCategory.MISC;
+            default -> null;
+        };
+    }
+
     private ExchangeItemsConfig.RawItemEntry toRawItemEntry(
         final ItemKey itemKey,
         final RawItemSpec spec
     ) {
-        final String displayName = spec.displayName() != null ? spec.displayName() : itemKey.value();
         return new ExchangeItemsConfig.RawItemEntry(
             itemKey,
-            displayName,
+            spec.displayName(),
             spec.category(),
+            spec.generatedCategory(),
             spec.policyMode(),
             spec.buyEnabled(),
             spec.sellEnabled(),
@@ -277,6 +316,7 @@ public final class ConfigLoader {
     private record RawItemSpec(
         String displayName,
         ItemCategory category,
+        GeneratedItemCategory generatedCategory,
         ItemPolicyMode policyMode,
         boolean buyEnabled,
         boolean sellEnabled,

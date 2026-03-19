@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.gui;
 
+import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.service.ExchangeCatalogView;
@@ -27,9 +28,15 @@ public final class ExchangeBrowseMenu {
         this.shopMenuRouter = Objects.requireNonNull(shopMenuRouter, "shopMenuRouter");
     }
 
-    public void open(final Player player, final ItemCategory category, final int page) {
-        final Inventory inventory = Bukkit.createInventory(null, 54, "Shop - " + this.prettyCategory(category));
-        final List<ExchangeCatalogView> entries = this.exchangeService.browseCategory(category, page, 45);
+    public void open(
+        final Player player,
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory,
+        final int page,
+        final boolean viaSubcategory
+    ) {
+        final Inventory inventory = Bukkit.createInventory(null, 54, this.title(category, generatedCategory));
+        final List<ExchangeCatalogView> entries = this.exchangeService.browseCategory(category, generatedCategory, page, 45);
 
         int slot = 0;
         for (final ExchangeCatalogView view : entries) {
@@ -46,7 +53,13 @@ public final class ExchangeBrowseMenu {
         player.openInventory(inventory);
     }
 
-    public void handleClick(final InventoryClickEvent event, final ItemCategory category, final int page) {
+    public void handleClick(
+        final InventoryClickEvent event,
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory,
+        final int page,
+        final boolean viaSubcategory
+    ) {
         event.setCancelled(true);
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
@@ -58,19 +71,31 @@ public final class ExchangeBrowseMenu {
             if (clicked == null || clicked.getType() == Material.AIR) {
                 return;
             }
-
             final ItemKey itemKey = this.toItemKey(clicked.getType());
             this.shopMenuRouter.openDetail(player, itemKey);
             return;
         }
 
         switch (slot) {
-            case 45 -> this.shopMenuRouter.openRoot(player);
+            case 45 -> {
+                if (viaSubcategory) {
+                    this.shopMenuRouter.openSubcategory(player, category);
+                } else {
+                    this.shopMenuRouter.openRoot(player);
+                }
+            }
             case 49 -> player.closeInventory();
-            case 53 -> this.shopMenuRouter.openBrowse(player, category, page + 1);
+            case 53 -> this.shopMenuRouter.openBrowse(player, category, generatedCategory, page + 1, viaSubcategory);
             default -> {
             }
         }
+    }
+
+    private String title(final ItemCategory category, final GeneratedItemCategory generatedCategory) {
+        if (generatedCategory == null) {
+            return "Shop - " + category.displayName();
+        }
+        return "Shop - " + category.displayName() + " / " + generatedCategory.displayName();
     }
 
     private ItemStack catalogItem(final ExchangeCatalogView view) {
@@ -105,15 +130,5 @@ public final class ExchangeBrowseMenu {
 
     private ItemKey toItemKey(final Material material) {
         return new ItemKey("minecraft:" + material.name().toLowerCase());
-    }
-
-    private String prettyCategory(final ItemCategory category) {
-        return switch (category) {
-            case FARMING -> "Farming";
-            case MINING -> "Mining";
-            case MOB_DROPS -> "Mob Drops";
-            case BUILDING -> "Building";
-            case UTILITY -> "Utility";
-        };
     }
 }

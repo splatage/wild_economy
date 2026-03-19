@@ -51,6 +51,7 @@ import com.splatage.wild_economy.exchange.stock.StockTurnoverServiceImpl;
 import com.splatage.wild_economy.gui.ExchangeBrowseMenu;
 import com.splatage.wild_economy.gui.ExchangeItemDetailMenu;
 import com.splatage.wild_economy.gui.ExchangeRootMenu;
+import com.splatage.wild_economy.gui.ExchangeSubcategoryMenu;
 import com.splatage.wild_economy.gui.ShopMenuListener;
 import com.splatage.wild_economy.gui.ShopMenuRouter;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
@@ -187,17 +188,19 @@ public final class ServiceRegistry {
             this.exchangeSellService
         );
 
-        final ExchangeRootMenu rootMenu = new ExchangeRootMenu();
+        final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService);
+        final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService);
         final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService);
         final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService);
 
-        this.shopMenuRouter = new ShopMenuRouter(rootMenu, browseMenu, itemDetailMenu);
+        this.shopMenuRouter = new ShopMenuRouter(rootMenu, subcategoryMenu, browseMenu, itemDetailMenu);
         rootMenu.setShopMenuRouter(this.shopMenuRouter);
+        subcategoryMenu.setShopMenuRouter(this.shopMenuRouter);
         browseMenu.setShopMenuRouter(this.shopMenuRouter);
         itemDetailMenu.setShopMenuRouter(this.shopMenuRouter);
 
         this.plugin.getServer().getPluginManager().registerEvents(
-            new ShopMenuListener(rootMenu, browseMenu, itemDetailMenu, this.shopMenuRouter),
+            new ShopMenuListener(rootMenu, subcategoryMenu, browseMenu, itemDetailMenu, this.shopMenuRouter),
             this.plugin
         );
     }
