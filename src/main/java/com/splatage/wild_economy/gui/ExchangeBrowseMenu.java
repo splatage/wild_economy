@@ -55,11 +55,12 @@ public final class ExchangeBrowseMenu {
         final int slot = event.getRawSlot();
         if (slot >= 0 && slot < 45) {
             final ItemStack clicked = event.getCurrentItem();
-            if (clicked == null || clicked.getType() == Material.AIR || !clicked.hasItemMeta() || !clicked.getItemMeta().hasLocalizedName()) {
+            if (clicked == null || clicked.getType() == Material.AIR) {
                 return;
             }
-            final String itemKeyValue = clicked.getItemMeta().getLocalizedName();
-            this.shopMenuRouter.openDetail(player, new ItemKey(itemKeyValue));
+
+            final ItemKey itemKey = this.toItemKey(clicked.getType());
+            this.shopMenuRouter.openDetail(player, itemKey);
             return;
         }
 
@@ -78,7 +79,6 @@ public final class ExchangeBrowseMenu {
         final ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(view.displayName());
-            meta.setLocalizedName(view.itemKey().value());
             meta.setLore(List.of(
                 "Price: " + view.buyPrice(),
                 "Stock: " + view.stockCount(),
@@ -101,6 +101,10 @@ public final class ExchangeBrowseMenu {
 
     private Material resolveMaterial(final ItemKey itemKey) {
         return Material.matchMaterial(itemKey.value().replace("minecraft:", "").toUpperCase());
+    }
+
+    private ItemKey toItemKey(final Material material) {
+        return new ItemKey("minecraft:" + material.name().toLowerCase());
     }
 
     private String prettyCategory(final ItemCategory category) {

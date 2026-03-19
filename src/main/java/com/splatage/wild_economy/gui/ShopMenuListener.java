@@ -4,6 +4,7 @@ import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import java.util.Locale;
 import java.util.Objects;
+import org.bukkit.Material;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -60,8 +61,8 @@ public final class ShopMenuListener implements Listener {
             }
 
             final var current = event.getInventory().getItem(11);
-            if (current != null && current.hasItemMeta() && current.getItemMeta().hasLocalizedName()) {
-                this.exchangeItemDetailMenu.handleClick(event, new ItemKey(current.getItemMeta().getLocalizedName()));
+            if (current != null && current.getType() != Material.AIR) {
+                this.exchangeItemDetailMenu.handleClick(event, this.toItemKey(current.getType()));
             }
         }
     }
@@ -83,5 +84,9 @@ public final class ShopMenuListener implements Listener {
             case "utility" -> ItemCategory.UTILITY;
             default -> null;
         };
+    }
+
+    private ItemKey toItemKey(final Material material) {
+        return new ItemKey("minecraft:" + material.name().toLowerCase());
     }
 }

@@ -78,7 +78,6 @@ public final class ExchangeItemDetailMenu {
         final ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(view.displayName());
-            meta.setLocalizedName(view.itemKey().value());
             meta.setLore(List.of(
                 "Unit price: " + view.buyPrice(),
                 "Stock: " + view.stockCount(),
