@@ -1,0 +1,116 @@
+
+
+# File: `src/main/java/com/splatage/wild_economy/gui/ShopMenuListener.java`
+
+```java
+package com.splatage.wild_economy.gui;
+
+import com.splatage.wild_economy.exchange.domain.ItemCategory;
+import com.splatage.wild_economy.exchange.domain.ItemKey;
+import java.util.Locale;
+import java.util.Objects;
+import org.bukkit.Material;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+
+public final class ShopMenuListener implements Listener {
+
+    private final ExchangeRootMenu exchangeRootMenu;
+    private final ExchangeBrowseMenu exchangeBrowseMenu;
+    private final ExchangeItemDetailMenu exchangeItemDetailMenu;
+    private final ShopMenuRouter shopMenuRouter;
+
+    public ShopMenuListener(
+        final ExchangeRootMenu exchangeRootMenu,
+        final ExchangeBrowseMenu exchangeBrowseMenu,
+        final ExchangeItemDetailMenu exchangeItemDetailMenu,
+        final ShopMenuRouter shopMenuRouter
+    ) {
+        this.exchangeRootMenu = Objects.requireNonNull(exchangeRootMenu, "exchangeRootMenu");
+        this.exchangeBrowseMenu = Objects.requireNonNull(exchangeBrowseMenu, "exchangeBrowseMenu");
+        this.exchangeItemDetailMenu = Objects.requireNonNull(exchangeItemDetailMenu, "exchangeItemDetailMenu");
+        this.shopMenuRouter = Objects.requireNonNull(shopMenuRouter, "shopMenuRouter");
+    }
+
+    @EventHandler
+    public void onInventoryClick(final InventoryClickEvent event) {
+        final String title = event.getView().getTitle();
+        if (title == null) {
+            return;
+        }
+
+        final boolean isShopInventory = title.equals("Shop")
+            || title.startsWith("Shop - ")
+            || title.startsWith("Buy - ");
+
+        if (!isShopInventory) {
+            return;
+        }
+
+        // Always cancel interactions in shop-managed inventories first.
+        // This prevents menu items from becoming movable if routing falls through.
+        event.setCancelled(true);
+
+        if (title.equals("Shop")) {
+            this.exchangeRootMenu.handleClick(event);
+            return;
+        }
+
+        if (title.startsWith("Shop - ")) {
+            final MenuSession session = this.shopMenuRouter.getSession(event.getWhoClicked().getUniqueId());
+            final ItemCategory category = session != null && session.currentCategory() != null
+                ? session.currentCategory()
+                : this.parseCategory(title.substring("Shop - ".length()));
+            final int page = session == null ? 0 : session.currentPage();
+
+            if (category != null) {
+                this.exchangeBrowseMenu.handleClick(event, category, page);
+            }
+            return;
+        }
+
+        if (title.startsWith("Buy - ")) {
+            final MenuSession session = this.shopMenuRouter.getSession(event.getWhoClicked().getUniqueId());
+            if (session != null && session.currentItemKey() != null) {
+                this.exchangeItemDetailMenu.handleClick(event, session.currentItemKey());
+                return;
+            }
+
+            final ItemKey fallbackItemKey = this.readItemKeyFromDetailInventory(event);
+            if (fallbackItemKey != null) {
+                this.exchangeItemDetailMenu.handleClick(event, fallbackItemKey);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(final PlayerQuitEvent event) {
+        this.shopMenuRouter.clearSession(event.getPlayer().getUniqueId());
+    }
+
+    private ItemCategory parseCategory(final String raw) {
+        return switch (raw.toLowerCase(Locale.ROOT)) {
+            case "farming" -> ItemCategory.FARMING;
+            case "mining" -> ItemCategory.MINING;
+            case "mob drops" -> ItemCategory.MOB_DROPS;
+            case "building" -> ItemCategory.BUILDING;
+            case "utility" -> ItemCategory.UTILITY;
+            default -> null;
+        };
+    }
+
+    private ItemKey readItemKeyFromDetailInventory(final InventoryClickEvent event) {
+        final var current = event.getInventory().getItem(11);
+        if (current == null || current.getType() == Material.AIR) {
+            return null;
+        }
+        return this.toItemKey(current.getType());
+    }
+
+    private ItemKey toItemKey(final Material material) {
+        return new ItemKey("minecraft:" + material.name().toLowerCase());
+    }
+}
+```

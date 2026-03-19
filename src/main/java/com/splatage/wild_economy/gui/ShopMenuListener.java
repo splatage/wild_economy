@@ -6,7 +6,7 @@ import org.bukkit.Material;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 public final class ShopMenuListener implements Listener {
 
@@ -39,6 +39,9 @@ public final class ShopMenuListener implements Listener {
         if (!(title.equals("Shop") || title.startsWith("Shop - ") || title.startsWith("Buy - "))) {
             return;
         }
+
+        // Always cancel clicks in shop-managed inventories first.
+        event.setCancelled(true);
 
         final MenuSession session = this.shopMenuRouter.getSession(event.getWhoClicked().getUniqueId());
         if (session == null) {
@@ -80,11 +83,8 @@ public final class ShopMenuListener implements Listener {
     }
 
     @EventHandler
-    public void onInventoryClose(final InventoryCloseEvent event) {
-        final String title = event.getView().getTitle();
-        if (title != null && (title.equals("Shop") || title.startsWith("Shop - ") || title.startsWith("Buy - "))) {
-            this.shopMenuRouter.clearSession(event.getPlayer().getUniqueId());
-        }
+    public void onPlayerQuit(final PlayerQuitEvent event) {
+        this.shopMenuRouter.clearSession(event.getPlayer().getUniqueId());
     }
 
     private ItemKey toItemKey(final Material material) {
