@@ -17,18 +17,15 @@ public final class RootAnchoredDerivationService {
 
     private final RecipeGraph recipeGraph;
     private final RootValueLookup rootValueLookup;
-    private final int maxDerivationDepth;
     private final Map<String, DerivedItemResult> cache = new HashMap<>();
     private final Set<String> visiting = new HashSet<>();
 
     public RootAnchoredDerivationService(
         final RecipeGraph recipeGraph,
-        final RootValueLookup rootValueLookup,
-        final int maxDerivationDepth
+        final RootValueLookup rootValueLookup
     ) {
         this.recipeGraph = recipeGraph;
         this.rootValueLookup = rootValueLookup;
-        this.maxDerivationDepth = maxDerivationDepth;
     }
 
     public DerivedItemResult resolve(final String itemKey) {
@@ -86,13 +83,7 @@ public final class RootAnchoredDerivationService {
                 )
                 .orElseThrow();
 
-            final DerivedItemResult result;
-            if (best.depth() > this.maxDerivationDepth) {
-                result = DerivedItemResult.blocked(best.depth(), best.value(), DerivationReason.DEPTH_LIMIT);
-            } else {
-                result = DerivedItemResult.derived(best.depth(), best.value());
-            }
-
+            final DerivedItemResult result = DerivedItemResult.derived(best.depth(), best.value());
             this.cache.put(itemKey, result);
             return result;
         } finally {
@@ -106,7 +97,7 @@ public final class RootAnchoredDerivationService {
 
         for (final RecipeIngredient ingredient : recipe.ingredients()) {
             final DerivedItemResult ingredientResult = this.resolve(ingredient.itemKey());
-            if (!ingredientResult.included() || ingredientResult.derivedValue() == null || ingredientResult.derivationDepth() == null) {
+            if (!ingredientResult.resolved() || ingredientResult.derivedValue() == null || ingredientResult.derivationDepth() == null) {
                 return null;
             }
 

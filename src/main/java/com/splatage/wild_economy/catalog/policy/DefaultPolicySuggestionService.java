@@ -44,6 +44,16 @@ public final class DefaultPolicySuggestionService implements PolicySuggestionSer
         "written_book"
     );
 
+    private final int maxAutoInclusionDepth;
+
+    public DefaultPolicySuggestionService() {
+        this(1);
+    }
+
+    public DefaultPolicySuggestionService(final int maxAutoInclusionDepth) {
+        this.maxAutoInclusionDepth = maxAutoInclusionDepth;
+    }
+
     @Override
     public CatalogPolicy suggest(
         final ItemFacts facts,
@@ -55,7 +65,10 @@ public final class DefaultPolicySuggestionService implements PolicySuggestionSer
         if (isHardDisabled(key)) {
             return CatalogPolicy.DISABLED;
         }
-        if (!derivation.included()) {
+        if (!derivation.resolved()) {
+            return CatalogPolicy.DISABLED;
+        }
+        if (isDepthLimited(derivation)) {
             return CatalogPolicy.DISABLED;
         }
         if (ALWAYS_AVAILABLE.contains(key)) {
@@ -100,17 +113,25 @@ public final class DefaultPolicySuggestionService implements PolicySuggestionSer
         if (isHardDisabled(facts.key())) {
             return "hard-disabled non-standard or admin item";
         }
+        if (isDepthLimited(derivation)) {
+            return "depth-limit";
+        }
         return switch (derivation.reason()) {
-            case DEPTH_LIMIT -> "depth-limit";
             case ALL_PATHS_BLOCKED -> "all-paths-blocked";
             case NO_RECIPE_AND_NO_ROOT -> "no-recipe-and-no-root";
             case CYCLE_DETECTED -> "cycle-detected";
             case HARD_DISABLED -> "hard-disabled";
-            case ROOT_ANCHOR, DERIVED_FROM_ROOT -> "disabled by policy rules";
+            case ROOT_ANCHOR, DERIVED_FROM_ROOT, DEPTH_LIMIT -> "disabled by policy rules";
         };
     }
 
     private boolean isHardDisabled(final String key) {
         return HARD_DISABLED_EXACT.contains(key) || key.endsWith("_spawn_egg");
+    }
+
+    private boolean isDepthLimited(final DerivedItemResult derivation) {
+        return derivation.resolved()
+            && derivation.derivationDepth() != null
+            && derivation.derivationDepth() > this.maxAutoInclusionDepth;
     }
 }

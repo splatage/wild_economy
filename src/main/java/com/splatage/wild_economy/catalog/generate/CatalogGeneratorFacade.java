@@ -14,7 +14,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class CatalogGeneratorFacade {
 
-    private static final int DEFAULT_MAX_DERIVATION_DEPTH = 1;
+    private static final int DEFAULT_MAX_AUTO_INCLUSION_DEPTH = 1;
 
     private final JavaPlugin plugin;
 
@@ -27,14 +27,13 @@ public final class CatalogGeneratorFacade {
         final RecipeGraph recipeGraph = new BukkitRecipeGraphBuilder().build();
         final RootAnchoredDerivationService derivationService = new RootAnchoredDerivationService(
             recipeGraph,
-            rootValueLoader,
-            DEFAULT_MAX_DERIVATION_DEPTH
+            rootValueLoader
         );
 
         final CatalogGenerationService service = new CatalogGenerationService(
             new BukkitMaterialScanner(rootValueLoader),
             new DefaultCategoryClassifier(),
-            new DefaultPolicySuggestionService(),
+            new DefaultPolicySuggestionService(DEFAULT_MAX_AUTO_INCLUSION_DEPTH),
             derivationService
         );
 

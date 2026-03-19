@@ -1,6 +1,7 @@
 package com.splatage.wild_economy.catalog.generate;
 
 import com.splatage.wild_economy.catalog.classify.CategoryClassifier;
+import com.splatage.wild_economy.catalog.derive.DerivationReason;
 import com.splatage.wild_economy.catalog.derive.DerivedItemResult;
 import com.splatage.wild_economy.catalog.derive.RootAnchoredDerivationService;
 import com.splatage.wild_economy.catalog.model.CatalogCategory;
@@ -51,10 +52,10 @@ public final class CatalogGenerationService {
             if (policy == CatalogPolicy.DISABLED) {
                 disabledCount++;
             }
-            if (derivation.reason() == com.splatage.wild_economy.catalog.derive.DerivationReason.ROOT_ANCHOR) {
+            if (derivation.reason() == DerivationReason.ROOT_ANCHOR) {
                 rootAnchoredCount++;
             }
-            if (derivation.reason() == com.splatage.wild_economy.catalog.derive.DerivationReason.DERIVED_FROM_ROOT) {
+            if (policy != CatalogPolicy.DISABLED && derivation.reason() == DerivationReason.DERIVED_FROM_ROOT) {
                 derivedIncludedCount++;
             }
 

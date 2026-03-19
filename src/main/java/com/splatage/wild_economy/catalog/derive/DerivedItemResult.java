@@ -3,7 +3,7 @@ package com.splatage.wild_economy.catalog.derive;
 import java.math.BigDecimal;
 
 public record DerivedItemResult(
-    boolean included,
+    boolean resolved,
     boolean rootValuePresent,
     BigDecimal rootValue,
     Integer derivationDepth,
