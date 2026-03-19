@@ -1,0 +1,7 @@
+enabled: true
+essentials-worth-file: plugins/Essentials/worth.yml
+
+import:
+  use-worth-as-base-value: true
+  explicit-item-config-overrides-worth: true
+  ignore-missing-worth: true
