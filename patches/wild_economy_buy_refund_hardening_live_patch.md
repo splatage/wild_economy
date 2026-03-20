@@ -1,3 +1,8 @@
+# wild_economy buy refund hardening patch (live code: `48b45a64cd9a78c2cb7f08d2a9a981a60bd9acc3`)
+
+## File: `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeBuyServiceImpl.java`
+
+```java
 package com.splatage.wild_economy.exchange.service;
 
 import com.splatage.wild_economy.economy.EconomyGateway;
@@ -303,3 +308,4 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         return remaining <= 0;
     }
 }
+```
