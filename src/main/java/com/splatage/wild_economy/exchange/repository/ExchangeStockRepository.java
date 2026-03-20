@@ -16,4 +16,6 @@ public interface ExchangeStockRepository {
     void decrementStock(ItemKey itemKey, int amount);
 
     void setStock(ItemKey itemKey, long stock);
+
+    void flushStocks(Map<ItemKey, Long> stockByItemKey);
 }

@@ -68,16 +68,31 @@ public final class SqliteExchangeStockRepository implements ExchangeStockReposit
 
     @Override
     public void incrementStock(final ItemKey itemKey, final int amount) {
-        this.changeStock(itemKey, amount);
+        if (amount <= 0) {
+            return;
+        }
+        this.changeStockAtomic(itemKey, amount);
     }
 
     @Override
     public void decrementStock(final ItemKey itemKey, final int amount) {
-        this.changeStock(itemKey, -amount);
+        if (amount <= 0) {
+            return;
+        }
+        this.changeStockAtomic(itemKey, -amount);
     }
 
     @Override
     public void setStock(final ItemKey itemKey, final long stock) {
+        this.flushStocks(Map.of(itemKey, stock));
+    }
+
+    @Override
+    public void flushStocks(final Map<ItemKey, Long> stockByItemKey) {
+        if (stockByItemKey.isEmpty()) {
+            return;
+        }
+
         final String sql = """
             INSERT INTO exchange_stock (item_key, stock_count, updated_at)
             VALUES (?, ?, ?)
@@ -85,22 +100,57 @@ public final class SqliteExchangeStockRepository implements ExchangeStockReposit
                 stock_count = excluded.stock_count,
                 updated_at = excluded.updated_at
             """;
-        try (
-            Connection connection = this.databaseProvider.getConnection();
-            PreparedStatement statement = connection.prepareStatement(sql)
-        ) {
-            statement.setString(1, itemKey.value());
-            statement.setLong(2, Math.max(0L, stock));
-            statement.setLong(3, Instant.now().getEpochSecond());
-            statement.executeUpdate();
+
+        try (Connection connection = this.databaseProvider.getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                final long updatedAt = Instant.now().getEpochSecond();
+                for (final Map.Entry<ItemKey, Long> entry : stockByItemKey.entrySet()) {
+                    statement.setString(1, entry.getKey().value());
+                    statement.setLong(2, Math.max(0L, entry.getValue()));
+                    statement.setLong(3, updatedAt);
+                    statement.addBatch();
+                }
+                statement.executeBatch();
+                connection.commit();
+            } catch (final SQLException exception) {
+                connection.rollback();
+                throw exception;
+            }
         } catch (final SQLException exception) {
-            throw new IllegalStateException("Failed to set stock for " + itemKey.value(), exception);
+            throw new IllegalStateException("Failed to batch flush exchange stock", exception);
         }
     }
 
-    private void changeStock(final ItemKey itemKey, final int delta) {
-        final long current = this.getStock(itemKey);
-        final long updated = Math.max(0L, current + delta);
-        this.setStock(itemKey, updated);
+    private void changeStockAtomic(final ItemKey itemKey, final int delta) {
+        final String insertSql = "INSERT OR IGNORE INTO exchange_stock (item_key, stock_count, updated_at) VALUES (?, ?, ?)";
+        final String updateSql = "UPDATE exchange_stock SET stock_count = MAX(0, stock_count + ?), updated_at = ? WHERE item_key = ?";
+
+        try (Connection connection = this.databaseProvider.getConnection()) {
+            connection.setAutoCommit(false);
+            try (
+                PreparedStatement insertStatement = connection.prepareStatement(insertSql);
+                PreparedStatement updateStatement = connection.prepareStatement(updateSql)
+            ) {
+                final long updatedAt = Instant.now().getEpochSecond();
+
+                insertStatement.setString(1, itemKey.value());
+                insertStatement.setLong(2, 0L);
+                insertStatement.setLong(3, updatedAt);
+                insertStatement.executeUpdate();
+
+                updateStatement.setInt(1, delta);
+                updateStatement.setLong(2, updatedAt);
+                updateStatement.setString(3, itemKey.value());
+                updateStatement.executeUpdate();
+
+                connection.commit();
+            } catch (final SQLException exception) {
+                connection.rollback();
+                throw exception;
+            }
+        } catch (final SQLException exception) {
+            throw new IllegalStateException("Failed to atomically change stock for " + itemKey.value(), exception);
+        }
     }
 }
