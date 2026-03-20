@@ -56,7 +56,6 @@ import com.splatage.wild_economy.gui.ExchangeBrowseMenu;
 import com.splatage.wild_economy.gui.ExchangeItemDetailMenu;
 import com.splatage.wild_economy.gui.ExchangeRootMenu;
 import com.splatage.wild_economy.gui.ExchangeSubcategoryMenu;
-import com.splatage.wild_economy.gui.MenuSessionStore;
 import com.splatage.wild_economy.gui.ShopMenuListener;
 import com.splatage.wild_economy.gui.ShopMenuRouter;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
@@ -219,7 +218,6 @@ public final class ServiceRegistry {
 
         this.shopMenuRouter = new ShopMenuRouter(
             this.platformExecutor,
-            new MenuSessionStore(),
             rootMenu,
             subcategoryMenu,
             browseMenu,
@@ -235,8 +233,7 @@ public final class ServiceRegistry {
             rootMenu,
             subcategoryMenu,
             browseMenu,
-            itemDetailMenu,
-            this.shopMenuRouter
+            itemDetailMenu
         );
         this.plugin.getServer().getPluginManager().registerEvents(this.shopMenuListener, this.plugin);
     }
@@ -331,3 +328,4 @@ public final class ServiceRegistry {
         return new VaultEconomyGateway(registration.getProvider());
     }
 }
+

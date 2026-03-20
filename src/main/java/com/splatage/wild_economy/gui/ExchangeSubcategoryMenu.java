@@ -5,7 +5,6 @@ import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
 import java.util.List;
 import java.util.Objects;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -29,20 +28,23 @@ public final class ExchangeSubcategoryMenu {
     }
 
     public void open(final Player player, final ItemCategory category) {
-        final Inventory inventory = Bukkit.createInventory(null, 27, "Shop - " + category.displayName() + " Types");
+        final ShopMenuHolder holder = ShopMenuHolder.subcategory(category);
+        final Inventory inventory = holder.createInventory(27, "Shop - " + category.displayName() + " Types");
+
         inventory.setItem(10, this.button(Material.CHEST, "All"));
 
         final List<GeneratedItemCategory> subcategories = this.exchangeService.listVisibleSubcategories(category);
         for (int i = 0; i < subcategories.size() && i < SUBCATEGORY_SLOTS.length; i++) {
             final GeneratedItemCategory generatedItemCategory = subcategories.get(i);
-            inventory.setItem(SUBCATEGORY_SLOTS[i], this.button(
-                this.icon(generatedItemCategory),
-                generatedItemCategory.displayName()
-            ));
+            inventory.setItem(
+                SUBCATEGORY_SLOTS[i],
+                this.button(this.icon(generatedItemCategory), generatedItemCategory.displayName())
+            );
         }
 
         inventory.setItem(18, this.button(Material.ARROW, "Back"));
         inventory.setItem(22, this.button(Material.BARRIER, "Close"));
+
         player.openInventory(inventory);
     }
 
@@ -57,10 +59,12 @@ public final class ExchangeSubcategoryMenu {
             this.shopMenuRouter.openBrowse(player, category, null, 0, true);
             return;
         }
+
         if (rawSlot == 18) {
             this.shopMenuRouter.openRoot(player);
             return;
         }
+
         if (rawSlot == 22) {
             player.closeInventory();
             return;
@@ -98,10 +102,13 @@ public final class ExchangeSubcategoryMenu {
     private ItemStack button(final Material material, final String name) {
         final ItemStack stack = new ItemStack(material);
         final ItemMeta meta = stack.getItemMeta();
+
         if (meta != null) {
             meta.setDisplayName(name);
             stack.setItemMeta(meta);
         }
+
         return stack;
     }
 }
+

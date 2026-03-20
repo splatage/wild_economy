@@ -7,7 +7,6 @@ import com.splatage.wild_economy.exchange.service.ExchangeCatalogView;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
 import java.util.List;
 import java.util.Objects;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -35,7 +34,8 @@ public final class ExchangeBrowseMenu {
         final int page,
         final boolean viaSubcategory
     ) {
-        final Inventory inventory = Bukkit.createInventory(null, 54, this.title(category, generatedCategory));
+        final ShopMenuHolder holder = ShopMenuHolder.browse(category, generatedCategory, page, viaSubcategory);
+        final Inventory inventory = holder.createInventory(54, this.title(category, generatedCategory));
         final List<ExchangeCatalogView> entries = this.exchangeService.browseCategory(category, generatedCategory, page, 45);
 
         int slot = 0;
@@ -50,6 +50,7 @@ public final class ExchangeBrowseMenu {
         inventory.setItem(45, this.button(Material.ARROW, "Back"));
         inventory.setItem(49, this.button(Material.BARRIER, "Close"));
         inventory.setItem(53, this.button(Material.ARROW, "Next"));
+
         player.openInventory(inventory);
     }
 
@@ -71,6 +72,7 @@ public final class ExchangeBrowseMenu {
             if (clicked == null || clicked.getType() == Material.AIR) {
                 return;
             }
+
             final ItemKey itemKey = this.toItemKey(clicked.getType());
             this.shopMenuRouter.openDetail(player, itemKey);
             return;
@@ -102,6 +104,7 @@ public final class ExchangeBrowseMenu {
         final Material material = this.resolveMaterial(view.itemKey());
         final ItemStack stack = new ItemStack(material == null ? Material.BARRIER : material);
         final ItemMeta meta = stack.getItemMeta();
+
         if (meta != null) {
             meta.setDisplayName(view.displayName());
             meta.setLore(List.of(
@@ -111,16 +114,19 @@ public final class ExchangeBrowseMenu {
             ));
             stack.setItemMeta(meta);
         }
+
         return stack;
     }
 
     private ItemStack button(final Material material, final String name) {
         final ItemStack stack = new ItemStack(material);
         final ItemMeta meta = stack.getItemMeta();
+
         if (meta != null) {
             meta.setDisplayName(name);
             stack.setItemMeta(meta);
         }
+
         return stack;
     }
 
@@ -132,3 +138,4 @@ public final class ExchangeBrowseMenu {
         return new ItemKey("minecraft:" + material.name().toLowerCase());
     }
 }
+

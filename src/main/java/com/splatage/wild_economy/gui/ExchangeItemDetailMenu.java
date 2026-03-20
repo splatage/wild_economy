@@ -1,13 +1,14 @@
 package com.splatage.wild_economy.gui;
 
 import com.splatage.wild_economy.exchange.domain.BuyResult;
+import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
+import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.service.ExchangeItemView;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
 import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.util.List;
 import java.util.Objects;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -30,9 +31,24 @@ public final class ExchangeItemDetailMenu {
         this.shopMenuRouter = Objects.requireNonNull(shopMenuRouter, "shopMenuRouter");
     }
 
-    public void open(final Player player, final ItemKey itemKey, final int amount) {
+    public void open(
+        final Player player,
+        final ItemKey itemKey,
+        final int amount,
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory,
+        final int page,
+        final boolean viaSubcategory
+    ) {
         final ExchangeItemView view = this.exchangeService.getItemView(itemKey);
-        final Inventory inventory = Bukkit.createInventory(null, 27, "Buy - " + view.displayName());
+        final ShopMenuHolder holder = ShopMenuHolder.detail(
+            category,
+            generatedCategory,
+            page,
+            itemKey,
+            viaSubcategory
+        );
+        final Inventory inventory = holder.createInventory(27, "Buy - " + view.displayName());
 
         inventory.setItem(11, this.detailItem(view, amount));
         inventory.setItem(13, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 1"));
@@ -40,12 +56,18 @@ public final class ExchangeItemDetailMenu {
         inventory.setItem(15, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 64"));
         inventory.setItem(18, this.button(Material.ARROW, "Back"));
         inventory.setItem(22, this.button(Material.BARRIER, "Close"));
+
         player.openInventory(inventory);
     }
 
-    public void handleClick(final InventoryClickEvent event, final ItemKey itemKey) {
+    public void handleClick(final InventoryClickEvent event, final ShopMenuHolder holder) {
         event.setCancelled(true);
         if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+
+        final ItemKey itemKey = holder.currentItemKey();
+        if (itemKey == null) {
             return;
         }
 
@@ -54,6 +76,7 @@ public final class ExchangeItemDetailMenu {
             this.shopMenuRouter.goBack(player);
             return;
         }
+
         if (slot == 22) {
             player.closeInventory();
             return;
@@ -70,8 +93,17 @@ public final class ExchangeItemDetailMenu {
             this.platformExecutor.runOnPlayer(player, () -> {
                 final BuyResult result = this.exchangeService.buy(player.getUniqueId(), itemKey, amount);
                 player.sendMessage(result.message());
+
                 if (result.success()) {
-                    this.open(player, itemKey, 1);
+                    this.open(
+                        player,
+                        itemKey,
+                        1,
+                        holder.currentCategory(),
+                        holder.currentGeneratedCategory(),
+                        holder.currentPage(),
+                        holder.viaSubcategory()
+                    );
                 }
             });
         }
@@ -79,8 +111,12 @@ public final class ExchangeItemDetailMenu {
 
     private ItemStack detailItem(final ExchangeItemView view, final int amount) {
         final Material material = this.resolveMaterial(view.itemKey());
-        final ItemStack stack = new ItemStack(material == null ? Material.BARRIER : material, Math.max(1, Math.min(amount, 64)));
+        final ItemStack stack = new ItemStack(
+            material == null ? Material.BARRIER : material,
+            Math.max(1, Math.min(amount, 64))
+        );
         final ItemMeta meta = stack.getItemMeta();
+
         if (meta != null) {
             meta.setDisplayName(view.displayName());
             meta.setLore(List.of(
@@ -90,16 +126,19 @@ public final class ExchangeItemDetailMenu {
             ));
             stack.setItemMeta(meta);
         }
+
         return stack;
     }
 
     private ItemStack button(final Material material, final String name) {
         final ItemStack stack = new ItemStack(material);
         final ItemMeta meta = stack.getItemMeta();
+
         if (meta != null) {
             meta.setDisplayName(name);
             stack.setItemMeta(meta);
         }
+
         return stack;
     }
 
@@ -107,3 +146,4 @@ public final class ExchangeItemDetailMenu {
         return Material.matchMaterial(itemKey.value().replace("minecraft:", "").toUpperCase());
     }
 }
+
