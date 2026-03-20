@@ -5,5 +5,10 @@ public record GlobalConfig(
     int guiPageSize,
     String baseCommand,
     String adminCommand,
-    boolean debugLogging
+    boolean debugLogging,
+    boolean buyToHeldShulkerEnabled,
+    boolean buyToLookedAtContainerEnabled,
+    boolean buyToInventoryEnabled,
+    boolean buyDropAtFeetEnabled
 ) {}
+

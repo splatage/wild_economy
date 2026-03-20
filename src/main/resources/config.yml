@@ -13,3 +13,10 @@ commands:
 
 logging:
   debug: false
+
+buy-delivery:
+  use-held-shulker: false
+  use-looked-at-container: false
+  use-player-inventory: true
+  drop-at-feet: false
+

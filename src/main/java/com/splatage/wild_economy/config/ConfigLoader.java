@@ -35,7 +35,11 @@ public final class ConfigLoader {
             config.getInt("gui.page-size", 45),
             config.getString("commands.base-command", "shop"),
             config.getString("commands.admin-command", "shopadmin"),
-            config.getBoolean("logging.debug", false)
+            config.getBoolean("logging.debug", false),
+            config.getBoolean("buy-delivery.use-held-shulker", false),
+            config.getBoolean("buy-delivery.use-looked-at-container", false),
+            config.getBoolean("buy-delivery.use-player-inventory", true),
+            config.getBoolean("buy-delivery.drop-at-feet", false)
         );
     }
 
@@ -340,3 +344,4 @@ public final class ConfigLoader {
         }
     }
 }
+

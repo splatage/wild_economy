@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.exchange.service;
 
+import com.splatage.wild_economy.config.GlobalConfig;
 import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.EconomyResult;
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalog;
@@ -14,8 +15,13 @@ import com.splatage.wild_economy.exchange.item.ItemValidationService;
 import com.splatage.wild_economy.exchange.item.ValidationResult;
 import com.splatage.wild_economy.exchange.pricing.PricingService;
 import com.splatage.wild_economy.exchange.stock.StockService;
+import com.splatage.wild_economy.integration.protection.ContainerAccessResult;
+import com.splatage.wild_economy.integration.protection.ContainerAccessService;
+import com.splatage.wild_economy.integration.protection.ContainerAccessServices;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -23,13 +29,21 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.block.Barrel;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Chest;
+import org.bukkit.block.Lockable;
+import org.bukkit.block.ShulkerBox;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BlockStateMeta;
 
 public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
 
     private static final int MAX_BUY_AMOUNT = 64;
+    private static final int CONTAINER_TARGET_RANGE = 5;
     private static final Logger LOGGER = Logger.getLogger(ExchangeBuyServiceImpl.class.getName());
     private static final BigDecimal ZERO_MONEY = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
@@ -39,6 +53,8 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
     private final PricingService pricingService;
     private final EconomyGateway economyGateway;
     private final TransactionLogService transactionLogService;
+    private final GlobalConfig globalConfig;
+    private final ContainerAccessService containerAccessService;
 
     public ExchangeBuyServiceImpl(
         final ExchangeCatalog exchangeCatalog,
@@ -46,7 +62,30 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         final StockService stockService,
         final PricingService pricingService,
         final EconomyGateway economyGateway,
-        final TransactionLogService transactionLogService
+        final TransactionLogService transactionLogService,
+        final GlobalConfig globalConfig
+    ) {
+        this(
+            exchangeCatalog,
+            itemValidationService,
+            stockService,
+            pricingService,
+            economyGateway,
+            transactionLogService,
+            globalConfig,
+            ContainerAccessServices.createDefault()
+        );
+    }
+
+    ExchangeBuyServiceImpl(
+        final ExchangeCatalog exchangeCatalog,
+        final ItemValidationService itemValidationService,
+        final StockService stockService,
+        final PricingService pricingService,
+        final EconomyGateway economyGateway,
+        final TransactionLogService transactionLogService,
+        final GlobalConfig globalConfig,
+        final ContainerAccessService containerAccessService
     ) {
         this.exchangeCatalog = Objects.requireNonNull(exchangeCatalog, "exchangeCatalog");
         this.itemValidationService = Objects.requireNonNull(itemValidationService, "itemValidationService");
@@ -54,6 +93,8 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         this.pricingService = Objects.requireNonNull(pricingService, "pricingService");
         this.economyGateway = Objects.requireNonNull(economyGateway, "economyGateway");
         this.transactionLogService = Objects.requireNonNull(transactionLogService, "transactionLogService");
+        this.globalConfig = Objects.requireNonNull(globalConfig, "globalConfig");
+        this.containerAccessService = Objects.requireNonNull(containerAccessService, "containerAccessService");
     }
 
     @Override
@@ -72,6 +113,18 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
                 null,
                 RejectionReason.BUY_NOT_ALLOWED,
                 "Amount must be between 1 and " + MAX_BUY_AMOUNT
+            );
+        }
+
+        if (!this.hasAnyEnabledDeliveryTarget()) {
+            return new BuyResult(
+                false,
+                itemKey,
+                0,
+                null,
+                null,
+                RejectionReason.BUY_NOT_ALLOWED,
+                "No buy delivery destination is enabled in config"
             );
         }
 
@@ -116,19 +169,6 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             );
         }
 
-        final ItemStack toGive = new ItemStack(material, amount);
-        if (!this.canFit(player.getInventory(), toGive)) {
-            return new BuyResult(
-                false,
-                itemKey,
-                0,
-                quote.unitPrice(),
-                quote.totalPrice(),
-                RejectionReason.INVENTORY_FULL,
-                "Not enough inventory space"
-            );
-        }
-
         if (playerStocked && !this.stockService.tryConsume(itemKey, amount)) {
             return new BuyResult(
                 false,
@@ -157,12 +197,12 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             );
         }
 
-        final Map<Integer, ItemStack> leftovers = player.getInventory().addItem(toGive);
-        final int leftoverAmount = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
-        final int amountBought = Math.max(0, amount - leftoverAmount);
+        final DeliveryOutcome delivery = this.deliverPurchase(player, material, amount);
+        final int amountBought = delivery.amountDelivered();
+        final int undeliveredAmount = delivery.amountUndelivered();
 
-        if (leftoverAmount > 0 && playerStocked) {
-            this.stockService.addStock(itemKey, leftoverAmount);
+        if (undeliveredAmount > 0 && playerStocked) {
+            this.stockService.addStock(itemKey, undeliveredAmount);
         }
 
         if (amountBought <= 0) {
@@ -199,7 +239,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
                 quote.unitPrice(),
                 ZERO_MONEY,
                 RejectionReason.INVENTORY_FULL,
-                "Not enough inventory space"
+                "No enabled delivery destination had space for this purchase"
             );
         }
 
@@ -207,7 +247,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             .multiply(BigDecimal.valueOf(amountBought))
             .setScale(2, RoundingMode.HALF_UP);
 
-        if (leftoverAmount > 0) {
+        if (undeliveredAmount > 0) {
             final BigDecimal refund = quote.totalPrice().subtract(actualTotalPrice).setScale(2, RoundingMode.HALF_UP);
             if (refund.compareTo(BigDecimal.ZERO) > 0) {
                 final EconomyResult refundResult = this.economyGateway.deposit(playerId, refund);
@@ -218,7 +258,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
                         Level.SEVERE,
                         "Failed to automatically refund player "
                             + playerId
-                            + " after a partial purchase of "
+                            + " after a partially delivered purchase of "
                             + amountBought
                             + "/"
                             + amount
@@ -251,6 +291,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
                             + amountBought
                             + "x "
                             + entry.displayName()
+                            + this.formatDeliverySuffix(delivery)
                             + ", but the automatic refund for undelivered items failed. Please contact staff."
                     );
                 }
@@ -259,12 +300,200 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
 
         this.transactionLogService.logPurchase(playerId, itemKey, amountBought, quote.unitPrice(), actualTotalPrice);
 
-        final String message = amountBought == amount
-            ? "Bought " + amountBought + "x " + entry.displayName() + " for " + actualTotalPrice
-            : "Bought " + amountBought + "x " + entry.displayName() + " for " + actualTotalPrice
-                + " (inventory accepted fewer than requested)";
+        final String message;
+        if (amountBought == amount) {
+            message = "Bought "
+                + amountBought
+                + "x "
+                + entry.displayName()
+                + " for "
+                + actualTotalPrice
+                + this.formatDeliverySuffix(delivery);
+        } else {
+            message = "Bought "
+                + amountBought
+                + "x "
+                + entry.displayName()
+                + " for "
+                + actualTotalPrice
+                + this.formatDeliverySuffix(delivery)
+                + " (refunded "
+                + undeliveredAmount
+                + " undelivered item(s))";
+        }
 
         return new BuyResult(true, itemKey, amountBought, quote.unitPrice(), actualTotalPrice, null, message);
+    }
+
+    private boolean hasAnyEnabledDeliveryTarget() {
+        return this.globalConfig.buyToHeldShulkerEnabled()
+            || this.globalConfig.buyToLookedAtContainerEnabled()
+            || this.globalConfig.buyToInventoryEnabled()
+            || this.globalConfig.buyDropAtFeetEnabled();
+    }
+
+    private DeliveryOutcome deliverPurchase(final Player player, final Material material, final int amount) {
+        int remaining = amount;
+        final List<String> deliverySegments = new ArrayList<>(4);
+
+        if (this.globalConfig.buyToHeldShulkerEnabled() && remaining > 0) {
+            final DeliveryStepResult step = this.deliverToHeldShulker(player, material, remaining);
+            remaining -= step.amountDelivered();
+            this.appendDeliverySegment(deliverySegments, step.amountDelivered(), "held shulker");
+        }
+
+        if (this.globalConfig.buyToLookedAtContainerEnabled() && remaining > 0) {
+            final DeliveryStepResult step = this.deliverToLookedAtContainer(player, material, remaining);
+            remaining -= step.amountDelivered();
+            this.appendDeliverySegment(deliverySegments, step.amountDelivered(), step.targetLabel());
+        }
+
+        if (this.globalConfig.buyToInventoryEnabled() && remaining > 0) {
+            final int delivered = this.addAsMuchAsPossible(player.getInventory(), material, remaining);
+            remaining -= delivered;
+            this.appendDeliverySegment(deliverySegments, delivered, "inventory");
+        }
+
+        if (this.globalConfig.buyDropAtFeetEnabled() && remaining > 0) {
+            final ItemStack toDrop = new ItemStack(material, remaining);
+            player.getWorld().dropItem(player.getLocation(), toDrop);
+            this.appendDeliverySegment(deliverySegments, remaining, "dropped at feet");
+            remaining = 0;
+        }
+
+        return new DeliveryOutcome(amount - remaining, remaining, List.copyOf(deliverySegments));
+    }
+
+    private DeliveryStepResult deliverToHeldShulker(final Player player, final Material material, final int amount) {
+        final ItemStack held = player.getInventory().getItemInMainHand();
+        if (!this.isHeldShulkerItem(held)) {
+            return DeliveryStepResult.none();
+        }
+
+        final ItemStack updatedHeld = held.clone();
+        final BlockStateMeta updatedMeta = (BlockStateMeta) updatedHeld.getItemMeta();
+        if (updatedMeta == null || !(updatedMeta.getBlockState() instanceof ShulkerBox shulkerBox)) {
+            return DeliveryStepResult.none();
+        }
+
+        final int delivered = this.addAsMuchAsPossible(shulkerBox.getInventory(), material, amount);
+        if (delivered <= 0) {
+            return DeliveryStepResult.none();
+        }
+
+        updatedMeta.setBlockState(shulkerBox);
+        updatedHeld.setItemMeta(updatedMeta);
+        player.getInventory().setItemInMainHand(updatedHeld);
+        return new DeliveryStepResult(delivered, "held shulker");
+    }
+
+    private DeliveryStepResult deliverToLookedAtContainer(final Player player, final Material material, final int amount) {
+        final Block targetBlock = player.getTargetBlockExact(CONTAINER_TARGET_RANGE);
+        final SupportedContainerTarget target = this.resolveSupportedBlockTarget(targetBlock);
+        if (target == null) {
+            return DeliveryStepResult.none();
+        }
+
+        if (this.isLocked(target.state())) {
+            return DeliveryStepResult.none();
+        }
+
+        final ContainerAccessResult accessResult = this.containerAccessService.canAccessPlacedContainer(player, target.block());
+        if (!accessResult.allowed()) {
+            return DeliveryStepResult.none();
+        }
+
+        final int delivered = this.addAsMuchAsPossible(target.inventory(), material, amount);
+        if (delivered <= 0) {
+            return DeliveryStepResult.none();
+        }
+
+        return new DeliveryStepResult(delivered, target.description());
+    }
+
+    private int addAsMuchAsPossible(final Inventory inventory, final Material material, final int amount) {
+        if (amount <= 0) {
+            return 0;
+        }
+
+        final ItemStack toAdd = new ItemStack(material, amount);
+        final Map<Integer, ItemStack> leftovers = inventory.addItem(toAdd);
+        final int leftoverAmount = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
+        return Math.max(0, amount - leftoverAmount);
+    }
+
+    private SupportedContainerTarget resolveSupportedBlockTarget(final Block targetBlock) {
+        if (targetBlock == null) {
+            return null;
+        }
+
+        final BlockState state = targetBlock.getState();
+        final String description = this.describeTargetBlock(targetBlock);
+        if (state instanceof Chest chest) {
+            return new SupportedContainerTarget(targetBlock, state, chest.getInventory(), description);
+        }
+        if (state instanceof Barrel barrel) {
+            return new SupportedContainerTarget(targetBlock, state, barrel.getInventory(), description);
+        }
+        if (state instanceof ShulkerBox shulkerBox) {
+            return new SupportedContainerTarget(targetBlock, state, shulkerBox.getInventory(), description);
+        }
+        return null;
+    }
+
+    private boolean isHeldShulkerItem(final ItemStack stack) {
+        if (stack == null || stack.getType() == Material.AIR || !this.isShulkerBoxItem(stack.getType())) {
+            return false;
+        }
+        return stack.getItemMeta() instanceof BlockStateMeta blockStateMeta
+            && blockStateMeta.getBlockState() instanceof ShulkerBox;
+    }
+
+    private boolean isShulkerBoxItem(final Material material) {
+        return material != null && material.name().endsWith("SHULKER_BOX");
+    }
+
+    private boolean isLocked(final BlockState state) {
+        return state instanceof Lockable lockable && lockable.isLocked();
+    }
+
+    private String describeTargetBlock(final Block targetBlock) {
+        if (targetBlock == null) {
+            return "container";
+        }
+        return this.friendlyMaterialName(targetBlock.getType()).toLowerCase();
+    }
+
+    private String friendlyMaterialName(final Material material) {
+        final String[] parts = material.name().toLowerCase().split("_");
+        final StringBuilder builder = new StringBuilder();
+        for (final String part : parts) {
+            if (part.isEmpty()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(part.charAt(0)));
+            if (part.length() > 1) {
+                builder.append(part.substring(1));
+            }
+        }
+        return builder.toString();
+    }
+
+    private void appendDeliverySegment(final List<String> deliverySegments, final int amountDelivered, final String targetLabel) {
+        if (amountDelivered <= 0) {
+            return;
+        }
+        deliverySegments.add(amountDelivered + " to " + targetLabel);
+    }
+
+    private String formatDeliverySuffix(final DeliveryOutcome delivery) {
+        if (delivery.segments().isEmpty()) {
+            return "";
+        }
+        return " (delivered: " + String.join(", ", delivery.segments()) + ")";
     }
 
     private BigDecimal effectiveUnitPrice(final BigDecimal totalPrice, final int amount) {
@@ -275,31 +504,16 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         return totalPrice.divide(BigDecimal.valueOf(amount), 2, RoundingMode.HALF_UP);
     }
 
-    private boolean canFit(final Inventory inventory, final ItemStack itemStack) {
-        int remaining = itemStack.getAmount();
-        final int slotMax = Math.min(itemStack.getMaxStackSize(), inventory.getMaxStackSize());
+    private record DeliveryOutcome(int amountDelivered, int amountUndelivered, List<String> segments) {
+    }
 
-        for (final ItemStack existing : inventory.getStorageContents()) {
-            if (existing == null || existing.getType() == Material.AIR) {
-                remaining -= slotMax;
-                if (remaining <= 0) {
-                    return true;
-                }
-                continue;
-            }
-
-            if (!existing.isSimilar(itemStack)) {
-                continue;
-            }
-
-            final int existingSlotMax = Math.min(existing.getMaxStackSize(), slotMax);
-            final int freeSpace = Math.max(0, existingSlotMax - existing.getAmount());
-            remaining -= freeSpace;
-            if (remaining <= 0) {
-                return true;
-            }
+    private record DeliveryStepResult(int amountDelivered, String targetLabel) {
+        private static DeliveryStepResult none() {
+            return new DeliveryStepResult(0, "");
         }
+    }
 
-        return remaining <= 0;
+    private record SupportedContainerTarget(Block block, BlockState state, Inventory inventory, String description) {
     }
 }
+

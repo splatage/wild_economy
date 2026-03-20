@@ -185,7 +185,8 @@ public final class ServiceRegistry {
             this.stockService,
             this.pricingService,
             this.economyGateway,
-            this.transactionLogService
+            this.transactionLogService,
+            this.globalConfig
         );
 
         final ExchangeSellServiceImpl rawSellService = new ExchangeSellServiceImpl(
@@ -307,3 +308,4 @@ public final class ServiceRegistry {
         return new VaultEconomyGateway(registration.getProvider());
     }
 }
+
