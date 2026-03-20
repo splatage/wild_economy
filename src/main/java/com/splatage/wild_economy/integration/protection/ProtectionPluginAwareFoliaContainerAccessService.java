@@ -7,8 +7,7 @@ import org.bukkit.entity.Player;
 
 public final class ProtectionPluginAwareFoliaContainerAccessService implements ContainerAccessService {
 
-    private static final List<String> KNOWN_PROTECTION_PLUGINS = List.of(
-        "GriefPrevention",
+    private static final List<String> UNSUPPORTED_PROTECTION_PLUGINS = List.of(
         "PlotSquared",
         "Towny",
         "Lands",
@@ -41,7 +40,7 @@ public final class ProtectionPluginAwareFoliaContainerAccessService implements C
     }
 
     private String detectProtectionPlugin() {
-        for (final String pluginName : KNOWN_PROTECTION_PLUGINS) {
+        for (final String pluginName : UNSUPPORTED_PROTECTION_PLUGINS) {
             if (Bukkit.getPluginManager().isPluginEnabled(pluginName)) {
                 return pluginName;
             }
