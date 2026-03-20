@@ -1,3 +1,10 @@
+# sellcontainer protection patch files (against current `main`)
+
+Base inspected from current GitHub `main` where `ExchangeSellServiceImpl` already supports `/shop sellcontainer` for targeted chest/barrel/shulker blocks and held shulkers, with no placed-container protection gate yet. The current wiring still constructs `ExchangeSellServiceImpl` with the existing 6-argument constructor, so this patch keeps that constructor intact and adds an internal default protection service to avoid unnecessary bootstrap drift.
+
+## File: `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeSellServiceImpl.java`
+
+```java
 package com.splatage.wild_economy.exchange.service;
 
 import com.splatage.wild_economy.economy.EconomyGateway;
@@ -522,3 +529,108 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
     ) {
     }
 }
+```
+
+## File: `src/main/java/com/splatage/wild_economy/integration/protection/ContainerAccessService.java`
+
+```java
+package com.splatage.wild_economy.integration.protection;
+
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.entity.Player;
+
+public interface ContainerAccessService {
+
+    ContainerAccessResult canAccessPlacedContainer(Player player, Block targetBlock, BlockState blockState);
+}
+```
+
+## File: `src/main/java/com/splatage/wild_economy/integration/protection/ContainerAccessResult.java`
+
+```java
+package com.splatage.wild_economy.integration.protection;
+
+public record ContainerAccessResult(boolean allowed, String message) {
+
+    public static ContainerAccessResult allow() {
+        return new ContainerAccessResult(true, "");
+    }
+
+    public static ContainerAccessResult deny(final String message) {
+        return new ContainerAccessResult(false, message);
+    }
+}
+```
+
+## File: `src/main/java/com/splatage/wild_economy/integration/protection/EventDrivenContainerAccessService.java`
+
+```java
+package com.splatage.wild_economy.integration.protection;
+
+import org.bukkit.Bukkit;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Lockable;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
+
+public final class EventDrivenContainerAccessService implements ContainerAccessService {
+
+    private static final String PROTECTED_CONTAINER_MESSAGE = "You cannot use /shop sellcontainer on that protected container.";
+    private static final String LOCKED_CONTAINER_MESSAGE = "That container is locked.";
+    private static final String UNKNOWN_CONTAINER_MESSAGE = "Could not verify access to that container, so the sale was cancelled.";
+
+    @Override
+    public ContainerAccessResult canAccessPlacedContainer(
+        final Player player,
+        final Block targetBlock,
+        final BlockState blockState
+    ) {
+        if (player == null || targetBlock == null || blockState == null) {
+            return ContainerAccessResult.deny(UNKNOWN_CONTAINER_MESSAGE);
+        }
+
+        if (blockState instanceof Lockable lockable && lockable.isLocked()) {
+            return ContainerAccessResult.deny(LOCKED_CONTAINER_MESSAGE);
+        }
+
+        final PlayerInteractEvent probe = new PlayerInteractEvent(
+            player,
+            Action.RIGHT_CLICK_BLOCK,
+            player.getInventory().getItemInMainHand(),
+            targetBlock,
+            BlockFace.UP,
+            EquipmentSlot.HAND
+        );
+
+        try {
+            Bukkit.getPluginManager().callEvent(probe);
+        } catch (final Throwable ignored) {
+            return ContainerAccessResult.deny(UNKNOWN_CONTAINER_MESSAGE);
+        }
+
+        if (this.isDenied(probe)) {
+            return ContainerAccessResult.deny(PROTECTED_CONTAINER_MESSAGE);
+        }
+
+        return ContainerAccessResult.allow();
+    }
+
+    @SuppressWarnings("deprecation")
+    private boolean isDenied(final PlayerInteractEvent probe) {
+        return probe.useInteractedBlock() == Event.Result.DENY || probe.isCancelled();
+    }
+}
+```
+
+## Notes
+
+* Held shulkers are intentionally unchanged: they are treated as belonging to the player holding them, so this protection check only applies to placed world containers.
+* This is a conservative generic integration. It probes normal block-use permission through a synthetic interact check before any inventory sale planning or mutation.
+* The existing 6-argument constructor is preserved so current `ServiceRegistry` wiring does not need to change.
+* A later pass can replace `EventDrivenContainerAccessService` with a registry of plugin-specific adapters if needed.
