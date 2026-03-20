@@ -206,7 +206,7 @@ public final class ServiceRegistry {
         final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService);
         final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService);
         final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService);
-        final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService);
+        final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService, this.platformExecutor);
 
         this.shopMenuRouter = new ShopMenuRouter(
             this.platformExecutor,
@@ -230,9 +230,9 @@ public final class ServiceRegistry {
 
     public void registerCommands() {
         final ShopOpenSubcommand openSubcommand = new ShopOpenSubcommand(this.shopMenuRouter);
-        final ShopSellHandSubcommand sellHandSubcommand = new ShopSellHandSubcommand(this.exchangeService);
-        final ShopSellAllSubcommand sellAllSubcommand = new ShopSellAllSubcommand(this.exchangeService);
-        final ShopSellContainerSubcommand sellContainerSubcommand = new ShopSellContainerSubcommand(this.exchangeService);
+        final ShopSellHandSubcommand sellHandSubcommand = new ShopSellHandSubcommand(this.exchangeService, this.platformExecutor);
+        final ShopSellAllSubcommand sellAllSubcommand = new ShopSellAllSubcommand(this.exchangeService, this.platformExecutor);
+        final ShopSellContainerSubcommand sellContainerSubcommand = new ShopSellContainerSubcommand(this.exchangeService, this.platformExecutor);
 
         final PluginCommand shop = this.plugin.getCommand("shop");
         if (shop != null) {

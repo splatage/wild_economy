@@ -3,6 +3,7 @@ package com.splatage.wild_economy.command;
 import com.splatage.wild_economy.exchange.domain.SellContainerResult;
 import com.splatage.wild_economy.exchange.domain.SellLineResult;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
+import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.util.List;
 import java.util.Objects;
 import org.bukkit.command.Command;
@@ -13,9 +14,11 @@ import org.bukkit.entity.Player;
 public final class ShopSellContainerSubcommand implements CommandExecutor {
 
     private final ExchangeService exchangeService;
+    private final PlatformExecutor platformExecutor;
 
-    public ShopSellContainerSubcommand(final ExchangeService exchangeService) {
+    public ShopSellContainerSubcommand(final ExchangeService exchangeService, final PlatformExecutor platformExecutor) {
         this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
+        this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
     }
 
     public boolean execute(final CommandSender sender) {
@@ -24,10 +27,12 @@ public final class ShopSellContainerSubcommand implements CommandExecutor {
             return true;
         }
 
-        final SellContainerResult result = this.exchangeService.sellContainer(player.getUniqueId());
-        player.sendMessage(result.message());
-        this.sendSoldLines(player, result.soldLines());
-        this.sendSkippedLines(player, result.skippedDescriptions());
+        this.platformExecutor.runOnPlayer(player, () -> {
+            final SellContainerResult result = this.exchangeService.sellContainer(player.getUniqueId());
+            player.sendMessage(result.message());
+            this.sendSoldLines(player, result.soldLines());
+            this.sendSkippedLines(player, result.skippedDescriptions());
+        });
         return true;
     }
 

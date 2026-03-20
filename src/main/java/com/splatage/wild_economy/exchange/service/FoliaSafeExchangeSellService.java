@@ -9,15 +9,22 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import org.bukkit.Bukkit;
+import org.bukkit.block.Barrel;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Chest;
+import org.bukkit.block.ShulkerBox;
 import org.bukkit.entity.Player;
 
 public final class FoliaSafeExchangeSellService implements ExchangeSellService {
+
+    private static final int CONTAINER_TARGET_RANGE = 5;
 
     private static final String OFF_THREAD_MESSAGE =
         "Sell action was attempted off the owning player thread. Please try again.";
 
     private static final String CROSS_REGION_CONTAINER_MESSAGE =
-        "Container selling is not available from this execution context. Move away from region borders and try again.";
+        "Looked-at container is outside the current owned region. Move closer and try again.";
 
     private final ExchangeSellService delegate;
 
@@ -64,7 +71,8 @@ public final class FoliaSafeExchangeSellService implements ExchangeSellService {
             return new SellContainerResult(false, List.of(), BigDecimal.ZERO, List.of(), null, OFF_THREAD_MESSAGE);
         }
 
-        if (!Bukkit.isOwnedByCurrentRegion(player.getLocation(), 1)) {
+        final Block targetBlock = player.getTargetBlockExact(CONTAINER_TARGET_RANGE);
+        if (this.isSupportedContainerTarget(targetBlock) && !Bukkit.isOwnedByCurrentRegion(targetBlock.getLocation())) {
             return new SellContainerResult(
                 false,
                 List.of(),
@@ -76,5 +84,14 @@ public final class FoliaSafeExchangeSellService implements ExchangeSellService {
         }
 
         return this.delegate.sellContainer(playerId);
+    }
+
+    private boolean isSupportedContainerTarget(final Block targetBlock) {
+        if (targetBlock == null) {
+            return false;
+        }
+
+        final BlockState state = targetBlock.getState();
+        return state instanceof Chest || state instanceof Barrel || state instanceof ShulkerBox;
     }
 }

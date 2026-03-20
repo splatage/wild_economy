@@ -2,6 +2,7 @@ package com.splatage.wild_economy.command;
 
 import com.splatage.wild_economy.exchange.domain.SellHandResult;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
+import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.util.Objects;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -11,9 +12,11 @@ import org.bukkit.entity.Player;
 public final class ShopSellHandSubcommand implements CommandExecutor {
 
     private final ExchangeService exchangeService;
+    private final PlatformExecutor platformExecutor;
 
-    public ShopSellHandSubcommand(final ExchangeService exchangeService) {
+    public ShopSellHandSubcommand(final ExchangeService exchangeService, final PlatformExecutor platformExecutor) {
         this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
+        this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
     }
 
     public boolean execute(final CommandSender sender) {
@@ -22,8 +25,10 @@ public final class ShopSellHandSubcommand implements CommandExecutor {
             return true;
         }
 
-        final SellHandResult result = this.exchangeService.sellHand(player.getUniqueId());
-        player.sendMessage(result.message());
+        this.platformExecutor.runOnPlayer(player, () -> {
+            final SellHandResult result = this.exchangeService.sellHand(player.getUniqueId());
+            player.sendMessage(result.message());
+        });
         return true;
     }
 

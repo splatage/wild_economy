@@ -4,6 +4,7 @@ import com.splatage.wild_economy.exchange.domain.BuyResult;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.service.ExchangeItemView;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
+import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.util.List;
 import java.util.Objects;
 import org.bukkit.Bukkit;
@@ -17,10 +18,12 @@ import org.bukkit.inventory.meta.ItemMeta;
 public final class ExchangeItemDetailMenu {
 
     private final ExchangeService exchangeService;
+    private final PlatformExecutor platformExecutor;
     private ShopMenuRouter shopMenuRouter;
 
-    public ExchangeItemDetailMenu(final ExchangeService exchangeService) {
+    public ExchangeItemDetailMenu(final ExchangeService exchangeService, final PlatformExecutor platformExecutor) {
         this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
+        this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -64,11 +67,13 @@ public final class ExchangeItemDetailMenu {
         };
 
         if (amount > 0) {
-            final BuyResult result = this.exchangeService.buy(player.getUniqueId(), itemKey, amount);
-            player.sendMessage(result.message());
-            if (result.success()) {
-                this.open(player, itemKey, 1);
-            }
+            this.platformExecutor.runOnPlayer(player, () -> {
+                final BuyResult result = this.exchangeService.buy(player.getUniqueId(), itemKey, amount);
+                player.sendMessage(result.message());
+                if (result.success()) {
+                    this.open(player, itemKey, 1);
+                }
+            });
         }
     }
 
