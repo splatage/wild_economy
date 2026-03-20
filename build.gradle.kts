@@ -24,9 +24,10 @@ dependencies {
 
     implementation("org.xerial:sqlite-jdbc:3.46.1.3")
     implementation("com.mysql:mysql-connector-j:9.0.0")
+    implementation("com.zaxxer:HikariCP:5.1.0")
 }
 
-tasks.withType<JavaCompile>().configureEach {
+tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     options.release.set(21)
 }
@@ -36,7 +37,7 @@ tasks.processResources {
     filesMatching("plugin.yml") {
         expand(
             mapOf(
-                "version" to project.version
+                "version" to project.version,
             )
         )
     }

@@ -71,8 +71,8 @@ public final class ServiceRegistry {
     private ExchangeItemsConfig exchangeItemsConfig;
 
     private DatabaseProvider databaseProvider;
-    private ExchangeCatalog exchangeCatalog;
 
+    private ExchangeCatalog exchangeCatalog;
     private ItemNormalizer itemNormalizer;
     private ItemValidationService itemValidationService;
 
@@ -84,12 +84,10 @@ public final class ServiceRegistry {
     private PricingService pricingService;
     private TransactionLogService transactionLogService;
     private StockTurnoverService stockTurnoverService;
-
     private ExchangeBrowseService exchangeBrowseService;
     private ExchangeBuyService exchangeBuyService;
     private ExchangeSellService exchangeSellService;
     private ExchangeService exchangeService;
-
     private ShopMenuRouter shopMenuRouter;
 
     public ServiceRegistry(final WildEconomyPlugin plugin) {
@@ -98,6 +96,7 @@ public final class ServiceRegistry {
 
     public void initialize() {
         final ConfigLoader configLoader = new ConfigLoader(this.plugin);
+
         this.globalConfig = configLoader.loadGlobalConfig();
         this.databaseConfig = configLoader.loadDatabaseConfig();
         this.exchangeItemsConfig = configLoader.loadExchangeItemsConfig();
@@ -148,13 +147,25 @@ public final class ServiceRegistry {
         final CanonicalItemRules canonicalItemRules = new CanonicalItemRules();
         this.itemNormalizer = new BukkitItemNormalizer(canonicalItemRules);
         this.itemValidationService = new ItemValidationServiceImpl(this.itemNormalizer, this.exchangeCatalog);
-
         this.economyGateway = this.resolveVaultEconomy();
 
         final StockStateResolver stockStateResolver = new StockStateResolver();
-        this.stockService = new StockServiceImpl(this.exchangeStockRepository, this.exchangeCatalog, stockStateResolver);
+        this.stockService = new StockServiceImpl(
+            this.exchangeStockRepository,
+            this.exchangeCatalog,
+            stockStateResolver,
+            this.plugin.getLogger(),
+            this.databaseProvider.dialect(),
+            this.databaseConfig.mysqlMaximumPoolSize()
+        );
+
         this.pricingService = new PricingServiceImpl(this.exchangeCatalog);
-        this.transactionLogService = new TransactionLogServiceImpl(this.exchangeTransactionRepository);
+        this.transactionLogService = new TransactionLogServiceImpl(
+            this.exchangeTransactionRepository,
+            this.plugin.getLogger(),
+            this.databaseProvider.dialect(),
+            this.databaseConfig.mysqlMaximumPoolSize()
+        );
 
         this.stockTurnoverService = new StockTurnoverServiceImpl(
             this.exchangeCatalog,
@@ -194,6 +205,7 @@ public final class ServiceRegistry {
         final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService);
 
         this.shopMenuRouter = new ShopMenuRouter(rootMenu, subcategoryMenu, browseMenu, itemDetailMenu);
+
         rootMenu.setShopMenuRouter(this.shopMenuRouter);
         subcategoryMenu.setShopMenuRouter(this.shopMenuRouter);
         browseMenu.setShopMenuRouter(this.shopMenuRouter);
@@ -232,6 +244,16 @@ public final class ServiceRegistry {
 
     public void shutdown() {
         this.plugin.getServer().getScheduler().cancelTasks(this.plugin);
+
+        if (this.transactionLogService != null) {
+            this.transactionLogService.shutdown();
+        }
+        if (this.stockService != null) {
+            this.stockService.shutdown();
+        }
+        if (this.databaseProvider != null) {
+            this.databaseProvider.close();
+        }
     }
 
     private EconomyGateway resolveVaultEconomy() {
