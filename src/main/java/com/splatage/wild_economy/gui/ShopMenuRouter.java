@@ -6,6 +6,7 @@ import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.util.Objects;
 import java.util.UUID;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 public final class ShopMenuRouter {
@@ -97,7 +98,6 @@ public final class ShopMenuRouter {
             itemKey,
             viaSubcategory
         ));
-
         this.platformExecutor.runOnPlayer(player, () -> this.exchangeItemDetailMenu.open(player, itemKey, 1));
     }
 
@@ -140,5 +140,23 @@ public final class ShopMenuRouter {
 
     public void clearSession(final UUID playerId) {
         this.menuSessionStore.remove(playerId);
+    }
+
+    public void closeAllShopViews() {
+        for (final Player player : Bukkit.getOnlinePlayers()) {
+            this.clearSession(player.getUniqueId());
+
+            final String title = player.getOpenInventory().getTitle();
+            if (!isShopViewTitle(title)) {
+                continue;
+            }
+
+            this.platformExecutor.runOnPlayer(player, player::closeInventory);
+        }
+    }
+
+    public static boolean isShopViewTitle(final String title) {
+        return title != null
+            && (title.equals("Shop") || title.startsWith("Shop - ") || title.startsWith("Buy - "));
     }
 }

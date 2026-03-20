@@ -33,10 +33,7 @@ public final class ShopMenuListener implements Listener {
     @EventHandler
     public void onInventoryClick(final InventoryClickEvent event) {
         final String title = event.getView().getTitle();
-        if (title == null) {
-            return;
-        }
-        if (!(title.equals("Shop") || title.startsWith("Shop - ") || title.startsWith("Buy - "))) {
+        if (!ShopMenuRouter.isShopViewTitle(title)) {
             return;
         }
 
@@ -45,7 +42,7 @@ public final class ShopMenuListener implements Listener {
 
         final MenuSession session = this.shopMenuRouter.getSession(event.getWhoClicked().getUniqueId());
         if (session == null) {
-            if (title.equals("Shop")) {
+            if ("Shop".equals(title)) {
                 this.exchangeRootMenu.handleClick(event);
             }
             return;
@@ -74,6 +71,7 @@ public final class ShopMenuListener implements Listener {
                     this.exchangeItemDetailMenu.handleClick(event, session.currentItemKey());
                     return;
                 }
+
                 final var current = event.getInventory().getItem(11);
                 if (current != null && current.getType() != Material.AIR) {
                     this.exchangeItemDetailMenu.handleClick(event, this.toItemKey(current.getType()));

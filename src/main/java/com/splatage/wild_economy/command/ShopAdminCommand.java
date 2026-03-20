@@ -39,9 +39,14 @@ public final class ShopAdminCommand implements CommandExecutor {
     }
 
     private boolean handleReload(final CommandSender sender) {
-        this.plugin.reloadConfig();
-        this.plugin.getBootstrap().reload();
-        sender.sendMessage("wild_economy reloaded.");
+        try {
+            this.plugin.reloadConfig();
+            this.plugin.getBootstrap().reload();
+            sender.sendMessage("wild_economy reloaded.");
+        } catch (final RuntimeException exception) {
+            this.plugin.getLogger().log(Level.SEVERE, "Failed to reload wild_economy", exception);
+            sender.sendMessage("Reload failed. Check console for details.");
+        }
         return true;
     }
 

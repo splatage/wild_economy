@@ -5,6 +5,8 @@ import com.splatage.wild_economy.WildEconomyPlugin;
 public final class PluginBootstrap {
 
     private final WildEconomyPlugin plugin;
+    private final Object lifecycleLock = new Object();
+
     private ServiceRegistry services;
 
     public PluginBootstrap(final WildEconomyPlugin plugin) {
@@ -12,22 +14,43 @@ public final class PluginBootstrap {
     }
 
     public void enable() {
-        this.services = new ServiceRegistry(this.plugin);
-        this.services.initialize();
-        this.services.registerCommands();
-        this.services.registerTasks();
+        synchronized (this.lifecycleLock) {
+            if (this.services != null) {
+                return;
+            }
+            this.services = this.startServices();
+        }
     }
 
     public void reload() {
-        if (this.services != null) {
-            this.services.shutdown();
+        synchronized (this.lifecycleLock) {
+            final ServiceRegistry current = this.services;
+            this.services = null;
+
+            if (current != null) {
+                current.shutdown();
+            }
+
+            this.services = this.startServices();
         }
-        this.enable();
     }
 
     public void disable() {
-        if (this.services != null) {
-            this.services.shutdown();
+        synchronized (this.lifecycleLock) {
+            final ServiceRegistry current = this.services;
+            this.services = null;
+
+            if (current != null) {
+                current.shutdown();
+            }
         }
+    }
+
+    private ServiceRegistry startServices() {
+        final ServiceRegistry registry = new ServiceRegistry(this.plugin);
+        registry.initialize();
+        registry.registerCommands();
+        registry.registerTasks();
+        return registry;
     }
 }
