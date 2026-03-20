@@ -9,10 +9,9 @@ import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
 import com.splatage.wild_economy.exchange.domain.StockSnapshot;
 import com.splatage.wild_economy.exchange.domain.StockState;
 import com.splatage.wild_economy.exchange.stock.StockService;
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
 
@@ -34,41 +33,79 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
         final int page,
         final int pageSize
     ) {
+        final List<ExchangeCatalogEntry> indexedEntries = this.indexedEntries(category, generatedCategory);
+        if (indexedEntries.isEmpty()) {
+            return List.of();
+        }
+
         final int safePage = Math.max(0, page);
         final int safePageSize = Math.max(1, pageSize);
+        final long toSkip = (long) safePage * safePageSize;
 
-        return this.visibleEntries(category, generatedCategory).stream()
-            .skip((long) safePage * safePageSize)
-            .limit(safePageSize)
-            .map(visible -> new ExchangeCatalogView(
-                visible.entry().itemKey(),
-                visible.entry().displayName(),
-                visible.entry().buyPrice(),
-                visible.snapshot().stockCount(),
-                visible.snapshot().stockState()
-            ))
-            .collect(Collectors.toList());
+        long visibleIndex = 0L;
+        final List<ExchangeCatalogView> pageEntries = new ArrayList<>(safePageSize);
+
+        for (final ExchangeCatalogEntry entry : indexedEntries) {
+            final StockSnapshot snapshot = this.stockService.getSnapshot(entry.itemKey());
+            if (!this.isPurchasableNow(entry, snapshot)) {
+                continue;
+            }
+            if (visibleIndex++ < toSkip) {
+                continue;
+            }
+
+            pageEntries.add(new ExchangeCatalogView(
+                entry.itemKey(),
+                entry.displayName(),
+                entry.buyPrice(),
+                snapshot.stockCount(),
+                snapshot.stockState()
+            ));
+
+            if (pageEntries.size() >= safePageSize) {
+                break;
+            }
+        }
+
+        return List.copyOf(pageEntries);
     }
 
     @Override
-    public int countVisibleItems(final ItemCategory category, final GeneratedItemCategory generatedCategory) {
-        return this.visibleEntries(category, generatedCategory).size();
+    public int countVisibleItems(
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory
+    ) {
+        int count = 0;
+        for (final ExchangeCatalogEntry entry : this.indexedEntries(category, generatedCategory)) {
+            final StockSnapshot snapshot = this.stockService.getSnapshot(entry.itemKey());
+            if (this.isPurchasableNow(entry, snapshot)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     @Override
     public List<GeneratedItemCategory> listVisibleSubcategories(final ItemCategory category) {
-        return this.visibleEntries(category, null).stream()
-            .map(visible -> visible.entry().generatedCategory())
-            .filter(Objects::nonNull)
-            .distinct()
-            .sorted(Comparator.comparing(GeneratedItemCategory::displayName))
-            .collect(Collectors.toList());
+        final List<GeneratedItemCategory> indexedSubcategories = this.exchangeCatalog.generatedSubcategories(category);
+        if (indexedSubcategories.isEmpty()) {
+            return List.of();
+        }
+
+        final List<GeneratedItemCategory> visibleSubcategories = new ArrayList<>();
+        for (final GeneratedItemCategory generatedCategory : indexedSubcategories) {
+            if (this.hasVisibleEntries(category, generatedCategory)) {
+                visibleSubcategories.add(generatedCategory);
+            }
+        }
+        return List.copyOf(visibleSubcategories);
     }
 
     @Override
     public ExchangeItemView getItemView(final ItemKey itemKey) {
         final ExchangeCatalogEntry entry = this.exchangeCatalog.get(itemKey)
             .orElseThrow(() -> new IllegalStateException("Missing catalog entry for " + itemKey.value()));
+
         final StockSnapshot snapshot = this.stockService.getSnapshot(itemKey);
         return new ExchangeItemView(
             itemKey,
@@ -81,35 +118,38 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
         );
     }
 
-    private List<VisibleEntry> visibleEntries(
+    private List<ExchangeCatalogEntry> indexedEntries(
         final ItemCategory category,
         final GeneratedItemCategory generatedCategory
     ) {
-        final List<ExchangeCatalogEntry> rawEntries = generatedCategory == null
+        return generatedCategory == null
             ? this.exchangeCatalog.byCategory(category)
             : this.exchangeCatalog.byCategoryAndGeneratedCategory(category, generatedCategory);
-
-        return rawEntries.stream()
-            .map(entry -> new VisibleEntry(entry, this.stockService.getSnapshot(entry.itemKey())))
-            .filter(this::isPurchasableNow)
-            .sorted(Comparator.comparing(visible -> visible.entry().displayName(), String.CASE_INSENSITIVE_ORDER))
-            .collect(Collectors.toList());
     }
 
-    private boolean isPurchasableNow(final VisibleEntry visible) {
-        final ExchangeCatalogEntry entry = visible.entry();
+    private boolean hasVisibleEntries(
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory
+    ) {
+        for (final ExchangeCatalogEntry entry : this.exchangeCatalog.byCategoryAndGeneratedCategory(category, generatedCategory)) {
+            final StockSnapshot snapshot = this.stockService.getSnapshot(entry.itemKey());
+            if (this.isPurchasableNow(entry, snapshot)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isPurchasableNow(
+        final ExchangeCatalogEntry entry,
+        final StockSnapshot snapshot
+    ) {
         if (!entry.buyEnabled()) {
             return false;
         }
         if (entry.policyMode() == ItemPolicyMode.UNLIMITED_BUY) {
             return true;
         }
-        return visible.snapshot().stockState() != StockState.OUT_OF_STOCK;
-    }
-
-    private record VisibleEntry(
-        ExchangeCatalogEntry entry,
-        StockSnapshot snapshot
-    ) {
+        return snapshot.stockState() != StockState.OUT_OF_STOCK;
     }
 }
