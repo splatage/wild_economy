@@ -3,8 +3,6 @@ package com.splatage.wild_economy.integration.protection;
 import org.bukkit.Bukkit;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockState;
-import org.bukkit.block.Lockable;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
@@ -14,21 +12,12 @@ import org.bukkit.inventory.EquipmentSlot;
 public final class EventDrivenContainerAccessService implements ContainerAccessService {
 
     private static final String PROTECTED_CONTAINER_MESSAGE = "You cannot use /shop sellcontainer on that protected container.";
-    private static final String LOCKED_CONTAINER_MESSAGE = "That container is locked.";
     private static final String UNKNOWN_CONTAINER_MESSAGE = "Could not verify access to that container, so the sale was cancelled.";
 
     @Override
-    public ContainerAccessResult canAccessPlacedContainer(
-        final Player player,
-        final Block targetBlock,
-        final BlockState blockState
-    ) {
-        if (player == null || targetBlock == null || blockState == null) {
+    public ContainerAccessResult canAccessPlacedContainer(final Player player, final Block targetBlock) {
+        if (player == null || targetBlock == null) {
             return ContainerAccessResult.deny(UNKNOWN_CONTAINER_MESSAGE);
-        }
-
-        if (blockState instanceof Lockable lockable && lockable.isLocked()) {
-            return ContainerAccessResult.deny(LOCKED_CONTAINER_MESSAGE);
         }
 
         final PlayerInteractEvent probe = new PlayerInteractEvent(

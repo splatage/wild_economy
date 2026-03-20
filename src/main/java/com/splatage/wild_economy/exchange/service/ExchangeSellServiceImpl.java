@@ -26,11 +26,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
+import org.bukkit.block.Lockable;
 import org.bukkit.block.ShulkerBox;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -40,6 +42,7 @@ import org.bukkit.inventory.meta.BlockStateMeta;
 public final class ExchangeSellServiceImpl implements ExchangeSellService {
 
     private static final int CONTAINER_TARGET_RANGE = 5;
+    private static final String LOCKED_CONTAINER_MESSAGE = "That container is locked.";
 
     private final ExchangeCatalog exchangeCatalog;
     private final ItemValidationService itemValidationService;
@@ -196,20 +199,13 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         final Block targetBlock = player.getTargetBlockExact(CONTAINER_TARGET_RANGE);
         final SupportedContainerTarget blockTarget = this.resolveSupportedBlockTarget(targetBlock);
         if (blockTarget != null) {
-            final ContainerAccessResult accessResult = this.containerAccessService.canAccessPlacedContainer(
-                player,
-                blockTarget.block(),
-                blockTarget.state()
-            );
+            if (this.isLocked(blockTarget.state())) {
+                return this.deniedPlacedContainer(blockTarget.description(), LOCKED_CONTAINER_MESSAGE);
+            }
+
+            final ContainerAccessResult accessResult = this.canAccessPlacedContainer(player, blockTarget.block());
             if (!accessResult.allowed()) {
-                return new SellContainerResult(
-                    false,
-                    List.of(),
-                    BigDecimal.ZERO,
-                    List.of(),
-                    blockTarget.description(),
-                    accessResult.message()
-                );
+                return this.deniedPlacedContainer(blockTarget.description(), accessResult.message());
             }
 
             return this.sellFromInventoryTarget(playerId, blockTarget.inventory(), blockTarget.description());
@@ -228,6 +224,49 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
             null,
             "No supported container found. Look at a chest, barrel, or shulker, or hold a shulker box."
         );
+    }
+
+    boolean isSupportedPlacedContainerTarget(final Block targetBlock) {
+        return this.resolveSupportedBlockTarget(targetBlock) != null;
+    }
+
+    ContainerAccessResult canAccessPlacedContainer(final Player player, final Block targetBlock) {
+        return this.containerAccessService.canAccessPlacedContainer(player, targetBlock);
+    }
+
+    SellContainerResult buildPlacedContainerDeniedResult(final Block targetBlock, final String message) {
+        return this.deniedPlacedContainer(this.describeTargetBlock(targetBlock), message);
+    }
+
+    SellContainerResult sellPlacedContainerAtLocation(final UUID playerId, final Location location) {
+        if (location == null || location.getWorld() == null) {
+            return new SellContainerResult(
+                false,
+                List.of(),
+                BigDecimal.ZERO,
+                List.of(),
+                null,
+                "No supported container found. It may have changed before the sale completed."
+            );
+        }
+
+        final SupportedContainerTarget blockTarget = this.resolveSupportedBlockTarget(location.getBlock());
+        if (blockTarget == null) {
+            return new SellContainerResult(
+                false,
+                List.of(),
+                BigDecimal.ZERO,
+                List.of(),
+                null,
+                "No supported container found. It may have changed before the sale completed."
+            );
+        }
+
+        if (this.isLocked(blockTarget.state())) {
+            return this.deniedPlacedContainer(blockTarget.description(), LOCKED_CONTAINER_MESSAGE);
+        }
+
+        return this.sellFromInventoryTarget(playerId, blockTarget.inventory(), blockTarget.description());
     }
 
     private SellContainerResult sellFromInventoryTarget(
@@ -458,7 +497,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         }
 
         final BlockState state = targetBlock.getState();
-        final String description = this.friendlyMaterialName(targetBlock.getType()).toLowerCase();
+        final String description = this.describeTargetBlock(targetBlock);
 
         if (state instanceof Chest chest) {
             return new SupportedContainerTarget(targetBlock, state, chest.getInventory(), description);
@@ -486,6 +525,28 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
 
     private boolean isShulkerBoxItem(final Material material) {
         return material != null && material.name().endsWith("SHULKER_BOX");
+    }
+
+    private boolean isLocked(final BlockState state) {
+        return state instanceof Lockable lockable && lockable.isLocked();
+    }
+
+    private SellContainerResult deniedPlacedContainer(final String targetDescription, final String message) {
+        return new SellContainerResult(
+            false,
+            List.of(),
+            BigDecimal.ZERO,
+            List.of(),
+            targetDescription,
+            message
+        );
+    }
+
+    private String describeTargetBlock(final Block targetBlock) {
+        if (targetBlock == null) {
+            return null;
+        }
+        return this.friendlyMaterialName(targetBlock.getType()).toLowerCase();
     }
 
     private String friendlyMaterialName(final Material material) {

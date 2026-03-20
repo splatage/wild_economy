@@ -1,8 +1,8 @@
 package com.splatage.wild_economy.platform;
 
-import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import java.util.Objects;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -25,6 +25,23 @@ public final class PaperFoliaPlatformExecutor implements PlatformExecutor {
         }
 
         player.getScheduler().run(this.plugin, scheduledTask -> task.run(), null);
+    }
+
+    @Override
+    public void runOnLocation(final Location location, final Runnable task) {
+        Objects.requireNonNull(location, "location");
+        Objects.requireNonNull(task, "task");
+
+        if (location.getWorld() == null) {
+            throw new IllegalArgumentException("location.world");
+        }
+
+        if (Bukkit.isOwnedByCurrentRegion(location)) {
+            task.run();
+            return;
+        }
+
+        this.plugin.getServer().getRegionScheduler().execute(this.plugin, location, task);
     }
 
     @Override

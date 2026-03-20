@@ -42,6 +42,7 @@ import com.splatage.wild_economy.exchange.service.ExchangeSellService;
 import com.splatage.wild_economy.exchange.service.ExchangeSellServiceImpl;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
 import com.splatage.wild_economy.exchange.service.ExchangeServiceImpl;
+import com.splatage.wild_economy.exchange.service.FoliaContainerSellCoordinator;
 import com.splatage.wild_economy.exchange.service.FoliaSafeExchangeBuyService;
 import com.splatage.wild_economy.exchange.service.FoliaSafeExchangeSellService;
 import com.splatage.wild_economy.exchange.service.TransactionLogService;
@@ -92,6 +93,7 @@ public final class ServiceRegistry {
     private ExchangeSellService exchangeSellService;
     private ExchangeService exchangeService;
     private ShopMenuRouter shopMenuRouter;
+    private FoliaContainerSellCoordinator foliaContainerSellCoordinator;
 
     public ServiceRegistry(final WildEconomyPlugin plugin) {
         this.plugin = plugin;
@@ -186,7 +188,7 @@ public final class ServiceRegistry {
             this.transactionLogService
         );
 
-        final ExchangeSellService rawSellService = new ExchangeSellServiceImpl(
+        final ExchangeSellServiceImpl rawSellService = new ExchangeSellServiceImpl(
             this.exchangeCatalog,
             this.itemValidationService,
             this.stockService,
@@ -201,6 +203,11 @@ public final class ServiceRegistry {
             this.exchangeBrowseService,
             this.exchangeBuyService,
             this.exchangeSellService
+        );
+        this.foliaContainerSellCoordinator = new FoliaContainerSellCoordinator(
+            this.platformExecutor,
+            this.exchangeService,
+            rawSellService
         );
 
         final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService);
@@ -232,7 +239,9 @@ public final class ServiceRegistry {
         final ShopOpenSubcommand openSubcommand = new ShopOpenSubcommand(this.shopMenuRouter);
         final ShopSellHandSubcommand sellHandSubcommand = new ShopSellHandSubcommand(this.exchangeService, this.platformExecutor);
         final ShopSellAllSubcommand sellAllSubcommand = new ShopSellAllSubcommand(this.exchangeService, this.platformExecutor);
-        final ShopSellContainerSubcommand sellContainerSubcommand = new ShopSellContainerSubcommand(this.exchangeService, this.platformExecutor);
+        final ShopSellContainerSubcommand sellContainerSubcommand = new ShopSellContainerSubcommand(
+            this.foliaContainerSellCoordinator
+        );
 
         final PluginCommand shop = this.plugin.getCommand("shop");
         if (shop != null) {
