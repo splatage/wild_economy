@@ -39,7 +39,7 @@ If access is denied, the command must:
 * not change stock
 * not remove items
 
-Held shulker-box selling is **not** part of the claims-protection problem in the same way, because that container item is already in the player's possession. This feature primarily targets **world block containers**.
+Held shulker-box selling is **not** part of the claims-protection problem in the same way, because that container item is already in the player's possession. This feature applies only to **placed world containers**.
 
 ---
 
@@ -297,13 +297,13 @@ These adapters should remain optional and only activate when the corresponding p
 
 ## 10. v1 access policy
 
-### World containers
+### Placed world containers
 
 `/shop sellcontainer` must require explicit access approval.
 
 ### Held shulker items
 
-Held shulker items do not require a claims check, because they are not world-owned block containers in the same sense.
+Held shulker items are treated as belonging to the player holding them and do not require a claims or owner check in v1.
 
 ### Double chests
 
@@ -312,6 +312,8 @@ Treat as normal chest access. No separate UX or scope change is required.
 ### Protected but viewable edge cases
 
 If a plugin allows visual interaction but restricts take/use semantics, the plugin-specific adapter should decide. Until then, the generic v1 implementation should prefer **deny over risky allow**.
+
+## 11.plementation should prefer **deny over risky allow**.
 
 ---
 
