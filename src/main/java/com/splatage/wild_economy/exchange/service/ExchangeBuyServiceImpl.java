@@ -14,11 +14,15 @@ import com.splatage.wild_economy.exchange.item.ItemValidationService;
 import com.splatage.wild_economy.exchange.item.ValidationResult;
 import com.splatage.wild_economy.exchange.pricing.PricingService;
 import com.splatage.wild_economy.exchange.stock.StockService;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
@@ -52,6 +56,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         if (player == null) {
             return new BuyResult(false, itemKey, 0, null, null, RejectionReason.INTERNAL_ERROR, "Player is not online");
         }
+
         if (amount <= 0) {
             return new BuyResult(false, itemKey, 0, null, null, RejectionReason.BUY_NOT_ALLOWED, "Amount must be positive");
         }
@@ -70,33 +75,125 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         }
 
         final BuyQuote quote = this.pricingService.quoteBuy(itemKey, amount, snapshot);
-        final var balance = this.economyGateway.getBalance(playerId);
+        final BigDecimal balance = this.economyGateway.getBalance(playerId);
         if (balance.compareTo(quote.totalPrice()) < 0) {
-            return new BuyResult(false, itemKey, 0, quote.unitPrice(), quote.totalPrice(), RejectionReason.INSUFFICIENT_FUNDS, "Not enough money");
+            return new BuyResult(
+                false,
+                itemKey,
+                0,
+                quote.unitPrice(),
+                quote.totalPrice(),
+                RejectionReason.INSUFFICIENT_FUNDS,
+                "Not enough money"
+            );
         }
 
         final Material material = Material.matchMaterial(itemKey.value().replace("minecraft:", "").toUpperCase());
         if (material == null || material == Material.AIR) {
-            return new BuyResult(false, itemKey, 0, quote.unitPrice(), quote.totalPrice(), RejectionReason.INTERNAL_ERROR, "Invalid material mapping");
+            return new BuyResult(
+                false,
+                itemKey,
+                0,
+                quote.unitPrice(),
+                quote.totalPrice(),
+                RejectionReason.INTERNAL_ERROR,
+                "Invalid material mapping"
+            );
         }
 
         final ItemStack toGive = new ItemStack(material, amount);
-        if (player.getInventory().firstEmpty() == -1) {
-            return new BuyResult(false, itemKey, 0, quote.unitPrice(), quote.totalPrice(), RejectionReason.INVENTORY_FULL, "Inventory is full");
+        if (!this.canFit(player.getInventory(), toGive)) {
+            return new BuyResult(
+                false,
+                itemKey,
+                0,
+                quote.unitPrice(),
+                quote.totalPrice(),
+                RejectionReason.INVENTORY_FULL,
+                "Not enough inventory space"
+            );
         }
 
         final EconomyResult withdrawal = this.economyGateway.withdraw(playerId, quote.totalPrice());
         if (!withdrawal.success()) {
-            return new BuyResult(false, itemKey, 0, quote.unitPrice(), quote.totalPrice(), RejectionReason.INTERNAL_ERROR, withdrawal.message());
+            return new BuyResult(
+                false,
+                itemKey,
+                0,
+                quote.unitPrice(),
+                quote.totalPrice(),
+                RejectionReason.INTERNAL_ERROR,
+                withdrawal.message()
+            );
         }
 
-        player.getInventory().addItem(toGive);
+        final Map<Integer, ItemStack> leftovers = player.getInventory().addItem(toGive);
+        final int leftoverAmount = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
+        final int amountBought = Math.max(0, amount - leftoverAmount);
+
+        if (amountBought <= 0) {
+            this.economyGateway.deposit(playerId, quote.totalPrice());
+            return new BuyResult(
+                false,
+                itemKey,
+                0,
+                quote.unitPrice(),
+                BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
+                RejectionReason.INVENTORY_FULL,
+                "Not enough inventory space"
+            );
+        }
+
+        final BigDecimal actualTotalPrice = quote.unitPrice()
+            .multiply(BigDecimal.valueOf(amountBought))
+            .setScale(2, RoundingMode.HALF_UP);
+
+        if (leftoverAmount > 0) {
+            final BigDecimal refund = quote.totalPrice().subtract(actualTotalPrice).setScale(2, RoundingMode.HALF_UP);
+            if (refund.compareTo(BigDecimal.ZERO) > 0) {
+                this.economyGateway.deposit(playerId, refund);
+            }
+        }
+
         if (entry.policyMode() == ItemPolicyMode.PLAYER_STOCKED) {
-            this.stockService.removeStock(itemKey, amount);
+            this.stockService.removeStock(itemKey, amountBought);
         }
-        this.transactionLogService.logPurchase(playerId, itemKey, amount, quote.unitPrice(), quote.totalPrice());
 
-        final String message = "Bought " + amount + "x " + entry.displayName() + " for " + quote.totalPrice();
-        return new BuyResult(true, itemKey, amount, quote.unitPrice(), quote.totalPrice(), null, message);
+        this.transactionLogService.logPurchase(playerId, itemKey, amountBought, quote.unitPrice(), actualTotalPrice);
+
+        final String message = amountBought == amount
+            ? "Bought " + amountBought + "x " + entry.displayName() + " for " + actualTotalPrice
+            : "Bought " + amountBought + "x " + entry.displayName() + " for " + actualTotalPrice
+                + " (inventory accepted fewer than requested)";
+
+        return new BuyResult(true, itemKey, amountBought, quote.unitPrice(), actualTotalPrice, null, message);
+    }
+
+    private boolean canFit(final Inventory inventory, final ItemStack itemStack) {
+        int remaining = itemStack.getAmount();
+        final int slotMax = Math.min(itemStack.getMaxStackSize(), inventory.getMaxStackSize());
+
+        for (final ItemStack existing : inventory.getStorageContents()) {
+            if (existing == null || existing.getType() == Material.AIR) {
+                remaining -= slotMax;
+                if (remaining <= 0) {
+                    return true;
+                }
+                continue;
+            }
+
+            if (!existing.isSimilar(itemStack)) {
+                continue;
+            }
+
+            final int existingSlotMax = Math.min(existing.getMaxStackSize(), slotMax);
+            final int freeSpace = Math.max(0, existingSlotMax - existing.getAmount());
+            remaining -= freeSpace;
+            if (remaining <= 0) {
+                return true;
+            }
+        }
+
+        return remaining <= 0;
     }
 }

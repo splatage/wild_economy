@@ -33,7 +33,7 @@ public final class ShopCommand implements CommandExecutor {
             case "sellhand" -> this.sellHandSubcommand.execute(sender);
             case "sellall" -> this.sellAllSubcommand.execute(sender);
             default -> {
-                sender.sendMessage("Unknown subcommand. Use /shop, /shop sellhand, or /shop sellall.");
+                sender.sendMessage("Unknown subcommand. Use /shop, /shop sellhand, /shop sellall, /sellhand, or /sellall.");
                 yield true;
             }
         };

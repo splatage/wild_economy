@@ -4,20 +4,32 @@ main: com.splatage.wild_economy.WildEconomyPlugin
 api-version: '1.21'
 author: splatage
 description: Curated Exchange-first economy plugin for Minecraft
+
 depend:
-- Vault
+  - Vault
+
 softdepend:
-- Essentials
+  - Essentials
+
 commands:
   shop:
     description: Open the shop or use sell commands.
     usage: /shop [sellhand|sellall]
     aliases: [exchange]
     permission: wild_economy.shop
+  sellhand:
+    description: Sell the item in your hand to the Exchange.
+    usage: /sellhand
+    permission: wild_economy.shop.sell
+  sellall:
+    description: Sell all sellable items in your inventory to the Exchange.
+    usage: /sellall
+    permission: wild_economy.shop.sell
   shopadmin:
     description: Admin commands for wild_economy.
     usage: /shopadmin <reload|generatecatalog>
     permission: wild_economy.admin
+
 permissions:
   wild_economy.shop:
     description: Allows use of player shop commands.

@@ -218,13 +218,27 @@ public final class ServiceRegistry {
     }
 
     public void registerCommands() {
+        final ShopOpenSubcommand openSubcommand = new ShopOpenSubcommand(this.shopMenuRouter);
+        final ShopSellHandSubcommand sellHandSubcommand = new ShopSellHandSubcommand(this.exchangeService);
+        final ShopSellAllSubcommand sellAllSubcommand = new ShopSellAllSubcommand(this.exchangeService);
+
         final PluginCommand shop = this.plugin.getCommand("shop");
         if (shop != null) {
             shop.setExecutor(new ShopCommand(
-                new ShopOpenSubcommand(this.shopMenuRouter),
-                new ShopSellHandSubcommand(this.exchangeService),
-                new ShopSellAllSubcommand(this.exchangeService)
+                openSubcommand,
+                sellHandSubcommand,
+                sellAllSubcommand
             ));
+        }
+
+        final PluginCommand sellHand = this.plugin.getCommand("sellhand");
+        if (sellHand != null) {
+            sellHand.setExecutor(sellHandSubcommand);
+        }
+
+        final PluginCommand sellAll = this.plugin.getCommand("sellall");
+        if (sellAll != null) {
+            sellAll.setExecutor(sellAllSubcommand);
         }
 
         final PluginCommand shopAdmin = this.plugin.getCommand("shopadmin");
