@@ -1,24 +1,16 @@
-# wild_economy P0 persistence patch set
+# wild_economy cumulative P0 + P1 + P2 patch set
 
-Stage: **P0 partial**
+Stage: **cumulative replacement pack**
 
-This patch set applies the locked database-design direction to the current repo shape without rewriting the whole plugin at once.
+This document is a single full-file replacement set that folds together the intended changes from:
 
-Included in this slice:
+* **P0** persistence/off-main-thread foundation
+* **P1** browse/index precomputation
+* **P2** batched stock flushes, atomic stock mutation, and stock metrics
 
-* Hikari-backed `DatabaseProvider`
-* in-memory authoritative stock cache in `StockServiceImpl`
-* async stock persistence queue with backend-aware worker sizing
-* async transaction logging queue
-* repository preload method for startup stock cache loading
-* `ServiceRegistry` wiring and shutdown flush/close behavior
+Use this pack when you want to avoid regressions caused by pasting later full files over earlier patched files.
 
-Not yet included in this slice:
-
-* precomputed browse indexes
-* atomic SQL stock mutation/delta updates
-* batch flush/snapshot metrics
-* deeper buy/sell path rework beyond what the cached `StockService` and async `TransactionLogService` already improve
+If you overwrite the listed repo paths with the files below, you should end up with one consistent cumulative state rather than a mix of partially-overwritten stages.
 
 ---
 
@@ -79,6 +71,86 @@ tasks.build {
 }
 ```
 
+## File: `src/main/java/com/splatage/wild_economy/persistence/DatabaseProvider.java`
+
+```java
+package com.splatage.wild_economy.persistence;
+
+import com.splatage.wild_economy.config.DatabaseConfig;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Objects;
+
+public final class DatabaseProvider implements AutoCloseable {
+
+    private final DatabaseDialect dialect;
+    private final HikariDataSource dataSource;
+
+    public DatabaseProvider(final DatabaseConfig config) {
+        Objects.requireNonNull(config, "config");
+
+        final String backend = config.backend().toLowerCase();
+        final HikariConfig hikariConfig = new HikariConfig();
+
+        if ("sqlite".equals(backend)) {
+            this.dialect = DatabaseDialect.SQLITE;
+
+            final Path sqlitePath = Path.of(config.sqliteFile()).toAbsolutePath();
+            final Path parent = sqlitePath.getParent();
+            if (parent != null) {
+                parent.toFile().mkdirs();
+            }
+
+            hikariConfig.setJdbcUrl("jdbc:sqlite:" + sqlitePath);
+            hikariConfig.setMaximumPoolSize(1);
+            hikariConfig.setMinimumIdle(1);
+            hikariConfig.setPoolName("wild-economy-sqlite");
+            hikariConfig.setConnectionTestQuery("SELECT 1");
+        } else if ("mysql".equals(backend)) {
+            this.dialect = DatabaseDialect.MYSQL;
+
+            hikariConfig.setJdbcUrl(
+                "jdbc:mysql://"
+                    + config.mysqlHost()
+                    + ":"
+                    + config.mysqlPort()
+                    + "/"
+                    + config.mysqlDatabase()
+                    + "?useSSL="
+                    + config.mysqlSsl()
+                    + "&allowPublicKeyRetrieval=true"
+                    + "&serverTimezone=UTC"
+            );
+            hikariConfig.setUsername(config.mysqlUsername());
+            hikariConfig.setPassword(config.mysqlPassword());
+            hikariConfig.setMaximumPoolSize(Math.max(2, config.mysqlMaximumPoolSize()));
+            hikariConfig.setMinimumIdle(1);
+            hikariConfig.setPoolName("wild-economy-mysql");
+        } else {
+            throw new IllegalStateException("Unsupported database backend: " + config.backend());
+        }
+
+        this.dataSource = new HikariDataSource(hikariConfig);
+    }
+
+    public DatabaseDialect dialect() {
+        return this.dialect;
+    }
+
+    public Connection getConnection() throws SQLException {
+        return this.dataSource.getConnection();
+    }
+
+    @Override
+    public void close() {
+        this.dataSource.close();
+    }
+}
+```
+
 ## File: `src/main/java/com/splatage/wild_economy/exchange/repository/ExchangeStockRepository.java`
 
 ```java
@@ -100,117 +172,8 @@ public interface ExchangeStockRepository {
     void decrementStock(ItemKey itemKey, int amount);
 
     void setStock(ItemKey itemKey, long stock);
-}
-```
 
-## File: `src/main/java/com/splatage/wild_economy/exchange/repository/mysql/MysqlExchangeStockRepository.java`
-
-```java
-package com.splatage.wild_economy.exchange.repository.mysql;
-
-import com.splatage.wild_economy.exchange.domain.ItemKey;
-import com.splatage.wild_economy.exchange.repository.ExchangeStockRepository;
-import com.splatage.wild_economy.persistence.DatabaseProvider;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.time.Instant;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
-
-public final class MysqlExchangeStockRepository implements ExchangeStockRepository {
-
-    private final DatabaseProvider databaseProvider;
-
-    public MysqlExchangeStockRepository(final DatabaseProvider databaseProvider) {
-        this.databaseProvider = Objects.requireNonNull(databaseProvider, "databaseProvider");
-    }
-
-    @Override
-    public long getStock(final ItemKey itemKey) {
-        final String sql = "SELECT stock_count FROM exchange_stock WHERE item_key = ?";
-        try (
-            Connection connection = this.databaseProvider.getConnection();
-            PreparedStatement statement = connection.prepareStatement(sql)
-        ) {
-            statement.setString(1, itemKey.value());
-            try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    return resultSet.getLong("stock_count");
-                }
-                return 0L;
-            }
-        } catch (final SQLException exception) {
-            throw new IllegalStateException("Failed to load stock for " + itemKey.value(), exception);
-        }
-    }
-
-    @Override
-    public Map<ItemKey, Long> getStocks(final Iterable<ItemKey> itemKeys) {
-        final Map<ItemKey, Long> result = new LinkedHashMap<>();
-        for (final ItemKey itemKey : itemKeys) {
-            result.put(itemKey, this.getStock(itemKey));
-        }
-        return result;
-    }
-
-    @Override
-    public Map<ItemKey, Long> loadAllStocks() {
-        final String sql = "SELECT item_key, stock_count FROM exchange_stock";
-        final Map<ItemKey, Long> result = new LinkedHashMap<>();
-        try (
-            Connection connection = this.databaseProvider.getConnection();
-            PreparedStatement statement = connection.prepareStatement(sql);
-            ResultSet resultSet = statement.executeQuery()
-        ) {
-            while (resultSet.next()) {
-                result.put(new ItemKey(resultSet.getString("item_key")), resultSet.getLong("stock_count"));
-            }
-            return result;
-        } catch (final SQLException exception) {
-            throw new IllegalStateException("Failed to load exchange stock cache", exception);
-        }
-    }
-
-    @Override
-    public void incrementStock(final ItemKey itemKey, final int amount) {
-        this.changeStock(itemKey, amount);
-    }
-
-    @Override
-    public void decrementStock(final ItemKey itemKey, final int amount) {
-        this.changeStock(itemKey, -amount);
-    }
-
-    @Override
-    public void setStock(final ItemKey itemKey, final long stock) {
-        final String sql = """
-            INSERT INTO exchange_stock (item_key, stock_count, updated_at)
-            VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                stock_count = VALUES(stock_count),
-                updated_at = VALUES(updated_at)
-            """;
-        try (
-            Connection connection = this.databaseProvider.getConnection();
-            PreparedStatement statement = connection.prepareStatement(sql)
-        ) {
-            statement.setString(1, itemKey.value());
-            statement.setLong(2, Math.max(0L, stock));
-            statement.setLong(3, Instant.now().getEpochSecond());
-            statement.executeUpdate();
-        } catch (final SQLException exception) {
-            throw new IllegalStateException("Failed to set stock for " + itemKey.value(), exception);
-        }
-    }
-
-    private void changeStock(final ItemKey itemKey, final int delta) {
-        final long current = this.getStock(itemKey);
-        final long updated = Math.max(0L, current + delta);
-        this.setStock(itemKey, updated);
-    }
+    void flushStocks(Map<ItemKey, Long> stockByItemKey);
 }
 ```
 
@@ -287,16 +250,31 @@ public final class SqliteExchangeStockRepository implements ExchangeStockReposit
 
     @Override
     public void incrementStock(final ItemKey itemKey, final int amount) {
-        this.changeStock(itemKey, amount);
+        if (amount <= 0) {
+            return;
+        }
+        this.changeStockAtomic(itemKey, amount);
     }
 
     @Override
     public void decrementStock(final ItemKey itemKey, final int amount) {
-        this.changeStock(itemKey, -amount);
+        if (amount <= 0) {
+            return;
+        }
+        this.changeStockAtomic(itemKey, -amount);
     }
 
     @Override
     public void setStock(final ItemKey itemKey, final long stock) {
+        this.flushStocks(Map.of(itemKey, stock));
+    }
+
+    @Override
+    public void flushStocks(final Map<ItemKey, Long> stockByItemKey) {
+        if (stockByItemKey.isEmpty()) {
+            return;
+        }
+
         final String sql = """
             INSERT INTO exchange_stock (item_key, stock_count, updated_at)
             VALUES (?, ?, ?)
@@ -304,23 +282,219 @@ public final class SqliteExchangeStockRepository implements ExchangeStockReposit
                 stock_count = excluded.stock_count,
                 updated_at = excluded.updated_at
             """;
+
+        try (Connection connection = this.databaseProvider.getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                final long updatedAt = Instant.now().getEpochSecond();
+                for (final Map.Entry<ItemKey, Long> entry : stockByItemKey.entrySet()) {
+                    statement.setString(1, entry.getKey().value());
+                    statement.setLong(2, Math.max(0L, entry.getValue()));
+                    statement.setLong(3, updatedAt);
+                    statement.addBatch();
+                }
+                statement.executeBatch();
+                connection.commit();
+            } catch (final SQLException exception) {
+                connection.rollback();
+                throw exception;
+            }
+        } catch (final SQLException exception) {
+            throw new IllegalStateException("Failed to batch flush exchange stock", exception);
+        }
+    }
+
+    private void changeStockAtomic(final ItemKey itemKey, final int delta) {
+        final String insertSql = "INSERT OR IGNORE INTO exchange_stock (item_key, stock_count, updated_at) VALUES (?, ?, ?)";
+        final String updateSql = "UPDATE exchange_stock SET stock_count = MAX(0, stock_count + ?), updated_at = ? WHERE item_key = ?";
+
+        try (Connection connection = this.databaseProvider.getConnection()) {
+            connection.setAutoCommit(false);
+            try (
+                PreparedStatement insertStatement = connection.prepareStatement(insertSql);
+                PreparedStatement updateStatement = connection.prepareStatement(updateSql)
+            ) {
+                final long updatedAt = Instant.now().getEpochSecond();
+
+                insertStatement.setString(1, itemKey.value());
+                insertStatement.setLong(2, 0L);
+                insertStatement.setLong(3, updatedAt);
+                insertStatement.executeUpdate();
+
+                updateStatement.setInt(1, delta);
+                updateStatement.setLong(2, updatedAt);
+                updateStatement.setString(3, itemKey.value());
+                updateStatement.executeUpdate();
+
+                connection.commit();
+            } catch (final SQLException exception) {
+                connection.rollback();
+                throw exception;
+            }
+        } catch (final SQLException exception) {
+            throw new IllegalStateException("Failed to atomically change stock for " + itemKey.value(), exception);
+        }
+    }
+}
+```
+
+## File: `src/main/java/com/splatage/wild_economy/exchange/repository/mysql/MysqlExchangeStockRepository.java`
+
+```java
+package com.splatage.wild_economy.exchange.repository.mysql;
+
+import com.splatage.wild_economy.exchange.domain.ItemKey;
+import com.splatage.wild_economy.exchange.repository.ExchangeStockRepository;
+import com.splatage.wild_economy.persistence.DatabaseProvider;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+
+public final class MysqlExchangeStockRepository implements ExchangeStockRepository {
+
+    private final DatabaseProvider databaseProvider;
+
+    public MysqlExchangeStockRepository(final DatabaseProvider databaseProvider) {
+        this.databaseProvider = Objects.requireNonNull(databaseProvider, "databaseProvider");
+    }
+
+    @Override
+    public long getStock(final ItemKey itemKey) {
+        final String sql = "SELECT stock_count FROM exchange_stock WHERE item_key = ?";
         try (
             Connection connection = this.databaseProvider.getConnection();
             PreparedStatement statement = connection.prepareStatement(sql)
         ) {
             statement.setString(1, itemKey.value());
-            statement.setLong(2, Math.max(0L, stock));
-            statement.setLong(3, Instant.now().getEpochSecond());
-            statement.executeUpdate();
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getLong("stock_count");
+                }
+                return 0L;
+            }
         } catch (final SQLException exception) {
-            throw new IllegalStateException("Failed to set stock for " + itemKey.value(), exception);
+            throw new IllegalStateException("Failed to load stock for " + itemKey.value(), exception);
         }
     }
 
-    private void changeStock(final ItemKey itemKey, final int delta) {
-        final long current = this.getStock(itemKey);
-        final long updated = Math.max(0L, current + delta);
-        this.setStock(itemKey, updated);
+    @Override
+    public Map<ItemKey, Long> getStocks(final Iterable<ItemKey> itemKeys) {
+        final Map<ItemKey, Long> result = new LinkedHashMap<>();
+        for (final ItemKey itemKey : itemKeys) {
+            result.put(itemKey, this.getStock(itemKey));
+        }
+        return result;
+    }
+
+    @Override
+    public Map<ItemKey, Long> loadAllStocks() {
+        final String sql = "SELECT item_key, stock_count FROM exchange_stock";
+        final Map<ItemKey, Long> result = new LinkedHashMap<>();
+        try (
+            Connection connection = this.databaseProvider.getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql);
+            ResultSet resultSet = statement.executeQuery()
+        ) {
+            while (resultSet.next()) {
+                result.put(new ItemKey(resultSet.getString("item_key")), resultSet.getLong("stock_count"));
+            }
+            return result;
+        } catch (final SQLException exception) {
+            throw new IllegalStateException("Failed to load exchange stock cache", exception);
+        }
+    }
+
+    @Override
+    public void incrementStock(final ItemKey itemKey, final int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        this.changeStockAtomic(itemKey, amount);
+    }
+
+    @Override
+    public void decrementStock(final ItemKey itemKey, final int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        this.changeStockAtomic(itemKey, -amount);
+    }
+
+    @Override
+    public void setStock(final ItemKey itemKey, final long stock) {
+        this.flushStocks(Map.of(itemKey, stock));
+    }
+
+    @Override
+    public void flushStocks(final Map<ItemKey, Long> stockByItemKey) {
+        if (stockByItemKey.isEmpty()) {
+            return;
+        }
+
+        final String sql = """
+            INSERT INTO exchange_stock (item_key, stock_count, updated_at)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                stock_count = VALUES(stock_count),
+                updated_at = VALUES(updated_at)
+            """;
+
+        try (Connection connection = this.databaseProvider.getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                final long updatedAt = Instant.now().getEpochSecond();
+                for (final Map.Entry<ItemKey, Long> entry : stockByItemKey.entrySet()) {
+                    statement.setString(1, entry.getKey().value());
+                    statement.setLong(2, Math.max(0L, entry.getValue()));
+                    statement.setLong(3, updatedAt);
+                    statement.addBatch();
+                }
+                statement.executeBatch();
+                connection.commit();
+            } catch (final SQLException exception) {
+                connection.rollback();
+                throw exception;
+            }
+        } catch (final SQLException exception) {
+            throw new IllegalStateException("Failed to batch flush exchange stock", exception);
+        }
+    }
+
+    private void changeStockAtomic(final ItemKey itemKey, final int delta) {
+        final String insertSql = "INSERT IGNORE INTO exchange_stock (item_key, stock_count, updated_at) VALUES (?, ?, ?)";
+        final String updateSql = "UPDATE exchange_stock SET stock_count = GREATEST(0, stock_count + ?), updated_at = ? WHERE item_key = ?";
+
+        try (Connection connection = this.databaseProvider.getConnection()) {
+            connection.setAutoCommit(false);
+            try (
+                PreparedStatement insertStatement = connection.prepareStatement(insertSql);
+                PreparedStatement updateStatement = connection.prepareStatement(updateSql)
+            ) {
+                final long updatedAt = Instant.now().getEpochSecond();
+
+                insertStatement.setString(1, itemKey.value());
+                insertStatement.setLong(2, 0L);
+                insertStatement.setLong(3, updatedAt);
+                insertStatement.executeUpdate();
+
+                updateStatement.setInt(1, delta);
+                updateStatement.setLong(2, updatedAt);
+                updateStatement.setString(3, itemKey.value());
+                updateStatement.executeUpdate();
+
+                connection.commit();
+            } catch (final SQLException exception) {
+                connection.rollback();
+                throw exception;
+            }
+        } catch (final SQLException exception) {
+            throw new IllegalStateException("Failed to atomically change stock for " + itemKey.value(), exception);
+        }
     }
 }
 ```
@@ -343,7 +517,29 @@ public interface StockService {
 
     void removeStock(ItemKey itemKey, int amount);
 
+    void flushDirtyNow();
+
+    StockMetricsSnapshot metricsSnapshot();
+
     void shutdown();
+}
+```
+
+## File: `src/main/java/com/splatage/wild_economy/exchange/stock/StockMetricsSnapshot.java`
+
+```java
+package com.splatage.wild_economy.exchange.stock;
+
+public record StockMetricsSnapshot(
+    int dirtyItemCount,
+    int queuedPersistenceTasks,
+    boolean flushInProgress,
+    long lastFlushDurationMillis,
+    int lastFlushItemCount,
+    long totalFlushedItems,
+    long totalFlushOperations,
+    long totalFlushFailures
+) {
 }
 ```
 
@@ -359,16 +555,22 @@ import com.splatage.wild_economy.exchange.domain.StockSnapshot;
 import com.splatage.wild_economy.exchange.domain.StockState;
 import com.splatage.wild_economy.exchange.repository.ExchangeStockRepository;
 import com.splatage.wild_economy.persistence.DatabaseDialect;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -376,6 +578,8 @@ public final class StockServiceImpl implements StockService {
 
     private static final int SQLITE_QUEUE_CAPACITY = 4096;
     private static final int MYSQL_QUEUE_CAPACITY = 8192;
+    private static final int MAX_BATCH_SIZE = 256;
+    private static final long FLUSH_INTERVAL_MILLIS = 5000L;
 
     private final ExchangeStockRepository stockRepository;
     private final ExchangeCatalog exchangeCatalog;
@@ -383,7 +587,16 @@ public final class StockServiceImpl implements StockService {
     private final Logger logger;
     private final Map<ItemKey, Long> stockCache;
     private final Set<ItemKey> dirtyKeys;
-    private final ExecutorService persistenceExecutor;
+    private final ThreadPoolExecutor persistenceExecutor;
+    private final ScheduledExecutorService flushScheduler;
+    private final AtomicBoolean flushDispatchInProgress;
+    private final AtomicInteger pendingBatchCount;
+    private final LongAdder totalFlushedItems;
+    private final LongAdder totalFlushOperations;
+    private final LongAdder totalFlushFailures;
+
+    private volatile long lastFlushDurationMillis;
+    private volatile int lastFlushItemCount;
 
     public StockServiceImpl(
         final ExchangeStockRepository stockRepository,
@@ -400,7 +613,14 @@ public final class StockServiceImpl implements StockService {
         this.stockCache = new ConcurrentHashMap<>();
         this.dirtyKeys = ConcurrentHashMap.newKeySet();
         this.persistenceExecutor = this.createExecutor(dialect, mysqlMaximumPoolSize);
+        this.flushScheduler = this.createFlushScheduler(dialect);
+        this.flushDispatchInProgress = new AtomicBoolean(false);
+        this.pendingBatchCount = new AtomicInteger(0);
+        this.totalFlushedItems = new LongAdder();
+        this.totalFlushOperations = new LongAdder();
+        this.totalFlushFailures = new LongAdder();
         this.preloadCache();
+        this.startFlushScheduler();
     }
 
     @Override
@@ -433,7 +653,7 @@ public final class StockServiceImpl implements StockService {
             return;
         }
         this.stockCache.merge(itemKey, (long) amount, Long::sum);
-        this.markDirty(itemKey);
+        this.dirtyKeys.add(itemKey);
     }
 
     @Override
@@ -445,11 +665,69 @@ public final class StockServiceImpl implements StockService {
             final long currentValue = current == null ? 0L : current;
             return Math.max(0L, currentValue - amount);
         });
-        this.markDirty(itemKey);
+        this.dirtyKeys.add(itemKey);
+    }
+
+    @Override
+    public void flushDirtyNow() {
+        if (this.dirtyKeys.isEmpty()) {
+            return;
+        }
+        if (!this.flushDispatchInProgress.compareAndSet(false, true)) {
+            return;
+        }
+
+        final List<List<ItemKey>> batches = this.snapshotDirtyBatches();
+        if (batches.isEmpty()) {
+            this.flushDispatchInProgress.set(false);
+            return;
+        }
+
+        this.pendingBatchCount.set(batches.size());
+        for (final List<ItemKey> batch : batches) {
+            try {
+                this.persistenceExecutor.submit(() -> this.flushBatch(batch));
+            } catch (final RejectedExecutionException exception) {
+                this.totalFlushFailures.increment();
+                this.logger.log(
+                    Level.WARNING,
+                    "Stock persistence queue rejected a flush batch. Dirty stock will remain pending for a later flush.",
+                    exception
+                );
+                if (this.pendingBatchCount.decrementAndGet() == 0) {
+                    this.flushDispatchInProgress.set(false);
+                }
+            }
+        }
+    }
+
+    @Override
+    public StockMetricsSnapshot metricsSnapshot() {
+        return new StockMetricsSnapshot(
+            this.dirtyKeys.size(),
+            this.persistenceExecutor.getQueue().size(),
+            this.flushDispatchInProgress.get(),
+            this.lastFlushDurationMillis,
+            this.lastFlushItemCount,
+            this.totalFlushedItems.sum(),
+            this.totalFlushOperations.sum(),
+            this.totalFlushFailures.sum()
+        );
     }
 
     @Override
     public void shutdown() {
+        this.flushScheduler.shutdown();
+        try {
+            if (!this.flushScheduler.awaitTermination(5L, TimeUnit.SECONDS)) {
+                this.flushScheduler.shutdownNow();
+            }
+        } catch (final InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            this.flushScheduler.shutdownNow();
+        }
+
+        this.flushDirtyNow();
         this.persistenceExecutor.shutdown();
         try {
             if (!this.persistenceExecutor.awaitTermination(10L, TimeUnit.SECONDS)) {
@@ -459,7 +737,9 @@ public final class StockServiceImpl implements StockService {
             Thread.currentThread().interrupt();
             this.persistenceExecutor.shutdownNow();
         }
-        this.flushDirtyKeysSynchronously();
+
+        this.flushDirtySynchronously();
+        this.logShutdownSummary();
     }
 
     private void preloadCache() {
@@ -469,7 +749,7 @@ public final class StockServiceImpl implements StockService {
         }
     }
 
-    private ExecutorService createExecutor(final DatabaseDialect dialect, final int mysqlMaximumPoolSize) {
+    private ThreadPoolExecutor createExecutor(final DatabaseDialect dialect, final int mysqlMaximumPoolSize) {
         final int workers = dialect == DatabaseDialect.SQLITE
             ? 1
             : Math.max(2, Math.min(4, mysqlMaximumPoolSize));
@@ -495,51 +775,130 @@ public final class StockServiceImpl implements StockService {
         );
     }
 
-    private void markDirty(final ItemKey itemKey) {
-        this.dirtyKeys.add(itemKey);
-        try {
-            this.persistenceExecutor.submit(() -> this.flushDirtyItem(itemKey));
-        } catch (final RejectedExecutionException exception) {
-            this.logger.log(
-                Level.WARNING,
-                "Stock persistence queue rejected update for " + itemKey.value() + "; state will remain dirty until shutdown flush.",
-                exception
-            );
-        }
+    private ScheduledExecutorService createFlushScheduler(final DatabaseDialect dialect) {
+        final String threadName = dialect == DatabaseDialect.SQLITE
+            ? "wild-economy-stock-flush-sqlite"
+            : "wild-economy-stock-flush-mysql";
+
+        return Executors.newSingleThreadScheduledExecutor(runnable -> {
+            final Thread thread = new Thread(runnable, threadName);
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
-    private void flushDirtyItem(final ItemKey itemKey) {
-        final long valueToPersist = Math.max(0L, this.stockCache.getOrDefault(itemKey, 0L));
+    private void startFlushScheduler() {
+        this.flushScheduler.scheduleAtFixedRate(
+            this::safePeriodicFlush,
+            FLUSH_INTERVAL_MILLIS,
+            FLUSH_INTERVAL_MILLIS,
+            TimeUnit.MILLISECONDS
+        );
+    }
+
+    private void safePeriodicFlush() {
         try {
-            this.stockRepository.setStock(itemKey, valueToPersist);
-            final long currentValue = Math.max(0L, this.stockCache.getOrDefault(itemKey, 0L));
-            if (currentValue == valueToPersist) {
-                this.dirtyKeys.remove(itemKey);
-            } else {
-                this.markDirty(itemKey);
-            }
+            this.flushDirtyNow();
         } catch (final RuntimeException exception) {
-            this.logger.log(
-                Level.WARNING,
-                "Failed to persist exchange stock for " + itemKey.value() + ". Keeping item dirty for a later flush.",
-                exception
-            );
+            this.logger.log(Level.WARNING, "Periodic exchange stock flush failed.", exception);
         }
     }
 
-    private void flushDirtyKeysSynchronously() {
-        for (final ItemKey itemKey : Set.copyOf(this.dirtyKeys)) {
-            try {
-                this.stockRepository.setStock(itemKey, Math.max(0L, this.stockCache.getOrDefault(itemKey, 0L)));
-                this.dirtyKeys.remove(itemKey);
-            } catch (final RuntimeException exception) {
-                this.logger.log(
-                    Level.SEVERE,
-                    "Failed to flush dirty exchange stock for " + itemKey.value() + " during shutdown.",
-                    exception
-                );
+    private List<List<ItemKey>> snapshotDirtyBatches() {
+        final List<ItemKey> snapshot = new ArrayList<>(this.dirtyKeys);
+        if (snapshot.isEmpty()) {
+            return List.of();
+        }
+
+        final List<List<ItemKey>> batches = new ArrayList<>((snapshot.size() + MAX_BATCH_SIZE - 1) / MAX_BATCH_SIZE);
+        for (int index = 0; index < snapshot.size(); index += MAX_BATCH_SIZE) {
+            final int end = Math.min(snapshot.size(), index + MAX_BATCH_SIZE);
+            batches.add(List.copyOf(snapshot.subList(index, end)));
+        }
+        return batches;
+    }
+
+    private void flushBatch(final List<ItemKey> batch) {
+        final Map<ItemKey, Long> snapshot = this.buildFlushSnapshot(batch);
+        if (snapshot.isEmpty()) {
+            if (this.pendingBatchCount.decrementAndGet() == 0) {
+                this.flushDispatchInProgress.set(false);
+            }
+            return;
+        }
+
+        final long startedAt = System.nanoTime();
+        try {
+            this.stockRepository.flushStocks(snapshot);
+            final long durationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+            this.recordSuccessfulFlush(snapshot, durationMillis);
+        } catch (final RuntimeException exception) {
+            this.totalFlushFailures.increment();
+            this.logger.log(Level.WARNING, "Failed to batch flush exchange stock.", exception);
+        } finally {
+            if (this.pendingBatchCount.decrementAndGet() == 0) {
+                this.flushDispatchInProgress.set(false);
             }
         }
+    }
+
+    private Map<ItemKey, Long> buildFlushSnapshot(final List<ItemKey> batch) {
+        final Map<ItemKey, Long> snapshot = new LinkedHashMap<>(batch.size());
+        for (final ItemKey itemKey : batch) {
+            snapshot.put(itemKey, Math.max(0L, this.stockCache.getOrDefault(itemKey, 0L)));
+        }
+        return snapshot;
+    }
+
+    private void recordSuccessfulFlush(final Map<ItemKey, Long> snapshot, final long durationMillis) {
+        this.lastFlushDurationMillis = durationMillis;
+        this.lastFlushItemCount = snapshot.size();
+        this.totalFlushOperations.increment();
+        this.totalFlushedItems.add(snapshot.size());
+
+        for (final Map.Entry<ItemKey, Long> entry : snapshot.entrySet()) {
+            final long currentValue = Math.max(0L, this.stockCache.getOrDefault(entry.getKey(), 0L));
+            if (currentValue == entry.getValue()) {
+                this.dirtyKeys.remove(entry.getKey());
+            }
+        }
+    }
+
+    private void flushDirtySynchronously() {
+        while (!this.dirtyKeys.isEmpty()) {
+            final List<List<ItemKey>> batches = this.snapshotDirtyBatches();
+            if (batches.isEmpty()) {
+                return;
+            }
+
+            for (final List<ItemKey> batch : batches) {
+                final Map<ItemKey, Long> snapshot = this.buildFlushSnapshot(batch);
+                if (snapshot.isEmpty()) {
+                    continue;
+                }
+                try {
+                    final long startedAt = System.nanoTime();
+                    this.stockRepository.flushStocks(snapshot);
+                    final long durationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+                    this.recordSuccessfulFlush(snapshot, durationMillis);
+                } catch (final RuntimeException exception) {
+                    this.totalFlushFailures.increment();
+                    this.logger.log(Level.SEVERE, "Failed to synchronously flush exchange stock during shutdown.", exception);
+                    return;
+                }
+            }
+        }
+    }
+
+    private void logShutdownSummary() {
+        final StockMetricsSnapshot metrics = this.metricsSnapshot();
+        this.logger.info(
+            "Exchange stock persistence summary: flushedItems=" + metrics.totalFlushedItems()
+                + ", flushOperations=" + metrics.totalFlushOperations()
+                + ", flushFailures=" + metrics.totalFlushFailures()
+                + ", dirtyRemaining=" + metrics.dirtyItemCount()
+                + ", queueDepth=" + metrics.queuedPersistenceTasks()
+        );
     }
 }
 ```
@@ -725,82 +1084,309 @@ public final class TransactionLogServiceImpl implements TransactionLogService {
 }
 ```
 
-## File: `src/main/java/com/splatage/wild_economy/persistence/DatabaseProvider.java`
+## File: `src/main/java/com/splatage/wild_economy/exchange/catalog/ExchangeCatalog.java`
 
 ```java
-package com.splatage.wild_economy.persistence;
+package com.splatage.wild_economy.exchange.catalog;
 
-import com.splatage.wild_economy.config.DatabaseConfig;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.SQLException;
+import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
+import com.splatage.wild_economy.exchange.domain.ItemCategory;
+import com.splatage.wild_economy.exchange.domain.ItemKey;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
-public final class DatabaseProvider implements AutoCloseable {
+public final class ExchangeCatalog {
 
-    private final DatabaseDialect dialect;
-    private final HikariDataSource dataSource;
+    private static final Comparator<ExchangeCatalogEntry> DISPLAY_NAME_ORDER =
+        Comparator.comparing(ExchangeCatalogEntry::displayName, String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(entry -> entry.itemKey().value());
 
-    public DatabaseProvider(final DatabaseConfig config) {
-        Objects.requireNonNull(config, "config");
+    private static final Comparator<GeneratedItemCategory> GENERATED_CATEGORY_ORDER =
+        Comparator.comparing(GeneratedItemCategory::displayName, String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(GeneratedItemCategory::name);
 
-        final String backend = config.backend().toLowerCase();
-        final HikariConfig hikariConfig = new HikariConfig();
+    private final Map<ItemKey, ExchangeCatalogEntry> entries;
+    private final List<ExchangeCatalogEntry> allEntries;
+    private final Map<ItemCategory, List<ExchangeCatalogEntry>> entriesByCategory;
+    private final Map<ItemCategory, Map<GeneratedItemCategory, List<ExchangeCatalogEntry>>> entriesByCategoryAndGeneratedCategory;
+    private final Map<ItemCategory, List<GeneratedItemCategory>> generatedSubcategoriesByCategory;
 
-        if ("sqlite".equals(backend)) {
-            this.dialect = DatabaseDialect.SQLITE;
+    public ExchangeCatalog(final Map<ItemKey, ExchangeCatalogEntry> entries) {
+        Objects.requireNonNull(entries, "entries");
 
-            final Path sqlitePath = Path.of(config.sqliteFile()).toAbsolutePath();
-            final Path parent = sqlitePath.getParent();
-            if (parent != null) {
-                parent.toFile().mkdirs();
+        this.entries = Map.copyOf(entries);
+
+        final List<ExchangeCatalogEntry> sortedEntries = new ArrayList<>(this.entries.values());
+        sortedEntries.sort(DISPLAY_NAME_ORDER);
+        this.allEntries = List.copyOf(sortedEntries);
+
+        final Map<ItemCategory, List<ExchangeCatalogEntry>> categoryIndex = new EnumMap<>(ItemCategory.class);
+        final Map<ItemCategory, Map<GeneratedItemCategory, List<ExchangeCatalogEntry>>> subcategoryIndex =
+            new EnumMap<>(ItemCategory.class);
+
+        for (final ExchangeCatalogEntry entry : sortedEntries) {
+            categoryIndex.computeIfAbsent(entry.category(), ignored -> new ArrayList<>()).add(entry);
+
+            if (entry.generatedCategory() != null) {
+                subcategoryIndex
+                    .computeIfAbsent(entry.category(), ignored -> new EnumMap<>(GeneratedItemCategory.class))
+                    .computeIfAbsent(entry.generatedCategory(), ignored -> new ArrayList<>())
+                    .add(entry);
             }
-
-            hikariConfig.setJdbcUrl("jdbc:sqlite:" + sqlitePath);
-            hikariConfig.setMaximumPoolSize(1);
-            hikariConfig.setMinimumIdle(1);
-            hikariConfig.setPoolName("wild-economy-sqlite");
-            hikariConfig.setConnectionTestQuery("SELECT 1");
-        } else if ("mysql".equals(backend)) {
-            this.dialect = DatabaseDialect.MYSQL;
-
-            hikariConfig.setJdbcUrl(
-                "jdbc:mysql://"
-                    + config.mysqlHost()
-                    + ":"
-                    + config.mysqlPort()
-                    + "/"
-                    + config.mysqlDatabase()
-                    + "?useSSL="
-                    + config.mysqlSsl()
-                    + "&allowPublicKeyRetrieval=true"
-                    + "&serverTimezone=UTC"
-            );
-            hikariConfig.setUsername(config.mysqlUsername());
-            hikariConfig.setPassword(config.mysqlPassword());
-            hikariConfig.setMaximumPoolSize(Math.max(2, config.mysqlMaximumPoolSize()));
-            hikariConfig.setMinimumIdle(1);
-            hikariConfig.setPoolName("wild-economy-mysql");
-        } else {
-            throw new IllegalStateException("Unsupported database backend: " + config.backend());
         }
 
-        this.dataSource = new HikariDataSource(hikariConfig);
+        this.entriesByCategory = freezeCategoryIndex(categoryIndex);
+        this.entriesByCategoryAndGeneratedCategory = freezeSubcategoryIndex(subcategoryIndex);
+        this.generatedSubcategoriesByCategory = buildGeneratedSubcategoryIndex(this.entriesByCategoryAndGeneratedCategory);
     }
 
-    public DatabaseDialect dialect() {
-        return this.dialect;
+    public Optional<ExchangeCatalogEntry> get(final ItemKey itemKey) {
+        return Optional.ofNullable(this.entries.get(itemKey));
     }
 
-    public Connection getConnection() throws SQLException {
-        return this.dataSource.getConnection();
+    public Collection<ExchangeCatalogEntry> allEntries() {
+        return this.allEntries;
+    }
+
+    public List<ExchangeCatalogEntry> byCategory(final ItemCategory category) {
+        return this.entriesByCategory.getOrDefault(category, List.of());
+    }
+
+    public List<ExchangeCatalogEntry> byCategoryAndGeneratedCategory(
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory
+    ) {
+        if (generatedCategory == null) {
+            return this.byCategory(category);
+        }
+
+        final Map<GeneratedItemCategory, List<ExchangeCatalogEntry>> byGeneratedCategory =
+            this.entriesByCategoryAndGeneratedCategory.get(category);
+        if (byGeneratedCategory == null) {
+            return List.of();
+        }
+
+        return byGeneratedCategory.getOrDefault(generatedCategory, List.of());
+    }
+
+    public List<GeneratedItemCategory> generatedSubcategories(final ItemCategory category) {
+        return this.generatedSubcategoriesByCategory.getOrDefault(category, List.of());
+    }
+
+    private static Map<ItemCategory, List<ExchangeCatalogEntry>> freezeCategoryIndex(
+        final Map<ItemCategory, List<ExchangeCatalogEntry>> categoryIndex
+    ) {
+        final Map<ItemCategory, List<ExchangeCatalogEntry>> frozen = new EnumMap<>(ItemCategory.class);
+        for (final Map.Entry<ItemCategory, List<ExchangeCatalogEntry>> entry : categoryIndex.entrySet()) {
+            frozen.put(entry.getKey(), List.copyOf(entry.getValue()));
+        }
+        return Collections.unmodifiableMap(frozen);
+    }
+
+    private static Map<ItemCategory, Map<GeneratedItemCategory, List<ExchangeCatalogEntry>>> freezeSubcategoryIndex(
+        final Map<ItemCategory, Map<GeneratedItemCategory, List<ExchangeCatalogEntry>>> subcategoryIndex
+    ) {
+        final Map<ItemCategory, Map<GeneratedItemCategory, List<ExchangeCatalogEntry>>> frozen =
+            new EnumMap<>(ItemCategory.class);
+
+        for (final Map.Entry<ItemCategory, Map<GeneratedItemCategory, List<ExchangeCatalogEntry>>> categoryEntry
+            : subcategoryIndex.entrySet()) {
+            final Map<GeneratedItemCategory, List<ExchangeCatalogEntry>> innerFrozen =
+                new EnumMap<>(GeneratedItemCategory.class);
+
+            for (final Map.Entry<GeneratedItemCategory, List<ExchangeCatalogEntry>> generatedEntry
+                : categoryEntry.getValue().entrySet()) {
+                innerFrozen.put(generatedEntry.getKey(), List.copyOf(generatedEntry.getValue()));
+            }
+
+            frozen.put(categoryEntry.getKey(), Collections.unmodifiableMap(innerFrozen));
+        }
+
+        return Collections.unmodifiableMap(frozen);
+    }
+
+    private static Map<ItemCategory, List<GeneratedItemCategory>> buildGeneratedSubcategoryIndex(
+        final Map<ItemCategory, Map<GeneratedItemCategory, List<ExchangeCatalogEntry>>> subcategoryIndex
+    ) {
+        final Map<ItemCategory, List<GeneratedItemCategory>> result = new EnumMap<>(ItemCategory.class);
+
+        for (final Map.Entry<ItemCategory, Map<GeneratedItemCategory, List<ExchangeCatalogEntry>>> categoryEntry
+            : subcategoryIndex.entrySet()) {
+            final List<GeneratedItemCategory> generatedCategories =
+                new ArrayList<>(categoryEntry.getValue().keySet());
+            generatedCategories.sort(GENERATED_CATEGORY_ORDER);
+            result.put(categoryEntry.getKey(), List.copyOf(generatedCategories));
+        }
+
+        return Collections.unmodifiableMap(new LinkedHashMap<>(result));
+    }
+}
+```
+
+## File: `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeBrowseServiceImpl.java`
+
+```java
+package com.splatage.wild_economy.exchange.service;
+
+import com.splatage.wild_economy.exchange.catalog.ExchangeCatalog;
+import com.splatage.wild_economy.exchange.catalog.ExchangeCatalogEntry;
+import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
+import com.splatage.wild_economy.exchange.domain.ItemCategory;
+import com.splatage.wild_economy.exchange.domain.ItemKey;
+import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
+import com.splatage.wild_economy.exchange.domain.StockSnapshot;
+import com.splatage.wild_economy.exchange.domain.StockState;
+import com.splatage.wild_economy.exchange.stock.StockService;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
+
+    private final ExchangeCatalog exchangeCatalog;
+    private final StockService stockService;
+
+    public ExchangeBrowseServiceImpl(
+        final ExchangeCatalog exchangeCatalog,
+        final StockService stockService
+    ) {
+        this.exchangeCatalog = Objects.requireNonNull(exchangeCatalog, "exchangeCatalog");
+        this.stockService = Objects.requireNonNull(stockService, "stockService");
     }
 
     @Override
-    public void close() {
-        this.dataSource.close();
+    public List<ExchangeCatalogView> browseCategory(
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory,
+        final int page,
+        final int pageSize
+    ) {
+        final List<ExchangeCatalogEntry> indexedEntries = this.indexedEntries(category, generatedCategory);
+        if (indexedEntries.isEmpty()) {
+            return List.of();
+        }
+
+        final int safePage = Math.max(0, page);
+        final int safePageSize = Math.max(1, pageSize);
+        final long toSkip = (long) safePage * safePageSize;
+
+        long visibleIndex = 0L;
+        final List<ExchangeCatalogView> pageEntries = new ArrayList<>(safePageSize);
+
+        for (final ExchangeCatalogEntry entry : indexedEntries) {
+            final StockSnapshot snapshot = this.stockService.getSnapshot(entry.itemKey());
+            if (!this.isPurchasableNow(entry, snapshot)) {
+                continue;
+            }
+            if (visibleIndex++ < toSkip) {
+                continue;
+            }
+
+            pageEntries.add(new ExchangeCatalogView(
+                entry.itemKey(),
+                entry.displayName(),
+                entry.buyPrice(),
+                snapshot.stockCount(),
+                snapshot.stockState()
+            ));
+
+            if (pageEntries.size() >= safePageSize) {
+                break;
+            }
+        }
+
+        return List.copyOf(pageEntries);
+    }
+
+    @Override
+    public int countVisibleItems(
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory
+    ) {
+        int count = 0;
+        for (final ExchangeCatalogEntry entry : this.indexedEntries(category, generatedCategory)) {
+            final StockSnapshot snapshot = this.stockService.getSnapshot(entry.itemKey());
+            if (this.isPurchasableNow(entry, snapshot)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    @Override
+    public List<GeneratedItemCategory> listVisibleSubcategories(final ItemCategory category) {
+        final List<GeneratedItemCategory> indexedSubcategories = this.exchangeCatalog.generatedSubcategories(category);
+        if (indexedSubcategories.isEmpty()) {
+            return List.of();
+        }
+
+        final List<GeneratedItemCategory> visibleSubcategories = new ArrayList<>();
+        for (final GeneratedItemCategory generatedCategory : indexedSubcategories) {
+            if (this.hasVisibleEntries(category, generatedCategory)) {
+                visibleSubcategories.add(generatedCategory);
+            }
+        }
+        return List.copyOf(visibleSubcategories);
+    }
+
+    @Override
+    public ExchangeItemView getItemView(final ItemKey itemKey) {
+        final ExchangeCatalogEntry entry = this.exchangeCatalog.get(itemKey)
+            .orElseThrow(() -> new IllegalStateException("Missing catalog entry for " + itemKey.value()));
+
+        final StockSnapshot snapshot = this.stockService.getSnapshot(itemKey);
+        return new ExchangeItemView(
+            itemKey,
+            entry.displayName(),
+            entry.buyPrice(),
+            snapshot.stockCount(),
+            snapshot.stockCap(),
+            snapshot.stockState(),
+            entry.buyEnabled()
+        );
+    }
+
+    private List<ExchangeCatalogEntry> indexedEntries(
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory
+    ) {
+        return generatedCategory == null
+            ? this.exchangeCatalog.byCategory(category)
+            : this.exchangeCatalog.byCategoryAndGeneratedCategory(category, generatedCategory);
+    }
+
+    private boolean hasVisibleEntries(
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory
+    ) {
+        for (final ExchangeCatalogEntry entry : this.exchangeCatalog.byCategoryAndGeneratedCategory(category, generatedCategory)) {
+            final StockSnapshot snapshot = this.stockService.getSnapshot(entry.itemKey());
+            if (this.isPurchasableNow(entry, snapshot)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isPurchasableNow(
+        final ExchangeCatalogEntry entry,
+        final StockSnapshot snapshot
+    ) {
+        if (!entry.buyEnabled()) {
+            return false;
+        }
+        if (entry.policyMode() == ItemPolicyMode.UNLIMITED_BUY) {
+            return true;
+        }
+        return snapshot.stockState() != StockState.OUT_OF_STOCK;
     }
 }
 ```
