@@ -3,26 +3,30 @@ package com.splatage.wild_economy.gui;
 import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
-import java.util.HashMap;
-import java.util.Map;
+import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.util.Objects;
 import java.util.UUID;
 import org.bukkit.entity.Player;
 
 public final class ShopMenuRouter {
 
+    private final PlatformExecutor platformExecutor;
+    private final MenuSessionStore menuSessionStore;
     private final ExchangeRootMenu exchangeRootMenu;
     private final ExchangeSubcategoryMenu exchangeSubcategoryMenu;
     private final ExchangeBrowseMenu exchangeBrowseMenu;
     private final ExchangeItemDetailMenu exchangeItemDetailMenu;
-    private final Map<UUID, MenuSession> sessions = new HashMap<>();
 
     public ShopMenuRouter(
+        final PlatformExecutor platformExecutor,
+        final MenuSessionStore menuSessionStore,
         final ExchangeRootMenu exchangeRootMenu,
         final ExchangeSubcategoryMenu exchangeSubcategoryMenu,
         final ExchangeBrowseMenu exchangeBrowseMenu,
         final ExchangeItemDetailMenu exchangeItemDetailMenu
     ) {
+        this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
+        this.menuSessionStore = Objects.requireNonNull(menuSessionStore, "menuSessionStore");
         this.exchangeRootMenu = Objects.requireNonNull(exchangeRootMenu, "exchangeRootMenu");
         this.exchangeSubcategoryMenu = Objects.requireNonNull(exchangeSubcategoryMenu, "exchangeSubcategoryMenu");
         this.exchangeBrowseMenu = Objects.requireNonNull(exchangeBrowseMenu, "exchangeBrowseMenu");
@@ -30,7 +34,7 @@ public final class ShopMenuRouter {
     }
 
     public void openRoot(final Player player) {
-        this.sessions.put(player.getUniqueId(), new MenuSession(
+        this.menuSessionStore.put(new MenuSession(
             player.getUniqueId(),
             MenuSession.ViewType.ROOT,
             null,
@@ -39,11 +43,11 @@ public final class ShopMenuRouter {
             null,
             false
         ));
-        this.exchangeRootMenu.open(player);
+        this.platformExecutor.runOnPlayer(player, () -> this.exchangeRootMenu.open(player));
     }
 
     public void openSubcategory(final Player player, final ItemCategory category) {
-        this.sessions.put(player.getUniqueId(), new MenuSession(
+        this.menuSessionStore.put(new MenuSession(
             player.getUniqueId(),
             MenuSession.ViewType.SUBCATEGORY,
             category,
@@ -52,7 +56,7 @@ public final class ShopMenuRouter {
             null,
             false
         ));
-        this.exchangeSubcategoryMenu.open(player, category);
+        this.platformExecutor.runOnPlayer(player, () -> this.exchangeSubcategoryMenu.open(player, category));
     }
 
     public void openBrowse(
@@ -62,7 +66,7 @@ public final class ShopMenuRouter {
         final int page,
         final boolean viaSubcategory
     ) {
-        this.sessions.put(player.getUniqueId(), new MenuSession(
+        this.menuSessionStore.put(new MenuSession(
             player.getUniqueId(),
             MenuSession.ViewType.BROWSE,
             category,
@@ -71,17 +75,20 @@ public final class ShopMenuRouter {
             null,
             viaSubcategory
         ));
-        this.exchangeBrowseMenu.open(player, category, generatedCategory, page, viaSubcategory);
+        this.platformExecutor.runOnPlayer(
+            player,
+            () -> this.exchangeBrowseMenu.open(player, category, generatedCategory, page, viaSubcategory)
+        );
     }
 
     public void openDetail(final Player player, final ItemKey itemKey) {
-        final MenuSession previous = this.sessions.get(player.getUniqueId());
+        final MenuSession previous = this.menuSessionStore.get(player.getUniqueId());
         final ItemCategory category = previous == null ? null : previous.currentCategory();
         final GeneratedItemCategory generatedCategory = previous == null ? null : previous.currentGeneratedCategory();
         final int page = previous == null ? 0 : previous.currentPage();
         final boolean viaSubcategory = previous != null && previous.viaSubcategory();
 
-        this.sessions.put(player.getUniqueId(), new MenuSession(
+        this.menuSessionStore.put(new MenuSession(
             player.getUniqueId(),
             MenuSession.ViewType.DETAIL,
             category,
@@ -90,11 +97,12 @@ public final class ShopMenuRouter {
             itemKey,
             viaSubcategory
         ));
-        this.exchangeItemDetailMenu.open(player, itemKey, 1);
+
+        this.platformExecutor.runOnPlayer(player, () -> this.exchangeItemDetailMenu.open(player, itemKey, 1));
     }
 
     public void goBack(final Player player) {
-        final MenuSession session = this.sessions.get(player.getUniqueId());
+        final MenuSession session = this.menuSessionStore.get(player.getUniqueId());
         if (session == null) {
             this.openRoot(player);
             return;
@@ -127,10 +135,10 @@ public final class ShopMenuRouter {
     }
 
     public MenuSession getSession(final UUID playerId) {
-        return this.sessions.get(playerId);
+        return this.menuSessionStore.get(playerId);
     }
 
     public void clearSession(final UUID playerId) {
-        this.sessions.remove(playerId);
+        this.menuSessionStore.remove(playerId);
     }
 }

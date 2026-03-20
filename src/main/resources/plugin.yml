@@ -2,6 +2,7 @@ name: wild_economy
 version: ${version}
 main: com.splatage.wild_economy.WildEconomyPlugin
 api-version: '1.21'
+folia-supported: true
 author: splatage
 description: Curated Exchange-first economy plugin for Minecraft
 
@@ -31,7 +32,7 @@ commands:
     permission: wild_economy.shop.sellcontainer
   shopadmin:
     description: Admin commands for wild_economy.
-    usage: /shopadmin <reload|generatecatalog>
+    usage: /shopadmin
     permission: wild_economy.admin
 
 permissions:

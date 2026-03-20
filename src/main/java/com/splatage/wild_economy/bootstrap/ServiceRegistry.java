@@ -42,6 +42,8 @@ import com.splatage.wild_economy.exchange.service.ExchangeSellService;
 import com.splatage.wild_economy.exchange.service.ExchangeSellServiceImpl;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
 import com.splatage.wild_economy.exchange.service.ExchangeServiceImpl;
+import com.splatage.wild_economy.exchange.service.FoliaSafeExchangeBuyService;
+import com.splatage.wild_economy.exchange.service.FoliaSafeExchangeSellService;
 import com.splatage.wild_economy.exchange.service.TransactionLogService;
 import com.splatage.wild_economy.exchange.service.TransactionLogServiceImpl;
 import com.splatage.wild_economy.exchange.stock.StockService;
@@ -53,10 +55,13 @@ import com.splatage.wild_economy.gui.ExchangeBrowseMenu;
 import com.splatage.wild_economy.gui.ExchangeItemDetailMenu;
 import com.splatage.wild_economy.gui.ExchangeRootMenu;
 import com.splatage.wild_economy.gui.ExchangeSubcategoryMenu;
+import com.splatage.wild_economy.gui.MenuSessionStore;
 import com.splatage.wild_economy.gui.ShopMenuListener;
 import com.splatage.wild_economy.gui.ShopMenuRouter;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
 import com.splatage.wild_economy.persistence.MigrationManager;
+import com.splatage.wild_economy.platform.PaperFoliaPlatformExecutor;
+import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.io.File;
 import java.util.Objects;
 import net.milkbowl.vault.economy.Economy;
@@ -66,20 +71,17 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 public final class ServiceRegistry {
 
     private final WildEconomyPlugin plugin;
+    private final PlatformExecutor platformExecutor;
 
     private GlobalConfig globalConfig;
     private DatabaseConfig databaseConfig;
     private ExchangeItemsConfig exchangeItemsConfig;
-
     private DatabaseProvider databaseProvider;
-
     private ExchangeCatalog exchangeCatalog;
     private ItemNormalizer itemNormalizer;
     private ItemValidationService itemValidationService;
-
     private ExchangeStockRepository exchangeStockRepository;
     private ExchangeTransactionRepository exchangeTransactionRepository;
-
     private EconomyGateway economyGateway;
     private StockService stockService;
     private PricingService pricingService;
@@ -93,11 +95,11 @@ public final class ServiceRegistry {
 
     public ServiceRegistry(final WildEconomyPlugin plugin) {
         this.plugin = plugin;
+        this.platformExecutor = new PaperFoliaPlatformExecutor(plugin);
     }
 
     public void initialize() {
         final ConfigLoader configLoader = new ConfigLoader(this.plugin);
-
         this.globalConfig = configLoader.loadGlobalConfig();
         this.databaseConfig = configLoader.loadDatabaseConfig();
         this.exchangeItemsConfig = configLoader.loadExchangeItemsConfig();
@@ -124,7 +126,6 @@ public final class ServiceRegistry {
 
         final File rootValuesFile = new File(this.plugin.getDataFolder(), "root-values.yml");
         final File generatedCatalogFile = new File(new File(this.plugin.getDataFolder(), "generated"), "generated-catalog.yml");
-
         if (!generatedCatalogFile.exists()) {
             this.plugin.getLogger().warning(
                 "generated/generated-catalog.yml not found. Runtime catalog will fall back to exchange-items.yml overrides only."
@@ -176,7 +177,7 @@ public final class ServiceRegistry {
 
         this.exchangeBrowseService = new ExchangeBrowseServiceImpl(this.exchangeCatalog, this.stockService);
 
-        this.exchangeBuyService = new ExchangeBuyServiceImpl(
+        final ExchangeBuyService rawBuyService = new ExchangeBuyServiceImpl(
             this.exchangeCatalog,
             this.itemValidationService,
             this.stockService,
@@ -185,7 +186,7 @@ public final class ServiceRegistry {
             this.transactionLogService
         );
 
-        this.exchangeSellService = new ExchangeSellServiceImpl(
+        final ExchangeSellService rawSellService = new ExchangeSellServiceImpl(
             this.exchangeCatalog,
             this.itemValidationService,
             this.stockService,
@@ -194,6 +195,8 @@ public final class ServiceRegistry {
             this.transactionLogService
         );
 
+        this.exchangeBuyService = new FoliaSafeExchangeBuyService(rawBuyService);
+        this.exchangeSellService = new FoliaSafeExchangeSellService(rawSellService);
         this.exchangeService = new ExchangeServiceImpl(
             this.exchangeBrowseService,
             this.exchangeBuyService,
@@ -205,7 +208,14 @@ public final class ServiceRegistry {
         final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService);
         final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService);
 
-        this.shopMenuRouter = new ShopMenuRouter(rootMenu, subcategoryMenu, browseMenu, itemDetailMenu);
+        this.shopMenuRouter = new ShopMenuRouter(
+            this.platformExecutor,
+            new MenuSessionStore(),
+            rootMenu,
+            subcategoryMenu,
+            browseMenu,
+            itemDetailMenu
+        );
 
         rootMenu.setShopMenuRouter(this.shopMenuRouter);
         subcategoryMenu.setShopMenuRouter(this.shopMenuRouter);
@@ -256,8 +266,7 @@ public final class ServiceRegistry {
     }
 
     public void registerTasks() {
-        this.plugin.getServer().getScheduler().runTaskTimer(
-            this.plugin,
+        this.platformExecutor.runGlobalRepeating(
             new com.splatage.wild_economy.scheduler.StockTurnoverTask(this.stockTurnoverService),
             this.globalConfig.turnoverIntervalTicks(),
             this.globalConfig.turnoverIntervalTicks()
@@ -265,14 +274,16 @@ public final class ServiceRegistry {
     }
 
     public void shutdown() {
-        this.plugin.getServer().getScheduler().cancelTasks(this.plugin);
+        this.platformExecutor.cancelPluginTasks();
 
         if (this.transactionLogService != null) {
             this.transactionLogService.shutdown();
         }
+
         if (this.stockService != null) {
             this.stockService.shutdown();
         }
+
         if (this.databaseProvider != null) {
             this.databaseProvider.close();
         }
@@ -281,11 +292,9 @@ public final class ServiceRegistry {
     private EconomyGateway resolveVaultEconomy() {
         final RegisteredServiceProvider<Economy> registration =
             this.plugin.getServer().getServicesManager().getRegistration(Economy.class);
-
         if (registration == null || registration.getProvider() == null) {
             throw new IllegalStateException("Vault economy provider not found");
         }
-
         return new VaultEconomyGateway(registration.getProvider());
     }
 }
