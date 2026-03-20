@@ -1,3 +1,164 @@
+# wild_economy Folia access-service hardening patchset
+
+Source-of-truth snapshot: `3f3cadc8094b4caf5610032b3459fb470bc3c7b5`
+
+This patchset hardens the remaining unsafe part of the current Folia migration.
+
+## Why this step
+
+At this commit, the plugin already has:
+
+* `folia-supported: true`
+* global turnover scheduling on the global scheduler
+* player-thread routing for command and GUI entry points
+* a location-owned execution path for placed-container mutation via `runOnLocation(...)`
+
+However, the current placed-container access check still uses a synthetic `PlayerInteractEvent` in `EventDrivenContainerAccessService`. That event mixes a player-owned context and a block-owned context, which is the last major Folia risk in the current branch.
+
+This patch changes the default `ContainerAccessService` selection so that:
+
+* on **Paper**: keep the current event-driven access probe
+* on **Folia**: stop firing the synthetic event probe
+
+  * if no common protection plugin is detected, allow placed-container selling
+  * if a common protection/claim plugin is detected, deny placed-container selling with a clear message
+
+This is intentionally conservative. It keeps the core sell path Folia-safe while avoiding unsafe fake-event probing under Folia. It does mean that explicit claim-plugin adapters become the next step for restoring full protected-container support on Folia.
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/platform/PlatformSupport.java`
+
+```java
+package com.splatage.wild_economy.platform;
+
+public final class PlatformSupport {
+
+    private static final boolean FOLIA = detectFolia();
+
+    private PlatformSupport() {
+    }
+
+    public static boolean isFolia() {
+        return FOLIA;
+    }
+
+    private static boolean detectFolia() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            return true;
+        } catch (final ClassNotFoundException ignored) {
+            return false;
+        }
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/integration/protection/AllowAllContainerAccessService.java`
+
+```java
+package com.splatage.wild_economy.integration.protection;
+
+import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
+
+public final class AllowAllContainerAccessService implements ContainerAccessService {
+
+    @Override
+    public ContainerAccessResult canAccessPlacedContainer(final Player player, final Block targetBlock) {
+        return ContainerAccessResult.allow();
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/integration/protection/ProtectionPluginAwareFoliaContainerAccessService.java`
+
+```java
+package com.splatage.wild_economy.integration.protection;
+
+import java.util.List;
+import org.bukkit.Bukkit;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
+
+public final class ProtectionPluginAwareFoliaContainerAccessService implements ContainerAccessService {
+
+    private static final List<String> KNOWN_PROTECTION_PLUGINS = List.of(
+        "GriefPrevention",
+        "PlotSquared",
+        "Towny",
+        "Lands",
+        "HuskClaims",
+        "Residence",
+        "Factions",
+        "FactionsUUID",
+        "SaberFactions",
+        "MassiveCore",
+        "KingdomsX"
+    );
+
+    private final String detectedProtectionPlugin;
+
+    public ProtectionPluginAwareFoliaContainerAccessService() {
+        this.detectedProtectionPlugin = this.detectProtectionPlugin();
+    }
+
+    @Override
+    public ContainerAccessResult canAccessPlacedContainer(final Player player, final Block targetBlock) {
+        if (this.detectedProtectionPlugin == null) {
+            return ContainerAccessResult.allow();
+        }
+
+        return ContainerAccessResult.deny(
+            "Placed container selling is temporarily disabled on Folia while protection plugin '"
+                + this.detectedProtectionPlugin
+                + "' is installed. Held shulker selling still works."
+        );
+    }
+
+    private String detectProtectionPlugin() {
+        for (final String pluginName : KNOWN_PROTECTION_PLUGINS) {
+            if (Bukkit.getPluginManager().isPluginEnabled(pluginName)) {
+                return pluginName;
+            }
+        }
+        return null;
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/integration/protection/ContainerAccessServices.java`
+
+```java
+package com.splatage.wild_economy.integration.protection;
+
+import com.splatage.wild_economy.platform.PlatformSupport;
+
+public final class ContainerAccessServices {
+
+    private ContainerAccessServices() {
+    }
+
+    public static ContainerAccessService createDefault() {
+        if (PlatformSupport.isFolia()) {
+            return new ProtectionPluginAwareFoliaContainerAccessService();
+        }
+        return new EventDrivenContainerAccessService();
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeSellServiceImpl.java`
+
+```java
 package com.splatage.wild_economy.exchange.service;
 
 import com.splatage.wild_economy.economy.EconomyGateway;
@@ -583,3 +744,12 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
     ) {
     }
 }
+```
+
+---
+
+## Notes
+
+* This patch intentionally leaves `EventDrivenContainerAccessService` in the codebase for Paper.
+* On Folia, the default container-access strategy is now conservative and no longer fires a synthetic interact event.
+* The next step after this patch is to add explicit region-safe claim adapters for GriefPrevention / PlotSquared / Towny / Factions-family plugins so placed-container selling can be restored when those plugins are present.
