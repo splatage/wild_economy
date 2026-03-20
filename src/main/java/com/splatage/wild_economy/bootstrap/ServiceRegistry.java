@@ -5,6 +5,7 @@ import com.splatage.wild_economy.command.ShopAdminCommand;
 import com.splatage.wild_economy.command.ShopCommand;
 import com.splatage.wild_economy.command.ShopOpenSubcommand;
 import com.splatage.wild_economy.command.ShopSellAllSubcommand;
+import com.splatage.wild_economy.command.ShopSellContainerSubcommand;
 import com.splatage.wild_economy.command.ShopSellHandSubcommand;
 import com.splatage.wild_economy.config.ConfigLoader;
 import com.splatage.wild_economy.config.DatabaseConfig;
@@ -221,13 +222,15 @@ public final class ServiceRegistry {
         final ShopOpenSubcommand openSubcommand = new ShopOpenSubcommand(this.shopMenuRouter);
         final ShopSellHandSubcommand sellHandSubcommand = new ShopSellHandSubcommand(this.exchangeService);
         final ShopSellAllSubcommand sellAllSubcommand = new ShopSellAllSubcommand(this.exchangeService);
+        final ShopSellContainerSubcommand sellContainerSubcommand = new ShopSellContainerSubcommand(this.exchangeService);
 
         final PluginCommand shop = this.plugin.getCommand("shop");
         if (shop != null) {
             shop.setExecutor(new ShopCommand(
                 openSubcommand,
                 sellHandSubcommand,
-                sellAllSubcommand
+                sellAllSubcommand,
+                sellContainerSubcommand
             ));
         }
 
@@ -239,6 +242,11 @@ public final class ServiceRegistry {
         final PluginCommand sellAll = this.plugin.getCommand("sellall");
         if (sellAll != null) {
             sellAll.setExecutor(sellAllSubcommand);
+        }
+
+        final PluginCommand sellContainer = this.plugin.getCommand("sellcontainer");
+        if (sellContainer != null) {
+            sellContainer.setExecutor(sellContainerSubcommand);
         }
 
         final PluginCommand shopAdmin = this.plugin.getCommand("shopadmin");

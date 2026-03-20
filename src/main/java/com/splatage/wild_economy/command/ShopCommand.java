@@ -11,15 +11,18 @@ public final class ShopCommand implements CommandExecutor {
     private final ShopOpenSubcommand openSubcommand;
     private final ShopSellHandSubcommand sellHandSubcommand;
     private final ShopSellAllSubcommand sellAllSubcommand;
+    private final ShopSellContainerSubcommand sellContainerSubcommand;
 
     public ShopCommand(
         final ShopOpenSubcommand openSubcommand,
         final ShopSellHandSubcommand sellHandSubcommand,
-        final ShopSellAllSubcommand sellAllSubcommand
+        final ShopSellAllSubcommand sellAllSubcommand,
+        final ShopSellContainerSubcommand sellContainerSubcommand
     ) {
         this.openSubcommand = Objects.requireNonNull(openSubcommand, "openSubcommand");
         this.sellHandSubcommand = Objects.requireNonNull(sellHandSubcommand, "sellHandSubcommand");
         this.sellAllSubcommand = Objects.requireNonNull(sellAllSubcommand, "sellAllSubcommand");
+        this.sellContainerSubcommand = Objects.requireNonNull(sellContainerSubcommand, "sellContainerSubcommand");
     }
 
     @Override
@@ -32,8 +35,9 @@ public final class ShopCommand implements CommandExecutor {
         return switch (subcommand) {
             case "sellhand" -> this.sellHandSubcommand.execute(sender);
             case "sellall" -> this.sellAllSubcommand.execute(sender);
+            case "sellcontainer" -> this.sellContainerSubcommand.execute(sender);
             default -> {
-                sender.sendMessage("Unknown subcommand. Use /shop, /shop sellhand, /shop sellall, /sellhand, or /sellall.");
+                sender.sendMessage("Unknown subcommand. Use /shop, /shop sellhand, /shop sellall, /shop sellcontainer, /sellhand, /sellall, or /sellcontainer.");
                 yield true;
             }
         };

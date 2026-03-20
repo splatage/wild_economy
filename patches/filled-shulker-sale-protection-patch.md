@@ -1,3 +1,21 @@
+# wild_economy patch: protect filled shulkers from being sold as items
+
+Scope:
+
+* prevent filled shulker boxes from being treated as canonical Exchange items
+* keep empty shulker boxes sellable if they are otherwise valid and catalog-enabled
+* leave `/sellcontainer` behavior intact for intentionally selling shulker contents
+
+Rationale:
+
+* the live repo currently rejects only display name, lore, enchants, unbreakable, and damage in `CanonicalItemRules`, so filled shulkers can still normalize and be sold as shulker items today. ([raw.githubusercontent.com](https://raw.githubusercontent.com/splatage/wild_economy/main/src/main/java/com/splatage/wild_economy/exchange/item/CanonicalItemRules.java))
+* `validateForSell(...)` depends on the normalizer/canonical rules, so fixing this at the canonical layer protects `sellHand()` and `sellAll()` without duplicating logic in each command path. ([raw.githubusercontent.com](https://raw.githubusercontent.com/splatage/wild_economy/main/src/main/java/com/splatage/wild_economy/exchange/item/BukkitItemNormalizer.java))
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/exchange/item/CanonicalItemRules.java`
+
+```java
 package com.splatage.wild_economy.exchange.item;
 
 import com.splatage.wild_economy.exchange.domain.ItemKey;
@@ -71,3 +89,4 @@ public final class CanonicalItemRules {
         return false;
     }
 }
+```

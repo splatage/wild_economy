@@ -14,7 +14,7 @@ softdepend:
 commands:
   shop:
     description: Open the shop or use sell commands.
-    usage: /shop [sellhand|sellall]
+    usage: /shop [sellhand|sellall|sellcontainer]
     aliases: [exchange]
     permission: wild_economy.shop
   sellhand:
@@ -25,6 +25,10 @@ commands:
     description: Sell all sellable items in your inventory to the Exchange.
     usage: /sellall
     permission: wild_economy.shop.sell
+  sellcontainer:
+    description: Sell the contents of a looked-at container or held shulker box.
+    usage: /sellcontainer
+    permission: wild_economy.shop.sellcontainer
   shopadmin:
     description: Admin commands for wild_economy.
     usage: /shopadmin <reload|generatecatalog>
@@ -36,6 +40,9 @@ permissions:
     default: true
   wild_economy.shop.sell:
     description: Allows selling to the Exchange.
+    default: true
+  wild_economy.shop.sellcontainer:
+    description: Allows selling the contents of supported containers.
     default: true
   wild_economy.shop.buy:
     description: Allows buying from the Exchange.
