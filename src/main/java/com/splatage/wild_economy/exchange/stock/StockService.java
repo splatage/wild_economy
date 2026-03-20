@@ -11,6 +11,10 @@ public interface StockService {
 
     void addStock(ItemKey itemKey, int amount);
 
+    boolean tryConsume(ItemKey itemKey, int amount);
+
+    int consumeUpTo(ItemKey itemKey, int amount);
+
     void removeStock(ItemKey itemKey, int amount);
 
     void flushDirtyNow();

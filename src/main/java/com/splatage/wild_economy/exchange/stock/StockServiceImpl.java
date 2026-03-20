@@ -71,16 +71,19 @@ public final class StockServiceImpl implements StockService {
         this.totalFlushedItems = new LongAdder();
         this.totalFlushOperations = new LongAdder();
         this.totalFlushFailures = new LongAdder();
+
         this.preloadCache();
         this.startFlushScheduler();
     }
 
     @Override
     public StockSnapshot getSnapshot(final ItemKey itemKey) {
+        Objects.requireNonNull(itemKey, "itemKey");
+
         final ExchangeCatalogEntry entry = this.exchangeCatalog.get(itemKey)
             .orElseThrow(() -> new IllegalStateException("Missing catalog entry for " + itemKey.value()));
 
-        final long stockCount = this.stockCache.getOrDefault(itemKey, 0L);
+        final long stockCount = Math.max(0L, this.stockCache.getOrDefault(itemKey, 0L));
         final long stockCap = Math.max(0L, entry.stockCap());
         final double fillRatio = stockCap <= 0L
             ? 0.0D
@@ -101,23 +104,63 @@ public final class StockServiceImpl implements StockService {
 
     @Override
     public void addStock(final ItemKey itemKey, final int amount) {
+        Objects.requireNonNull(itemKey, "itemKey");
         if (amount <= 0) {
             return;
         }
+
         this.stockCache.merge(itemKey, (long) amount, Long::sum);
         this.dirtyKeys.add(itemKey);
     }
 
     @Override
-    public void removeStock(final ItemKey itemKey, final int amount) {
+    public boolean tryConsume(final ItemKey itemKey, final int amount) {
+        Objects.requireNonNull(itemKey, "itemKey");
         if (amount <= 0) {
-            return;
+            return true;
         }
+
+        final AtomicBoolean consumed = new AtomicBoolean(false);
         this.stockCache.compute(itemKey, (key, current) -> {
             final long currentValue = current == null ? 0L : current;
-            return Math.max(0L, currentValue - amount);
+            if (currentValue < amount) {
+                return currentValue;
+            }
+
+            consumed.set(true);
+            return currentValue - amount;
         });
-        this.dirtyKeys.add(itemKey);
+
+        if (consumed.get()) {
+            this.dirtyKeys.add(itemKey);
+        }
+        return consumed.get();
+    }
+
+    @Override
+    public int consumeUpTo(final ItemKey itemKey, final int amount) {
+        Objects.requireNonNull(itemKey, "itemKey");
+        if (amount <= 0) {
+            return 0;
+        }
+
+        final AtomicInteger consumed = new AtomicInteger(0);
+        this.stockCache.compute(itemKey, (key, current) -> {
+            final long currentValue = current == null ? 0L : current;
+            final int actualConsumed = (int) Math.min(currentValue, amount);
+            consumed.set(actualConsumed);
+            return currentValue - actualConsumed;
+        });
+
+        if (consumed.get() > 0) {
+            this.dirtyKeys.add(itemKey);
+        }
+        return consumed.get();
+    }
+
+    @Override
+    public void removeStock(final ItemKey itemKey, final int amount) {
+        this.consumeUpTo(itemKey, amount);
     }
 
     @Override
@@ -328,6 +371,7 @@ public final class StockServiceImpl implements StockService {
                 if (snapshot.isEmpty()) {
                     continue;
                 }
+
                 try {
                     final long startedAt = System.nanoTime();
                     this.stockRepository.flushStocks(snapshot);

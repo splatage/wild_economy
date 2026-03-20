@@ -5,7 +5,6 @@ import com.splatage.wild_economy.economy.EconomyResult;
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalog;
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalogEntry;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
-import com.splatage.wild_economy.exchange.domain.PlannedSale;
 import com.splatage.wild_economy.exchange.domain.RejectionReason;
 import com.splatage.wild_economy.exchange.domain.SellAllResult;
 import com.splatage.wild_economy.exchange.domain.SellContainerResult;
@@ -21,8 +20,11 @@ import com.splatage.wild_economy.integration.protection.ContainerAccessResult;
 import com.splatage.wild_economy.integration.protection.ContainerAccessService;
 import com.splatage.wild_economy.integration.protection.ContainerAccessServices;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.bukkit.Bukkit;
@@ -105,6 +107,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         final ItemKey itemKey = validation.itemKey();
         final ExchangeCatalogEntry entry = this.exchangeCatalog.get(itemKey)
             .orElseThrow(() -> new IllegalStateException("Missing catalog entry for " + itemKey.value()));
+
         final int amount = held.getAmount();
         final StockSnapshot stockSnapshot = this.stockService.getSnapshot(itemKey);
         final SellQuote quote = this.pricingService.quoteSell(itemKey, amount, stockSnapshot);
@@ -134,8 +137,10 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         );
 
         final String message = quote.tapered()
-            ? "Sold " + amount + "x " + entry.displayName() + " for " + quote.totalPrice() + " (reduced due to high stock)"
+            ? "Sold " + amount + "x " + entry.displayName() + " for " + quote.totalPrice()
+                + " (reduced due to high stock)"
             : "Sold " + amount + "x " + entry.displayName() + " for " + quote.totalPrice();
+
         return new SellHandResult(true, lineResult, null, message);
     }
 
@@ -156,15 +161,11 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         }
 
         final Inventory inventory = player.getInventory();
-        for (final PlannedSale sale : planning.plannedSales()) {
-            inventory.setItem(sale.slot(), null);
-        }
+        this.removePlannedItems(inventory, planning);
 
         final EconomyResult payout = this.economyGateway.deposit(playerId, planning.totalEarned());
         if (!payout.success()) {
-            for (final PlannedSale sale : planning.plannedSales()) {
-                inventory.setItem(sale.slot(), sale.originalStack());
-            }
+            this.restorePlannedItems(inventory, planning);
             return new SellAllResult(
                 false,
                 List.of(),
@@ -175,7 +176,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         }
 
         final List<SellLineResult> soldLines = this.completePlannedSales(playerId, planning.plannedSales());
-        String message = "Sold " + soldLines.size() + " stack(s) for a total of " + planning.totalEarned();
+        String message = "Sold " + soldLines.size() + " item type(s) for a total of " + planning.totalEarned();
         if (planning.taperedAny()) {
             message += " (some items sold at reduced value due to high stock)";
         }
@@ -274,11 +275,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         final Inventory inventory,
         final String targetDescription
     ) {
-        final SalePlanning planning = this.planSalesFromInventory(
-            inventory,
-            true,
-            "nested container not supported"
-        );
+        final SalePlanning planning = this.planSalesFromInventory(inventory, true, "nested container not supported");
         if (planning.plannedSales().isEmpty()) {
             return new SellContainerResult(
                 false,
@@ -290,15 +287,11 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
             );
         }
 
-        for (final PlannedSale sale : planning.plannedSales()) {
-            inventory.setItem(sale.slot(), null);
-        }
+        this.removePlannedItems(inventory, planning);
 
         final EconomyResult payout = this.economyGateway.deposit(playerId, planning.totalEarned());
         if (!payout.success()) {
-            for (final PlannedSale sale : planning.plannedSales()) {
-                inventory.setItem(sale.slot(), sale.originalStack());
-            }
+            this.restorePlannedItems(inventory, planning);
             return new SellContainerResult(
                 false,
                 List.of(),
@@ -359,13 +352,12 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
             );
         }
 
-        for (final PlannedSale sale : planning.plannedSales()) {
-            shulkerBox.getInventory().setItem(sale.slot(), null);
-        }
+        this.removePlannedItems(shulkerBox.getInventory(), planning);
 
         final ItemStack updatedHeld = heldShulker.clone();
         final BlockStateMeta updatedMeta = (BlockStateMeta) updatedHeld.getItemMeta();
         if (updatedMeta == null) {
+            this.restorePlannedItems(shulkerBox.getInventory(), planning);
             return new SellContainerResult(
                 false,
                 List.of(),
@@ -409,9 +401,12 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         );
     }
 
-    private List<SellLineResult> completePlannedSales(final UUID playerId, final List<PlannedSale> plannedSales) {
+    private List<SellLineResult> completePlannedSales(
+        final UUID playerId,
+        final List<GroupedPlannedSale> plannedSales
+    ) {
         final List<SellLineResult> soldLines = new ArrayList<>(plannedSales.size());
-        for (final PlannedSale sale : plannedSales) {
+        for (final GroupedPlannedSale sale : plannedSales) {
             this.stockService.addStock(sale.itemKey(), sale.amount());
             this.transactionLogService.logSale(
                 playerId,
@@ -437,10 +432,8 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         final boolean protectShulkers,
         final String protectedShulkerReason
     ) {
-        final List<PlannedSale> plannedSales = new ArrayList<>();
+        final Map<ItemKey, GroupedSaleAccumulator> groupedSales = new LinkedHashMap<>();
         final List<String> skippedDescriptions = new ArrayList<>();
-        BigDecimal totalEarned = BigDecimal.ZERO;
-        boolean taperedAny = false;
 
         for (int slot = 0; slot < inventory.getSize(); slot++) {
             final ItemStack stack = inventory.getItem(slot);
@@ -463,22 +456,29 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
             final ItemKey itemKey = validation.itemKey();
             final ExchangeCatalogEntry entry = this.exchangeCatalog.get(itemKey)
                 .orElseThrow(() -> new IllegalStateException("Missing catalog entry for " + itemKey.value()));
-            final int amount = stack.getAmount();
-            final StockSnapshot stockSnapshot = this.stockService.getSnapshot(itemKey);
-            final SellQuote quote = this.pricingService.quoteSell(itemKey, amount, stockSnapshot);
+
+            groupedSales
+                .computeIfAbsent(itemKey, key -> new GroupedSaleAccumulator(itemKey, entry.displayName()))
+                .add(slot, stack);
+        }
+
+        final List<GroupedPlannedSale> plannedSales = new ArrayList<>(groupedSales.size());
+        BigDecimal totalEarned = BigDecimal.ZERO;
+        boolean taperedAny = false;
+
+        for (final GroupedSaleAccumulator accumulator : groupedSales.values()) {
+            final StockSnapshot stockSnapshot = this.stockService.getSnapshot(accumulator.itemKey());
+            final SellQuote quote = this.pricingService.quoteSell(
+                accumulator.itemKey(),
+                accumulator.totalAmount(),
+                stockSnapshot
+            );
             if (quote.totalPrice().compareTo(BigDecimal.ZERO) <= 0) {
-                skippedDescriptions.add(entry.displayName() + " x" + amount + " (zero value)");
+                skippedDescriptions.add(accumulator.displayName() + " x" + accumulator.totalAmount() + " (zero value)");
                 continue;
             }
 
-            plannedSales.add(new PlannedSale(
-                slot,
-                stack.clone(),
-                itemKey,
-                entry.displayName(),
-                amount,
-                quote
-            ));
+            plannedSales.add(accumulator.toPlannedSale(quote));
             totalEarned = totalEarned.add(quote.totalPrice());
             taperedAny |= quote.tapered();
         }
@@ -486,9 +486,25 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         return new SalePlanning(
             List.copyOf(plannedSales),
             List.copyOf(skippedDescriptions),
-            totalEarned,
+            totalEarned.setScale(2, RoundingMode.HALF_UP),
             taperedAny
         );
+    }
+
+    private void removePlannedItems(final Inventory inventory, final SalePlanning planning) {
+        for (final GroupedPlannedSale sale : planning.plannedSales()) {
+            for (final InventoryRemoval removal : sale.removals()) {
+                inventory.setItem(removal.slot(), null);
+            }
+        }
+    }
+
+    private void restorePlannedItems(final Inventory inventory, final SalePlanning planning) {
+        for (final GroupedPlannedSale sale : planning.plannedSales()) {
+            for (final InventoryRemoval removal : sale.removals()) {
+                inventory.setItem(removal.slot(), removal.originalStack());
+            }
+        }
     }
 
     private SupportedContainerTarget resolveSupportedBlockTarget(final Block targetBlock) {
@@ -498,19 +514,15 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
 
         final BlockState state = targetBlock.getState();
         final String description = this.describeTargetBlock(targetBlock);
-
         if (state instanceof Chest chest) {
             return new SupportedContainerTarget(targetBlock, state, chest.getInventory(), description);
         }
-
         if (state instanceof Barrel barrel) {
             return new SupportedContainerTarget(targetBlock, state, barrel.getInventory(), description);
         }
-
         if (state instanceof ShulkerBox shulkerBox) {
             return new SupportedContainerTarget(targetBlock, state, shulkerBox.getInventory(), description);
         }
-
         return null;
     }
 
@@ -518,7 +530,6 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         if (stack == null || stack.getType() == Material.AIR || !this.isShulkerBoxItem(stack.getType())) {
             return false;
         }
-
         return stack.getItemMeta() instanceof BlockStateMeta blockStateMeta
             && blockStateMeta.getBlockState() instanceof ShulkerBox;
     }
@@ -532,14 +543,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
     }
 
     private SellContainerResult deniedPlacedContainer(final String targetDescription, final String message) {
-        return new SellContainerResult(
-            false,
-            List.of(),
-            BigDecimal.ZERO,
-            List.of(),
-            targetDescription,
-            message
-        );
+        return new SellContainerResult(false, List.of(), BigDecimal.ZERO, List.of(), targetDescription, message);
     }
 
     private String describeTargetBlock(final Block targetBlock) {
@@ -568,18 +572,67 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
     }
 
     private record SalePlanning(
-        List<PlannedSale> plannedSales,
+        List<GroupedPlannedSale> plannedSales,
         List<String> skippedDescriptions,
         BigDecimal totalEarned,
         boolean taperedAny
     ) {
     }
 
-    private record SupportedContainerTarget(
-        Block block,
-        BlockState state,
-        Inventory inventory,
-        String description
+    private record GroupedPlannedSale(
+        ItemKey itemKey,
+        String displayName,
+        int amount,
+        SellQuote quote,
+        List<InventoryRemoval> removals
     ) {
+    }
+
+    private record InventoryRemoval(int slot, ItemStack originalStack) {
+    }
+
+    private record SupportedContainerTarget(Block block, BlockState state, Inventory inventory, String description) {
+    }
+
+    private static final class GroupedSaleAccumulator {
+
+        private final ItemKey itemKey;
+        private final String displayName;
+        private final List<InventoryRemoval> removals;
+        private int totalAmount;
+
+        private GroupedSaleAccumulator(final ItemKey itemKey, final String displayName) {
+            this.itemKey = itemKey;
+            this.displayName = displayName;
+            this.removals = new ArrayList<>();
+            this.totalAmount = 0;
+        }
+
+        private void add(final int slot, final ItemStack originalStack) {
+            this.removals.add(new InventoryRemoval(slot, originalStack.clone()));
+            this.totalAmount += originalStack.getAmount();
+        }
+
+        private ItemKey itemKey() {
+            return this.itemKey;
+        }
+
+        private String displayName() {
+            return this.displayName;
+        }
+
+        private int totalAmount() {
+            return this.totalAmount;
+        }
+
+        private GroupedPlannedSale toPlannedSale(final SellQuote quote) {
+            return new GroupedPlannedSale(
+                this.itemKey,
+                this.displayName,
+                this.totalAmount,
+                quote,
+                List.copyOf(this.removals)
+            );
+        }
     }
 }

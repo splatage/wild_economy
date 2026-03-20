@@ -28,23 +28,19 @@ public final class StockTurnoverServiceImpl implements StockTurnoverService {
             if (entry.policyMode() != ItemPolicyMode.PLAYER_STOCKED) {
                 continue;
             }
+
             final long turnover = Math.max(0L, entry.turnoverAmountPerInterval());
             if (turnover <= 0L) {
                 continue;
             }
 
-            final var snapshot = this.stockService.getSnapshot(entry.itemKey());
-            if (snapshot.stockCount() <= 0L) {
+            final int requestedRemoval = (int) Math.min(Integer.MAX_VALUE, turnover);
+            final int actualRemoved = this.stockService.consumeUpTo(entry.itemKey(), requestedRemoval);
+            if (actualRemoved <= 0) {
                 continue;
             }
 
-            final int removeAmount = (int) Math.min(snapshot.stockCount(), turnover);
-            if (removeAmount <= 0) {
-                continue;
-            }
-
-            this.stockService.removeStock(entry.itemKey(), removeAmount);
-            this.transactionLogService.logTurnover(entry.itemKey(), removeAmount);
+            this.transactionLogService.logTurnover(entry.itemKey(), actualRemoved);
         }
     }
 }

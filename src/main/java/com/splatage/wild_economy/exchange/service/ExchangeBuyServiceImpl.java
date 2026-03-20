@@ -27,6 +27,8 @@ import org.bukkit.inventory.ItemStack;
 
 public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
 
+    private static final int MAX_BUY_AMOUNT = 64;
+
     private final ExchangeCatalog exchangeCatalog;
     private final ItemValidationService itemValidationService;
     private final StockService stockService;
@@ -57,8 +59,16 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             return new BuyResult(false, itemKey, 0, null, null, RejectionReason.INTERNAL_ERROR, "Player is not online");
         }
 
-        if (amount <= 0) {
-            return new BuyResult(false, itemKey, 0, null, null, RejectionReason.BUY_NOT_ALLOWED, "Amount must be positive");
+        if (amount <= 0 || amount > MAX_BUY_AMOUNT) {
+            return new BuyResult(
+                false,
+                itemKey,
+                0,
+                null,
+                null,
+                RejectionReason.BUY_NOT_ALLOWED,
+                "Amount must be between 1 and " + MAX_BUY_AMOUNT
+            );
         }
 
         final ValidationResult validation = this.itemValidationService.validateForBuy(itemKey);
@@ -69,8 +79,9 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         final ExchangeCatalogEntry entry = this.exchangeCatalog.get(itemKey)
             .orElseThrow(() -> new IllegalStateException("Missing catalog entry for " + itemKey.value()));
 
+        final boolean playerStocked = entry.policyMode() == ItemPolicyMode.PLAYER_STOCKED;
         final StockSnapshot snapshot = this.stockService.getSnapshot(itemKey);
-        if (entry.policyMode() == ItemPolicyMode.PLAYER_STOCKED && snapshot.stockCount() < amount) {
+        if (playerStocked && snapshot.stockCount() < amount) {
             return new BuyResult(false, itemKey, 0, null, null, RejectionReason.OUT_OF_STOCK, "Not enough stock available");
         }
 
@@ -114,8 +125,23 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             );
         }
 
+        if (playerStocked && !this.stockService.tryConsume(itemKey, amount)) {
+            return new BuyResult(
+                false,
+                itemKey,
+                0,
+                quote.unitPrice(),
+                quote.totalPrice(),
+                RejectionReason.OUT_OF_STOCK,
+                "Not enough stock available"
+            );
+        }
+
         final EconomyResult withdrawal = this.economyGateway.withdraw(playerId, quote.totalPrice());
         if (!withdrawal.success()) {
+            if (playerStocked) {
+                this.stockService.addStock(itemKey, amount);
+            }
             return new BuyResult(
                 false,
                 itemKey,
@@ -130,6 +156,10 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         final Map<Integer, ItemStack> leftovers = player.getInventory().addItem(toGive);
         final int leftoverAmount = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
         final int amountBought = Math.max(0, amount - leftoverAmount);
+
+        if (leftoverAmount > 0 && playerStocked) {
+            this.stockService.addStock(itemKey, leftoverAmount);
+        }
 
         if (amountBought <= 0) {
             this.economyGateway.deposit(playerId, quote.totalPrice());
@@ -153,10 +183,6 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             if (refund.compareTo(BigDecimal.ZERO) > 0) {
                 this.economyGateway.deposit(playerId, refund);
             }
-        }
-
-        if (entry.policyMode() == ItemPolicyMode.PLAYER_STOCKED) {
-            this.stockService.removeStock(itemKey, amountBought);
         }
 
         this.transactionLogService.logPurchase(playerId, itemKey, amountBought, quote.unitPrice(), actualTotalPrice);
