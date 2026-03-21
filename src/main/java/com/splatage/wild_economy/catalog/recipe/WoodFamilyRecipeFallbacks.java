@@ -32,6 +32,7 @@ public final class WoodFamilyRecipeFallbacks {
             applyStrippedInputFromLog(recipesByOutput, family);
             applyWoodenSign(recipesByOutput, family);
             applyHangingSign(recipesByOutput, family);
+            applyStairs(recipesByOutput, family);
             applyBoat(recipesByOutput, family);
             applyChestBoat(recipesByOutput, family);
         }
@@ -153,6 +154,28 @@ public final class WoodFamilyRecipeFallbacks {
         );
     }
 
+    private static void applyStairs(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final WoodFamily family
+    ) {
+        if (!hasMaterial(family.planksKey()) || !hasMaterial(family.stairsKey())) {
+            return;
+        }
+        if (hasRecipes(recipesByOutput, family.stairsKey())) {
+            return;
+        }
+
+        addRecipe(
+            recipesByOutput,
+            new RecipeDefinition(
+                family.stairsKey(),
+                4,
+                "fallback_wooden_stairs",
+                List.of(new RecipeIngredient(family.planksKey(), 6))
+            )
+        );
+    }
+
     private static void applyBoat(
         final Map<String, List<RecipeDefinition>> recipesByOutput,
         final WoodFamily family
@@ -235,6 +258,7 @@ public final class WoodFamilyRecipeFallbacks {
         String woodLikeOutputKey,
         String signKey,
         String hangingSignKey,
+        String stairsKey,
         String boatKey,
         String chestBoatKey,
         boolean supportsBoatRecipes
@@ -248,6 +272,7 @@ public final class WoodFamilyRecipeFallbacks {
                 familyKey + "_wood",
                 familyKey + "_sign",
                 familyKey + "_hanging_sign",
+                familyKey + "_stairs",
                 familyKey + "_boat",
                 familyKey + "_chest_boat",
                 true
@@ -263,6 +288,7 @@ public final class WoodFamilyRecipeFallbacks {
                 familyKey + "_hyphae",
                 familyKey + "_sign",
                 familyKey + "_hanging_sign",
+                familyKey + "_stairs",
                 null,
                 null,
                 false
