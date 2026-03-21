@@ -22,6 +22,7 @@ public record AdminCatalogDecisionTrace(
     CatalogCategory finalCategory,
     String stockProfile,
     String ecoEnvelope,
+    String postRuleAdjustment,
     String displayName,
     String note
 ) {
@@ -29,3 +30,4 @@ public record AdminCatalogDecisionTrace(
         matchedRuleIds = List.copyOf(matchedRuleIds);
     }
 }
+

@@ -1,3 +1,20 @@
+# wild_economy Phase 1 correctness patch
+Base commit: `fe2b7a8462e899c257a0f6882c9ed399b55f0d6d`
+
+This bundle contains full replacement files for the Phase 1 admin/catalog correctness pass.
+
+Key fixes:
+- Correctly parse nested `match` / `set` maps from `policy-rules.yml`
+- Make resolved policy/profile/envelope state stay consistent through rule application and final projection
+- Add decision-trace clarity for post-rule forced disablement
+- Add validation warnings for zero-match rules, zero SELL_ONLY outcomes, high disabled ratio, and heavy `NO_RECIPE_AND_NO_ROOT` counts
+- Expand generated summary output with derivation-reason and rule-match counts
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/catalog/admin/AdminCatalogPhaseOneService.java`
+
+```java
 package com.splatage.wild_economy.catalog.admin;
 
 import com.splatage.wild_economy.catalog.classify.DefaultCategoryClassifier;
@@ -1055,3 +1072,42 @@ public final class AdminCatalogPhaseOneService {
     }
 }
 
+```
+
+## File: `src/main/java/com/splatage/wild_economy/catalog/admin/AdminCatalogDecisionTrace.java`
+
+```java
+package com.splatage.wild_economy.catalog.admin;
+
+import com.splatage.wild_economy.catalog.derive.DerivationReason;
+import com.splatage.wild_economy.catalog.model.CatalogCategory;
+import com.splatage.wild_economy.catalog.model.CatalogPolicy;
+import java.math.BigDecimal;
+import java.util.List;
+
+public record AdminCatalogDecisionTrace(
+    String itemKey,
+    CatalogCategory classifiedCategory,
+    DerivationReason derivationReason,
+    Integer derivationDepth,
+    boolean rootValuePresent,
+    BigDecimal rootValue,
+    BigDecimal derivedValue,
+    CatalogPolicy baseSuggestedPolicy,
+    List<String> matchedRuleIds,
+    String winningRuleId,
+    boolean manualOverrideApplied,
+    CatalogPolicy finalPolicy,
+    CatalogCategory finalCategory,
+    String stockProfile,
+    String ecoEnvelope,
+    String postRuleAdjustment,
+    String displayName,
+    String note
+) {
+    public AdminCatalogDecisionTrace {
+        matchedRuleIds = List.copyOf(matchedRuleIds);
+    }
+}
+
+```
