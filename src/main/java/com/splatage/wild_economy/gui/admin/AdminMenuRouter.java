@@ -112,6 +112,18 @@ public final class AdminMenuRouter {
         this.platformExecutor.runOnPlayer(player, () -> this.adminRuleImpactMenu.openDetail(player, state, ruleId));
     }
 
+    public void openRuleImpactSampleDetail(
+        final Player player,
+        final AdminCatalogViewState state,
+        final String ruleId,
+        final String sampleGroupId
+    ) {
+        this.platformExecutor.runOnPlayer(
+            player,
+            () -> this.adminRuleImpactMenu.openSampleDetail(player, state, ruleId, sampleGroupId)
+        );
+    }
+
     public void openItemInspector(
         final Player player,
         final AdminCatalogViewState state,
@@ -139,6 +151,7 @@ public final class AdminMenuRouter {
             case REVIEW_BUCKET_SUBGROUP_DETAIL -> this.openReviewBucketDetail(player, holder.state(), holder.bucketId());
             case RULE_IMPACT_LIST -> this.openRoot(player, holder.state());
             case RULE_IMPACT_DETAIL -> this.openRuleImpactList(player, holder.state());
+            case RULE_IMPACT_SAMPLE_DETAIL -> this.openRuleImpactDetail(player, holder.state(), holder.ruleId());
             case ITEM_INSPECTOR -> {
                 if (holder.returnBucketId() != null) {
                     this.openReviewBucketDetail(player, holder.state(), holder.returnBucketId());

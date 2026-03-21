@@ -17,6 +17,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public final class AdminRuleImpactMenu {
 
+    private static final String SAMPLE_GROUP_MATCHED = "matched";
+    private static final String SAMPLE_GROUP_WINNING = "winning";
+    private static final String SAMPLE_GROUP_LOST = "lost";
+
     private AdminMenuRouter adminMenuRouter;
 
     public void setAdminMenuRouter(final AdminMenuRouter adminMenuRouter) {
@@ -60,35 +64,47 @@ public final class AdminRuleImpactMenu {
         inventory.setItem(12, this.lossRuleItem(ruleImpact));
         inventory.setItem(14, this.policyMapItem("Lost to policies", ruleImpact.lostToPolicies()));
 
-        int matchedSlot = 18;
-        for (final String itemKey : ruleImpact.sampleMatchedItems()) {
-            if (matchedSlot >= 27) {
-                break;
-            }
-            inventory.setItem(matchedSlot, this.itemButton(itemKey, "Matched sample"));
-            matchedSlot++;
-        }
-
-        int winSlot = 27;
-        for (final String itemKey : ruleImpact.sampleWinningItems()) {
-            if (winSlot >= 36) {
-                break;
-            }
-            inventory.setItem(winSlot, this.itemButton(itemKey, "Winning sample"));
-            winSlot++;
-        }
-
-        int lostSlot = 36;
-        for (final String itemKey : ruleImpact.sampleLostItems()) {
-            if (lostSlot >= 45) {
-                break;
-            }
-            inventory.setItem(lostSlot, this.itemButton(itemKey, "Lost sample"));
-            lostSlot++;
-        }
+        inventory.setItem(20, this.sampleGroupButton(Material.BOOK, "Matched samples", ruleImpact.sampleMatchedItems(), SAMPLE_GROUP_MATCHED));
+        inventory.setItem(22, this.sampleGroupButton(Material.LIME_DYE, "Winning samples", ruleImpact.sampleWinningItems(), SAMPLE_GROUP_WINNING));
+        inventory.setItem(24, this.sampleGroupButton(Material.RED_DYE, "Lost samples", ruleImpact.sampleLostItems(), SAMPLE_GROUP_LOST));
 
         inventory.setItem(45, this.button(Material.ARROW, "Back"));
         inventory.setItem(49, this.button(Material.COMPARATOR, "Rule List"));
+        inventory.setItem(53, this.button(Material.BARRIER, "Close"));
+
+        player.openInventory(inventory);
+    }
+
+    public void openSampleDetail(
+        final Player player,
+        final AdminCatalogViewState state,
+        final String ruleId,
+        final String sampleGroupId
+    ) {
+        final AdminCatalogRuleImpact ruleImpact = state.findRuleImpact(ruleId);
+        if (ruleImpact == null) {
+            player.sendMessage("Unknown rule impact: " + ruleId);
+            this.openList(player, state);
+            return;
+        }
+
+        final List<String> items = this.sampleItems(ruleImpact, sampleGroupId);
+        final AdminMenuHolder holder = AdminMenuHolder.ruleImpactSampleDetail(state, ruleId, sampleGroupId);
+        final Inventory inventory = holder.createInventory(54, "Rule Samples - " + this.prettySampleGroup(sampleGroupId));
+
+        inventory.setItem(4, this.sampleGroupSummaryItem(ruleImpact, sampleGroupId, items));
+
+        int slot = 18;
+        for (final String itemKey : items) {
+            if (slot >= 45) {
+                break;
+            }
+            inventory.setItem(slot, this.itemButton(itemKey, this.prettySampleGroup(sampleGroupId) + " sample"));
+            slot++;
+        }
+
+        inventory.setItem(45, this.button(Material.ARROW, "Back"));
+        inventory.setItem(49, this.button(Material.COMPARATOR, "Rule Detail"));
         inventory.setItem(53, this.button(Material.BARRIER, "Close"));
 
         player.openInventory(inventory);
@@ -101,6 +117,7 @@ public final class AdminRuleImpactMenu {
         switch (holder.viewType()) {
             case RULE_IMPACT_LIST -> this.handleListClick(event, player, holder.state());
             case RULE_IMPACT_DETAIL -> this.handleDetailClick(event, player, holder);
+            case RULE_IMPACT_SAMPLE_DETAIL -> this.handleSampleDetailClick(event, player, holder);
             default -> {
             }
         }
@@ -132,36 +149,47 @@ public final class AdminRuleImpactMenu {
             return;
         }
 
-        if (slot >= 18 && slot < 27) {
-            final int index = slot - 18;
-            if (index < ruleImpact.sampleMatchedItems().size()) {
-                this.adminMenuRouter.openItemInspector(player, holder.state(), ruleImpact.sampleMatchedItems().get(index), null, ruleImpact.ruleId());
-            }
-            return;
-        }
-
-        if (slot >= 27 && slot < 36) {
-            final int index = slot - 27;
-            if (index < ruleImpact.sampleWinningItems().size()) {
-                this.adminMenuRouter.openItemInspector(player, holder.state(), ruleImpact.sampleWinningItems().get(index), null, ruleImpact.ruleId());
-            }
-            return;
-        }
-
-        if (slot >= 36 && slot < 45) {
-            final int index = slot - 36;
-            if (index < ruleImpact.sampleLostItems().size()) {
-                this.adminMenuRouter.openItemInspector(player, holder.state(), ruleImpact.sampleLostItems().get(index), null, ruleImpact.ruleId());
-            }
-            return;
-        }
-
         switch (slot) {
+            case 20 -> this.adminMenuRouter.openRuleImpactSampleDetail(player, holder.state(), ruleImpact.ruleId(), SAMPLE_GROUP_MATCHED);
+            case 22 -> this.adminMenuRouter.openRuleImpactSampleDetail(player, holder.state(), ruleImpact.ruleId(), SAMPLE_GROUP_WINNING);
+            case 24 -> this.adminMenuRouter.openRuleImpactSampleDetail(player, holder.state(), ruleImpact.ruleId(), SAMPLE_GROUP_LOST);
             case 45, 49 -> this.adminMenuRouter.openRuleImpactList(player, holder.state());
             case 53 -> player.closeInventory();
             default -> {
             }
         }
+    }
+
+    private void handleSampleDetailClick(final InventoryClickEvent event, final Player player, final AdminMenuHolder holder) {
+        final int slot = event.getRawSlot();
+        final AdminCatalogRuleImpact ruleImpact = holder.state().findRuleImpact(holder.ruleId());
+        if (ruleImpact == null) {
+            this.adminMenuRouter.openRuleImpactList(player, holder.state());
+            return;
+        }
+
+        final List<String> items = this.sampleItems(ruleImpact, holder.sampleGroupId());
+        if (slot >= 18 && slot < 45) {
+            final int index = slot - 18;
+            if (index < items.size()) {
+                this.adminMenuRouter.openItemInspector(player, holder.state(), items.get(index), null, holder.ruleId());
+            }
+            return;
+        }
+
+        switch (slot) {
+            case 45, 49 -> this.adminMenuRouter.openRuleImpactDetail(player, holder.state(), holder.ruleId());
+            case 53 -> player.closeInventory();
+            default -> {
+            }
+        }
+    }
+
+    private List<String> sortedRuleIds(final Map<String, Integer> counts) {
+        return counts.entrySet().stream()
+            .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+            .map(Map.Entry::getKey)
+            .toList();
     }
 
     private List<AdminCatalogRuleImpact> sortedRuleImpacts(final AdminCatalogViewState state) {
@@ -172,6 +200,15 @@ public final class AdminRuleImpactMenu {
                 .reversed()
         );
         return ruleImpacts;
+    }
+
+    private List<String> sampleItems(final AdminCatalogRuleImpact ruleImpact, final String sampleGroupId) {
+        return switch (sampleGroupId) {
+            case SAMPLE_GROUP_MATCHED -> ruleImpact.sampleMatchedItems();
+            case SAMPLE_GROUP_WINNING -> ruleImpact.sampleWinningItems();
+            case SAMPLE_GROUP_LOST -> ruleImpact.sampleLostItems();
+            default -> List.of();
+        };
     }
 
     private ItemStack ruleItem(final AdminCatalogRuleImpact ruleImpact) {
@@ -200,7 +237,7 @@ public final class AdminRuleImpactMenu {
         lore.add("Match count: " + ruleImpact.matchCount());
         lore.add("Win count: " + ruleImpact.winCount());
         lore.add("Loss count: " + ruleImpact.lossCount());
-        lore.add("Matched / won / lost samples below");
+        lore.add("Open matched / won / lost sample lists below.");
         return this.item(Material.REPEATER, ruleImpact.ruleId(), lore);
     }
 
@@ -225,6 +262,47 @@ public final class AdminRuleImpactMenu {
             lore.add(policy.name() + ": " + counts.getOrDefault(policy, Integer.valueOf(0)));
         }
         return this.item(Material.PAPER, title, lore);
+    }
+
+    private ItemStack sampleGroupButton(
+        final Material material,
+        final String title,
+        final List<String> items,
+        final String sampleGroupId
+    ) {
+        final List<String> lore = new ArrayList<>();
+        lore.add("Count: " + items.size());
+        if (items.isEmpty()) {
+            lore.add("No samples recorded.");
+        } else {
+            for (final String itemKey : items.stream().limit(4).toList()) {
+                lore.add(this.displayItemKey(itemKey));
+            }
+            lore.add("Click to open sample detail.");
+        }
+        return this.item(material, title, lore);
+    }
+
+    private ItemStack sampleGroupSummaryItem(
+        final AdminCatalogRuleImpact ruleImpact,
+        final String sampleGroupId,
+        final List<String> items
+    ) {
+        final List<String> lore = new ArrayList<>();
+        lore.add("Rule: " + ruleImpact.ruleId());
+        lore.add("Group: " + this.prettySampleGroup(sampleGroupId));
+        lore.add("Count: " + items.size());
+        if (SAMPLE_GROUP_LOST.equals(sampleGroupId) && !ruleImpact.lostToRules().isEmpty()) {
+            final Map.Entry<String, Integer> topLoss = ruleImpact.lostToRules().entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .findFirst()
+                .orElse(null);
+            if (topLoss != null) {
+                lore.add("Top losing rule: " + topLoss.getKey() + " (" + topLoss.getValue() + ")");
+            }
+        }
+        lore.add("Click a sample item below to inspect it.");
+        return this.item(Material.BOOK, this.prettySampleGroup(sampleGroupId) + " samples", lore);
     }
 
     private ItemStack itemButton(final String itemKey, final String footer) {
@@ -259,6 +337,15 @@ public final class AdminRuleImpactMenu {
 
     private String displayItemKey(final String itemKey) {
         return itemKey.replace("minecraft:", "").replace('_', ' ');
+    }
+
+    private String prettySampleGroup(final String sampleGroupId) {
+        return switch (sampleGroupId) {
+            case SAMPLE_GROUP_MATCHED -> "Matched";
+            case SAMPLE_GROUP_WINNING -> "Winning";
+            case SAMPLE_GROUP_LOST -> "Lost";
+            default -> "Unknown";
+        };
     }
 }
 

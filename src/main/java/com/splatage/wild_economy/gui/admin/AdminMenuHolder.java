@@ -14,6 +14,7 @@ public final class AdminMenuHolder implements InventoryHolder {
         REVIEW_BUCKET_SUBGROUP_DETAIL,
         RULE_IMPACT_LIST,
         RULE_IMPACT_DETAIL,
+        RULE_IMPACT_SAMPLE_DETAIL,
         ITEM_INSPECTOR
     }
 
@@ -22,6 +23,7 @@ public final class AdminMenuHolder implements InventoryHolder {
     private final String bucketId;
     private final String subgroupId;
     private final String ruleId;
+    private final String sampleGroupId;
     private final String itemKey;
     private final String returnBucketId;
     private final String returnRuleId;
@@ -33,6 +35,7 @@ public final class AdminMenuHolder implements InventoryHolder {
         final String bucketId,
         final String subgroupId,
         final String ruleId,
+        final String sampleGroupId,
         final String itemKey,
         final String returnBucketId,
         final String returnRuleId
@@ -42,21 +45,22 @@ public final class AdminMenuHolder implements InventoryHolder {
         this.bucketId = bucketId;
         this.subgroupId = subgroupId;
         this.ruleId = ruleId;
+        this.sampleGroupId = sampleGroupId;
         this.itemKey = itemKey;
         this.returnBucketId = returnBucketId;
         this.returnRuleId = returnRuleId;
     }
 
     public static AdminMenuHolder root(final AdminCatalogViewState state) {
-        return new AdminMenuHolder(state, ViewType.ROOT, null, null, null, null, null, null);
+        return new AdminMenuHolder(state, ViewType.ROOT, null, null, null, null, null, null, null);
     }
 
     public static AdminMenuHolder reviewBucketList(final AdminCatalogViewState state) {
-        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_LIST, null, null, null, null, null, null);
+        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_LIST, null, null, null, null, null, null, null);
     }
 
     public static AdminMenuHolder reviewBucketDetail(final AdminCatalogViewState state, final String bucketId) {
-        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_DETAIL, bucketId, null, null, null, null, null);
+        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_DETAIL, bucketId, null, null, null, null, null, null);
     }
 
     public static AdminMenuHolder reviewBucketSubgroupDetail(
@@ -72,16 +76,35 @@ public final class AdminMenuHolder implements InventoryHolder {
             null,
             null,
             null,
+            null,
             null
         );
     }
 
     public static AdminMenuHolder ruleImpactList(final AdminCatalogViewState state) {
-        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_LIST, null, null, null, null, null, null);
+        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_LIST, null, null, null, null, null, null, null);
     }
 
     public static AdminMenuHolder ruleImpactDetail(final AdminCatalogViewState state, final String ruleId) {
-        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_DETAIL, null, null, ruleId, null, null, null);
+        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_DETAIL, null, null, ruleId, null, null, null, null);
+    }
+
+    public static AdminMenuHolder ruleImpactSampleDetail(
+        final AdminCatalogViewState state,
+        final String ruleId,
+        final String sampleGroupId
+    ) {
+        return new AdminMenuHolder(
+            state,
+            ViewType.RULE_IMPACT_SAMPLE_DETAIL,
+            null,
+            null,
+            ruleId,
+            sampleGroupId,
+            null,
+            null,
+            null
+        );
     }
 
     public static AdminMenuHolder itemInspector(
@@ -93,6 +116,7 @@ public final class AdminMenuHolder implements InventoryHolder {
         return new AdminMenuHolder(
             state,
             ViewType.ITEM_INSPECTOR,
+            null,
             null,
             null,
             null,
@@ -133,6 +157,10 @@ public final class AdminMenuHolder implements InventoryHolder {
 
     public String ruleId() {
         return this.ruleId;
+    }
+
+    public String sampleGroupId() {
+        return this.sampleGroupId;
     }
 
     public String itemKey() {
