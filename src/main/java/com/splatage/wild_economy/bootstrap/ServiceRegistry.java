@@ -53,6 +53,12 @@ import com.splatage.wild_economy.exchange.stock.StockStateResolver;
 import com.splatage.wild_economy.exchange.stock.StockTurnoverService;
 import com.splatage.wild_economy.exchange.stock.StockTurnoverServiceImpl;
 import com.splatage.wild_economy.gui.ExchangeBrowseMenu;
+import com.splatage.wild_economy.gui.admin.AdminItemInspectorMenu;
+import com.splatage.wild_economy.gui.admin.AdminMenuListener;
+import com.splatage.wild_economy.gui.admin.AdminMenuRouter;
+import com.splatage.wild_economy.gui.admin.AdminReviewBucketMenu;
+import com.splatage.wild_economy.gui.admin.AdminRootMenu;
+import com.splatage.wild_economy.gui.admin.AdminRuleImpactMenu;
 import com.splatage.wild_economy.gui.ExchangeItemDetailMenu;
 import com.splatage.wild_economy.gui.ExchangeRootMenu;
 import com.splatage.wild_economy.gui.ExchangeSubcategoryMenu;
@@ -94,6 +100,8 @@ public final class ServiceRegistry {
     private ExchangeService exchangeService;
     private ShopMenuRouter shopMenuRouter;
     private ShopMenuListener shopMenuListener;
+    private AdminMenuRouter adminMenuRouter;
+    private AdminMenuListener adminMenuListener;
     private FoliaContainerSellCoordinator foliaContainerSellCoordinator;
 
     public ServiceRegistry(final WildEconomyPlugin plugin) {
@@ -236,6 +244,33 @@ public final class ServiceRegistry {
             itemDetailMenu
         );
         this.plugin.getServer().getPluginManager().registerEvents(this.shopMenuListener, this.plugin);
+
+        final AdminRootMenu adminRootMenu = new AdminRootMenu();
+        final AdminReviewBucketMenu adminReviewBucketMenu = new AdminReviewBucketMenu();
+        final AdminRuleImpactMenu adminRuleImpactMenu = new AdminRuleImpactMenu();
+        final AdminItemInspectorMenu adminItemInspectorMenu = new AdminItemInspectorMenu();
+
+        this.adminMenuRouter = new AdminMenuRouter(
+            this.plugin,
+            this.platformExecutor,
+            adminRootMenu,
+            adminReviewBucketMenu,
+            adminRuleImpactMenu,
+            adminItemInspectorMenu
+        );
+
+        adminRootMenu.setAdminMenuRouter(this.adminMenuRouter);
+        adminReviewBucketMenu.setAdminMenuRouter(this.adminMenuRouter);
+        adminRuleImpactMenu.setAdminMenuRouter(this.adminMenuRouter);
+        adminItemInspectorMenu.setAdminMenuRouter(this.adminMenuRouter);
+
+        this.adminMenuListener = new AdminMenuListener(
+            adminRootMenu,
+            adminReviewBucketMenu,
+            adminRuleImpactMenu,
+            adminItemInspectorMenu
+        );
+        this.plugin.getServer().getPluginManager().registerEvents(this.adminMenuListener, this.plugin);
     }
 
     public void registerCommands() {
@@ -268,7 +303,7 @@ public final class ServiceRegistry {
 
         final PluginCommand shopAdmin = this.plugin.getCommand("shopadmin");
         if (shopAdmin != null) {
-            shopAdmin.setExecutor(new ShopAdminCommand(this.plugin));
+            shopAdmin.setExecutor(new ShopAdminCommand(this.plugin, this.adminMenuRouter));
         }
     }
 
@@ -286,9 +321,19 @@ public final class ServiceRegistry {
             this.shopMenuListener = null;
         }
 
+        if (this.adminMenuListener != null) {
+            HandlerList.unregisterAll(this.adminMenuListener);
+            this.adminMenuListener = null;
+        }
+
         if (this.shopMenuRouter != null) {
             this.shopMenuRouter.closeAllShopViews();
             this.shopMenuRouter = null;
+        }
+
+        if (this.adminMenuRouter != null) {
+            this.adminMenuRouter.closeAllAdminViews();
+            this.adminMenuRouter = null;
         }
 
         this.platformExecutor.cancelPluginTasks();
@@ -328,4 +373,5 @@ public final class ServiceRegistry {
         return new VaultEconomyGateway(registration.getProvider());
     }
 }
+
 

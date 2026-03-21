@@ -7,6 +7,7 @@ import com.splatage.wild_economy.catalog.admin.AdminCatalogDiffEntry;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogItemKeys;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogPhaseOneService;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogPlanEntry;
+import com.splatage.wild_economy.gui.admin.AdminMenuRouter;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogValidationIssue;
 import com.splatage.wild_economy.catalog.derive.DerivationReason;
 import com.splatage.wild_economy.catalog.model.CatalogCategory;
@@ -19,6 +20,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -27,10 +29,12 @@ public final class ShopAdminCommand implements CommandExecutor {
 
     private final WildEconomyPlugin plugin;
     private final AdminCatalogPhaseOneService catalogService;
+    private final AdminMenuRouter adminMenuRouter;
 
-    public ShopAdminCommand(final WildEconomyPlugin plugin) {
+    public ShopAdminCommand(final WildEconomyPlugin plugin, final AdminMenuRouter adminMenuRouter) {
         this.plugin = plugin;
         this.catalogService = new AdminCatalogPhaseOneService(plugin);
+        this.adminMenuRouter = adminMenuRouter;
     }
 
     @Override
@@ -41,13 +45,18 @@ public final class ShopAdminCommand implements CommandExecutor {
         final String[] args
     ) {
         if (args.length == 0) {
-            this.sendUsage(sender);
+            if (sender instanceof Player player) {
+                this.adminMenuRouter.openRoot(player);
+            } else {
+                this.sendUsage(sender);
+            }
             return true;
         }
 
         final String subcommand = args[0].toLowerCase(Locale.ROOT);
         return switch (subcommand) {
             case "reload" -> this.handleReload(sender);
+            case "gui" -> this.handleGui(sender);
             case "generatecatalog" -> this.handleCatalogPreview(sender);
             case "catalog" -> this.handleCatalog(sender, args);
             case "item" -> this.handleItemInspect(sender, args);
@@ -77,6 +86,15 @@ public final class ShopAdminCommand implements CommandExecutor {
                 yield true;
             }
         };
+    }
+
+    private boolean handleGui(final CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(ChatColor.RED + "Only players can open the admin review GUI.");
+            return true;
+        }
+        this.adminMenuRouter.openRoot(player);
+        return true;
     }
 
     private boolean handleReload(final CommandSender sender) {
@@ -436,10 +454,13 @@ public final class ShopAdminCommand implements CommandExecutor {
 
 
     private void sendUsage(final CommandSender sender) {
+        sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin to open the admin review GUI.");
+        sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin gui");
         sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin reload");
         sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin catalog <preview|validate|diff|apply>");
         sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin item <item_key>");
     }
 }
+
 
 
