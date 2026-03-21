@@ -6,7 +6,6 @@ import com.splatage.wild_economy.catalog.model.CatalogCategory;
 import com.splatage.wild_economy.catalog.model.CatalogPolicy;
 import com.splatage.wild_economy.catalog.model.ItemFacts;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 
 public record AdminCatalogPolicyRule(
@@ -26,8 +25,8 @@ public record AdminCatalogPolicyRule(
 
     public AdminCatalogPolicyRule {
         Objects.requireNonNull(id, "id");
-        itemKeys = List.copyOf(itemKeys);
-        itemKeyPatterns = List.copyOf(itemKeyPatterns);
+        itemKeys = AdminCatalogItemKeys.canonicalizeAll(itemKeys);
+        itemKeyPatterns = AdminCatalogItemKeys.canonicalizeAll(itemKeyPatterns);
         categories = List.copyOf(categories);
         derivationReasons = List.copyOf(derivationReasons);
     }
@@ -37,14 +36,16 @@ public record AdminCatalogPolicyRule(
         final CatalogCategory category,
         final DerivedItemResult derivation
     ) {
-        if (!this.itemKeys.isEmpty() && !this.itemKeys.contains(facts.key())) {
+        final String itemKey = AdminCatalogItemKeys.canonicalize(facts.key());
+
+        if (!this.itemKeys.isEmpty() && !this.itemKeys.contains(itemKey)) {
             return false;
         }
 
         if (!this.itemKeyPatterns.isEmpty()) {
             boolean matchedPattern = false;
             for (final String pattern : this.itemKeyPatterns) {
-                if (wildcardMatches(pattern, facts.key())) {
+                if (wildcardMatches(pattern, itemKey)) {
                     matchedPattern = true;
                     break;
                 }
@@ -83,9 +84,19 @@ public record AdminCatalogPolicyRule(
         return true;
     }
 
+    public boolean hasMatchCriteria() {
+        return !this.itemKeys.isEmpty()
+            || !this.itemKeyPatterns.isEmpty()
+            || !this.categories.isEmpty()
+            || !this.derivationReasons.isEmpty()
+            || this.minDerivationDepth != null
+            || this.maxDerivationDepth != null
+            || this.rootValuePresent != null;
+    }
+
     private static boolean wildcardMatches(final String wildcardPattern, final String value) {
         final StringBuilder regex = new StringBuilder("^");
-        for (final char c : wildcardPattern.toLowerCase(Locale.ROOT).toCharArray()) {
+        for (final char c : wildcardPattern.toCharArray()) {
             switch (c) {
                 case '*' -> regex.append(".*");
                 case '?' -> regex.append('.');
@@ -94,6 +105,7 @@ public record AdminCatalogPolicyRule(
             }
         }
         regex.append('$');
-        return value.toLowerCase(Locale.ROOT).matches(regex.toString());
+        return value.matches(regex.toString());
     }
 }
+

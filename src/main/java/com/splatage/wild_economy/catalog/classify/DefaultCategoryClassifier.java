@@ -62,6 +62,21 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
         "shulker_shell"
     );
 
+    private static final Set<String> WOOD_FAMILY_PREFIXES = Set.of(
+        "oak",
+        "spruce",
+        "birch",
+        "jungle",
+        "acacia",
+        "dark_oak",
+        "mangrove",
+        "cherry",
+        "pale_oak",
+        "bamboo",
+        "crimson",
+        "warped"
+    );
+
     @Override
     public CatalogCategory classify(final ItemFacts facts) {
         final String key = facts.key();
@@ -122,10 +137,31 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
             || key.endsWith("_sign")
             || key.endsWith("_boat")
             || key.endsWith("_chest_boat")
+            || key.endsWith("_raft")
+            || key.endsWith("_chest_raft")
             || key.contains("mangrove")
             || key.contains("bamboo_block")
             || key.contains("bamboo_planks")
-            || key.contains("stripped_");
+            || key.contains("bamboo_mosaic")
+            || key.contains("stripped_")
+            || isWoodFamilyCrafted(key);
+    }
+
+    private boolean isWoodFamilyCrafted(final String key) {
+        for (final String prefix : WOOD_FAMILY_PREFIXES) {
+            if (!key.startsWith(prefix + "_")) {
+                continue;
+            }
+            return key.endsWith("_button")
+                || key.endsWith("_door")
+                || key.endsWith("_fence")
+                || key.endsWith("_fence_gate")
+                || key.endsWith("_trapdoor")
+                || key.endsWith("_pressure_plate")
+                || key.endsWith("_slab")
+                || key.endsWith("_stairs");
+        }
+        return false;
     }
 
     private boolean isStone(final String key) {
@@ -300,6 +336,7 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
         return key.contains("minecart")
             || key.contains("rail")
             || key.contains("boat")
+            || key.contains("raft")
             || key.equals("saddle")
             || key.equals("lead");
     }
@@ -324,3 +361,4 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
             || key.contains("sea_pickle");
     }
 }
+

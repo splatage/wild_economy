@@ -1,7 +1,6 @@
 package com.splatage.wild_economy.catalog.recipe;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -18,6 +17,7 @@ public final class WoodFamilyRecipeFallbacks {
         WoodFamily.normal("dark_oak"),
         WoodFamily.normal("mangrove"),
         WoodFamily.normal("cherry"),
+        WoodFamily.normal("pale_oak"),
         WoodFamily.nether("crimson"),
         WoodFamily.nether("warped")
     );
@@ -30,6 +30,9 @@ public final class WoodFamilyRecipeFallbacks {
             applyPlanksFromLog(recipesByOutput, family);
             applyWoodFromLogs(recipesByOutput, family);
             applyWoodenSign(recipesByOutput, family);
+            applyHangingSign(recipesByOutput, family);
+            applyBoat(recipesByOutput, family);
+            applyChestBoat(recipesByOutput, family);
         }
     }
 
@@ -102,6 +105,84 @@ public final class WoodFamilyRecipeFallbacks {
         );
     }
 
+    private static void applyHangingSign(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final WoodFamily family
+    ) {
+        if (!hasMaterial(family.strippedInputLogKey()) || !hasMaterial(family.hangingSignKey()) || !hasMaterial("chain")) {
+            return;
+        }
+        if (hasRecipes(recipesByOutput, family.hangingSignKey())) {
+            return;
+        }
+
+        addRecipe(
+            recipesByOutput,
+            new RecipeDefinition(
+                family.hangingSignKey(),
+                6,
+                "fallback_hanging_sign",
+                List.of(
+                    new RecipeIngredient(family.strippedInputLogKey(), 6),
+                    new RecipeIngredient("chain", 2)
+                )
+            )
+        );
+    }
+
+    private static void applyBoat(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final WoodFamily family
+    ) {
+        if (!family.supportsBoatRecipes()) {
+            return;
+        }
+        if (!hasMaterial(family.planksKey()) || !hasMaterial(family.boatKey())) {
+            return;
+        }
+        if (hasRecipes(recipesByOutput, family.boatKey())) {
+            return;
+        }
+
+        addRecipe(
+            recipesByOutput,
+            new RecipeDefinition(
+                family.boatKey(),
+                1,
+                "fallback_boat",
+                List.of(new RecipeIngredient(family.planksKey(), 5))
+            )
+        );
+    }
+
+    private static void applyChestBoat(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final WoodFamily family
+    ) {
+        if (!family.supportsBoatRecipes()) {
+            return;
+        }
+        if (!hasMaterial(family.boatKey()) || !hasMaterial(family.chestBoatKey()) || !hasMaterial("chest")) {
+            return;
+        }
+        if (hasRecipes(recipesByOutput, family.chestBoatKey())) {
+            return;
+        }
+
+        addRecipe(
+            recipesByOutput,
+            new RecipeDefinition(
+                family.chestBoatKey(),
+                1,
+                "fallback_chest_boat",
+                List.of(
+                    new RecipeIngredient(family.boatKey(), 1),
+                    new RecipeIngredient("chest", 1)
+                )
+            )
+        );
+    }
+
     private static boolean hasRecipes(
         final Map<String, List<RecipeDefinition>> recipesByOutput,
         final String outputKey
@@ -126,17 +207,27 @@ public final class WoodFamilyRecipeFallbacks {
     private record WoodFamily(
         String familyKey,
         String inputLogKey,
+        String strippedInputLogKey,
         String planksKey,
         String woodLikeOutputKey,
-        String signKey
+        String signKey,
+        String hangingSignKey,
+        String boatKey,
+        String chestBoatKey,
+        boolean supportsBoatRecipes
     ) {
         private static WoodFamily normal(final String familyKey) {
             return new WoodFamily(
                 familyKey,
                 familyKey + "_log",
+                "stripped_" + familyKey + "_log",
                 familyKey + "_planks",
                 familyKey + "_wood",
-                familyKey + "_sign"
+                familyKey + "_sign",
+                familyKey + "_hanging_sign",
+                familyKey + "_boat",
+                familyKey + "_chest_boat",
+                true
             );
         }
 
@@ -144,10 +235,16 @@ public final class WoodFamilyRecipeFallbacks {
             return new WoodFamily(
                 familyKey,
                 familyKey + "_stem",
+                "stripped_" + familyKey + "_stem",
                 familyKey + "_planks",
                 familyKey + "_hyphae",
-                familyKey + "_sign"
+                familyKey + "_sign",
+                familyKey + "_hanging_sign",
+                null,
+                null,
+                false
             );
         }
     }
 }
+
