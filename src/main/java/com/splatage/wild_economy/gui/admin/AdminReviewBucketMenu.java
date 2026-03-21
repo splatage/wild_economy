@@ -4,9 +4,9 @@ import com.splatage.wild_economy.catalog.admin.AdminCatalogReviewBucket;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Locale;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -56,11 +56,12 @@ public final class AdminReviewBucketMenu {
 
         inventory.setItem(4, this.bucketSummaryItem(bucket));
 
-        int subgroupSlot = 9;
-        for (final Map.Entry<String, Integer> entry : bucket.subgroupCounts().entrySet().stream()
+        final List<Map.Entry<String, Integer>> subgroups = bucket.subgroupCounts().entrySet().stream()
             .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
             .limit(9)
-            .toList()) {
+            .toList();
+        int subgroupSlot = 9;
+        for (final Map.Entry<String, Integer> entry : subgroups) {
             inventory.setItem(subgroupSlot, this.subgroupItem(entry.getKey(), entry.getValue(), bucket.subgroupSampleItems()));
             subgroupSlot++;
         }
@@ -120,6 +121,22 @@ public final class AdminReviewBucketMenu {
             return;
         }
 
+        if (slot >= 9 && slot < 18) {
+            final int index = slot - 9;
+            final List<Map.Entry<String, Integer>> subgroups = bucket.subgroupCounts().entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(9)
+                .toList();
+            if (index < subgroups.size()) {
+                final String subgroupId = subgroups.get(index).getKey();
+                final List<String> sample = bucket.subgroupSampleItems().getOrDefault(subgroupId, List.of());
+                if (!sample.isEmpty()) {
+                    this.adminMenuRouter.openItemInspector(player, holder.state(), sample.get(0), bucket.bucketId(), null);
+                }
+            }
+            return;
+        }
+
         if (slot >= 18 && slot < 45) {
             final int index = slot - 18;
             if (index < bucket.sampleItems().size()) {
@@ -135,8 +152,7 @@ public final class AdminReviewBucketMenu {
         }
 
         switch (slot) {
-            case 45 -> this.adminMenuRouter.openReviewBucketList(player, holder.state());
-            case 49 -> this.adminMenuRouter.openReviewBucketList(player, holder.state());
+            case 45, 49 -> this.adminMenuRouter.openReviewBucketList(player, holder.state());
             case 53 -> player.closeInventory();
             default -> {
             }
@@ -167,13 +183,17 @@ public final class AdminReviewBucketMenu {
         final List<String> lore = new ArrayList<>();
         lore.add(bucket.description());
         lore.add("Total items: " + bucket.count());
-        lore.add("Sample items below open the inspector.");
         if (!bucket.subgroupCounts().isEmpty()) {
-            lore.add("Top subgroup: " + bucket.subgroupCounts().entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(entry -> entry.getKey() + " (" + entry.getValue() + ")")
-                .orElse("n/a"));
+            final Map.Entry<String, Integer> topSubgroup = bucket.subgroupCounts().entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .findFirst()
+                .orElse(null);
+            if (topSubgroup != null) {
+                lore.add("Top subgroup: " + topSubgroup.getKey() + " (" + topSubgroup.getValue() + ")");
+            }
         }
+        lore.add("Subgroup buttons inspect the first subgroup sample.");
+        lore.add("Item buttons inspect direct sample items.");
         return this.item(Material.ENDER_CHEST, this.displayBucketId(bucket.bucketId()), lore);
     }
 
@@ -185,9 +205,10 @@ public final class AdminReviewBucketMenu {
         final List<String> lore = new ArrayList<>();
         lore.add("Count: " + count);
         final List<String> sample = subgroupSampleItems.getOrDefault(subgroupId, List.of());
-        for (final String itemKey : sample.stream().limit(5).toList()) {
+        for (final String itemKey : sample.stream().limit(4).toList()) {
             lore.add(itemKey);
         }
+        lore.add(sample.isEmpty() ? "No subgroup sample items." : "Click to inspect the first subgroup sample.");
         return this.item(Material.PAPER, subgroupId, lore);
     }
 

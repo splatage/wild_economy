@@ -40,17 +40,18 @@ public final class AdminItemInspectorMenu {
         }
         final AdminCatalogPlanEntry planEntry = state.findPlanEntry(itemKey);
         final AdminMenuHolder holder = AdminMenuHolder.itemInspector(state, trace.itemKey(), returnBucketId, returnRuleId);
-        final Inventory inventory = holder.createInventory(45, "Inspect - " + trace.displayName());
+        final Inventory inventory = holder.createInventory(54, "Inspect - " + trace.displayName());
 
         inventory.setItem(13, this.itemIcon(trace, planEntry));
         inventory.setItem(20, this.decisionItem(trace));
         inventory.setItem(22, this.runtimeItem(planEntry));
         inventory.setItem(24, this.ruleItem(trace, state));
         inventory.setItem(31, this.reviewBucketItem(trace, planEntry));
+        inventory.setItem(33, this.actionHintItem(trace, state));
 
-        inventory.setItem(36, this.button(Material.ARROW, "Back"));
-        inventory.setItem(40, this.button(Material.COMPASS, "Root"));
-        inventory.setItem(44, this.button(Material.BARRIER, "Close"));
+        inventory.setItem(45, this.button(Material.ARROW, "Back"));
+        inventory.setItem(49, this.button(Material.COMPASS, "Root"));
+        inventory.setItem(53, this.button(Material.BARRIER, "Close"));
 
         player.openInventory(inventory);
     }
@@ -61,9 +62,9 @@ public final class AdminItemInspectorMenu {
         }
 
         switch (event.getRawSlot()) {
-            case 36 -> this.adminMenuRouter.goBack(player);
-            case 40 -> this.adminMenuRouter.openRoot(player, holder.state());
-            case 44 -> player.closeInventory();
+            case 45 -> this.adminMenuRouter.goBack(player);
+            case 49 -> this.adminMenuRouter.openRoot(player, holder.state());
+            case 53 -> player.closeInventory();
             default -> {
             }
         }
@@ -73,26 +74,25 @@ public final class AdminItemInspectorMenu {
         final Material material = this.resolveMaterial(trace.itemKey());
         final List<String> lore = new ArrayList<>();
         lore.add(trace.itemKey());
+        lore.add("Category: " + trace.finalCategory().name());
         lore.add("Final policy: " + trace.finalPolicy().name());
-        lore.add("Final category: " + trace.finalCategory().name());
         if (planEntry != null) {
             lore.add("Buy: " + planEntry.buyEnabled() + " @ " + String.valueOf(planEntry.buyPrice()));
             lore.add("Sell: " + planEntry.sellEnabled() + " @ " + String.valueOf(planEntry.sellPrice()));
         }
-        return this.item(
-            material == null ? Material.BARRIER : material,
-            trace.displayName(),
-            lore
-        );
+        return this.item(material == null ? Material.BARRIER : material, trace.displayName(), lore);
     }
 
     private ItemStack decisionItem(final AdminCatalogDecisionTrace trace) {
         final List<String> lore = new ArrayList<>();
-        lore.add("Classified: " + trace.classifiedCategory().name());
-        lore.add("Final: " + trace.finalCategory().name());
+        if (trace.classifiedCategory() == trace.finalCategory()) {
+            lore.add("Category: " + trace.finalCategory().name());
+        } else {
+            lore.add("Category: " + trace.classifiedCategory().name() + " -> " + trace.finalCategory().name());
+        }
         lore.add("Derivation: " + trace.derivationReason().name());
-        lore.add("Depth: " + String.valueOf(trace.derivationDepth()));
-        lore.add("Base policy: " + trace.baseSuggestedPolicy().name());
+        lore.add("Depth: " + trace.derivationDepth());
+        lore.add("Base suggested: " + trace.baseSuggestedPolicy().name());
         lore.add("Final policy: " + trace.finalPolicy().name());
         if (trace.postRuleAdjustment() != null && !trace.postRuleAdjustment().isBlank()) {
             lore.add("Adjustment: " + trace.postRuleAdjustment());
@@ -119,9 +119,19 @@ public final class AdminItemInspectorMenu {
 
     private ItemStack ruleItem(final AdminCatalogDecisionTrace trace, final AdminCatalogViewState state) {
         final List<String> lore = new ArrayList<>();
-        lore.add("Winning rule: " + String.valueOf(trace.winningRuleId()));
+        if (trace.winningRuleId() == null || trace.winningRuleId().isBlank()) {
+            lore.add("Decision source: none recorded.");
+        } else if (trace.matchedRuleIds().contains(trace.winningRuleId())) {
+            lore.add("Decision source: matched rule " + trace.winningRuleId());
+        } else {
+            lore.add("Decision source: fallback rule " + trace.winningRuleId());
+        }
         lore.add("Manual override: " + trace.manualOverrideApplied());
-        lore.add("Matched rules: " + trace.matchedRuleIds());
+        if (trace.matchedRuleIds().isEmpty()) {
+            lore.add("Matched specific rules: none");
+        } else {
+            lore.add("Matched specific rules: " + trace.matchedRuleIds());
+        }
         final List<String> matchedButLost = new ArrayList<>();
         for (final String matchedRuleId : trace.matchedRuleIds()) {
             if (!matchedRuleId.equals(trace.winningRuleId())) {
@@ -145,9 +155,31 @@ public final class AdminItemInspectorMenu {
         if (bucketIds.isEmpty()) {
             lore.add("No current review bucket membership.");
         } else {
-            lore.addAll(bucketIds);
+            for (final String bucketId : bucketIds) {
+                lore.add(bucketId);
+            }
         }
         return this.item(Material.CHEST, "Review buckets", lore);
+    }
+
+    private ItemStack actionHintItem(final AdminCatalogDecisionTrace trace, final AdminCatalogViewState state) {
+        final List<String> lore = new ArrayList<>();
+        final List<String> reviewBuckets = this.findReviewBuckets(trace, state.findPlanEntry(trace.itemKey()));
+        if (!reviewBuckets.isEmpty()) {
+            lore.add("Bucket focus: " + reviewBuckets.get(0));
+        }
+        if (trace.finalCategory() == CatalogCategory.MISC && trace.finalPolicy() != CatalogPolicy.DISABLED) {
+            lore.add("Likely next action: category review.");
+        } else if (trace.derivationReason() == DerivationReason.NO_RECIPE_AND_NO_ROOT) {
+            lore.add("Likely next action: root anchor or leave disabled.");
+        } else if (trace.derivationReason() == DerivationReason.ALL_PATHS_BLOCKED) {
+            lore.add("Likely next action: recipe-path review.");
+        } else if (trace.finalPolicy() == CatalogPolicy.SELL_ONLY) {
+            lore.add("Likely next action: review long-term SELL_ONLY fit.");
+        } else {
+            lore.add("Likely next action: none.");
+        }
+        return this.item(Material.LANTERN, "Admin hints", lore);
     }
 
     private List<String> findReviewBuckets(

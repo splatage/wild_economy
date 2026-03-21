@@ -5,9 +5,9 @@ import com.splatage.wild_economy.catalog.model.CatalogPolicy;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Locale;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -59,6 +59,15 @@ public final class AdminRuleImpactMenu {
         inventory.setItem(10, this.policyMapItem("Winning policies", ruleImpact.winningPolicies()));
         inventory.setItem(12, this.lossRuleItem(ruleImpact));
         inventory.setItem(14, this.policyMapItem("Lost to policies", ruleImpact.lostToPolicies()));
+
+        int matchedSlot = 18;
+        for (final String itemKey : ruleImpact.sampleMatchedItems()) {
+            if (matchedSlot >= 27) {
+                break;
+            }
+            inventory.setItem(matchedSlot, this.itemButton(itemKey, "Matched sample"));
+            matchedSlot++;
+        }
 
         int winSlot = 27;
         for (final String itemKey : ruleImpact.sampleWinningItems()) {
@@ -123,16 +132,18 @@ public final class AdminRuleImpactMenu {
             return;
         }
 
+        if (slot >= 18 && slot < 27) {
+            final int index = slot - 18;
+            if (index < ruleImpact.sampleMatchedItems().size()) {
+                this.adminMenuRouter.openItemInspector(player, holder.state(), ruleImpact.sampleMatchedItems().get(index), null, ruleImpact.ruleId());
+            }
+            return;
+        }
+
         if (slot >= 27 && slot < 36) {
             final int index = slot - 27;
             if (index < ruleImpact.sampleWinningItems().size()) {
-                this.adminMenuRouter.openItemInspector(
-                    player,
-                    holder.state(),
-                    ruleImpact.sampleWinningItems().get(index),
-                    null,
-                    ruleImpact.ruleId()
-                );
+                this.adminMenuRouter.openItemInspector(player, holder.state(), ruleImpact.sampleWinningItems().get(index), null, ruleImpact.ruleId());
             }
             return;
         }
@@ -140,20 +151,13 @@ public final class AdminRuleImpactMenu {
         if (slot >= 36 && slot < 45) {
             final int index = slot - 36;
             if (index < ruleImpact.sampleLostItems().size()) {
-                this.adminMenuRouter.openItemInspector(
-                    player,
-                    holder.state(),
-                    ruleImpact.sampleLostItems().get(index),
-                    null,
-                    ruleImpact.ruleId()
-                );
+                this.adminMenuRouter.openItemInspector(player, holder.state(), ruleImpact.sampleLostItems().get(index), null, ruleImpact.ruleId());
             }
             return;
         }
 
         switch (slot) {
-            case 45 -> this.adminMenuRouter.openRuleImpactList(player, holder.state());
-            case 49 -> this.adminMenuRouter.openRuleImpactList(player, holder.state());
+            case 45, 49 -> this.adminMenuRouter.openRuleImpactList(player, holder.state());
             case 53 -> player.closeInventory();
             default -> {
             }
@@ -163,8 +167,8 @@ public final class AdminRuleImpactMenu {
     private List<AdminCatalogRuleImpact> sortedRuleImpacts(final AdminCatalogViewState state) {
         final List<AdminCatalogRuleImpact> ruleImpacts = new ArrayList<>(state.ruleImpacts());
         ruleImpacts.sort(
-            Comparator.comparingInt(AdminCatalogRuleImpact::winCount)
-                .thenComparingInt(AdminCatalogRuleImpact::matchCount)
+            Comparator.comparingInt(AdminCatalogRuleImpact::lossCount)
+                .thenComparingInt(AdminCatalogRuleImpact::winCount)
                 .reversed()
         );
         return ruleImpacts;
@@ -176,6 +180,15 @@ public final class AdminRuleImpactMenu {
         lore.add("Matches: " + ruleImpact.matchCount());
         lore.add("Wins: " + ruleImpact.winCount());
         lore.add("Losses: " + ruleImpact.lossCount());
+        if (!ruleImpact.lostToRules().isEmpty()) {
+            final Map.Entry<String, Integer> topLoss = ruleImpact.lostToRules().entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .findFirst()
+                .orElse(null);
+            if (topLoss != null) {
+                lore.add("Top loss: " + topLoss.getKey() + " (" + topLoss.getValue() + ")");
+            }
+        }
         lore.add("Click to open rule detail.");
         return this.item(Material.COMPARATOR, ruleImpact.ruleId(), lore);
     }
@@ -187,7 +200,7 @@ public final class AdminRuleImpactMenu {
         lore.add("Match count: " + ruleImpact.matchCount());
         lore.add("Win count: " + ruleImpact.winCount());
         lore.add("Loss count: " + ruleImpact.lossCount());
-        lore.add("Winning and losing sample items below");
+        lore.add("Matched / won / lost samples below");
         return this.item(Material.REPEATER, ruleImpact.ruleId(), lore);
     }
 
