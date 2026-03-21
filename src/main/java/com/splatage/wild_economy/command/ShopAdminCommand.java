@@ -12,7 +12,9 @@ import com.splatage.wild_economy.catalog.derive.DerivationReason;
 import com.splatage.wild_economy.catalog.model.CatalogCategory;
 import com.splatage.wild_economy.catalog.model.CatalogPolicy;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
@@ -105,6 +107,7 @@ public final class ShopAdminCommand implements CommandExecutor {
         return this.runCatalogAction(sender, "apply", true, false);
     }
 
+
     private boolean handleItemInspect(final CommandSender sender, final String[] args) {
         if (args.length < 2) {
             sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin item <item_key>.");
@@ -135,6 +138,8 @@ public final class ShopAdminCommand implements CommandExecutor {
                     break;
                 }
             }
+
+            final List<String> reviewBuckets = this.findReviewBuckets(trace, planEntry);
 
             sender.sendMessage(ChatColor.GOLD + "Item inspector: " + trace.displayName() + ChatColor.GRAY + " (" + trace.itemKey() + ")");
             sender.sendMessage(
@@ -177,6 +182,14 @@ public final class ShopAdminCommand implements CommandExecutor {
                         + "."
                 );
             }
+
+            final List<String> matchedButLost = new ArrayList<>();
+            for (final String matchedRuleId : trace.matchedRuleIds()) {
+                if (!matchedRuleId.equals(trace.winningRuleId())) {
+                    matchedButLost.add(matchedRuleId);
+                }
+            }
+
             sender.sendMessage(
                 ChatColor.GRAY
                     + "Winning rule: "
@@ -187,6 +200,12 @@ public final class ShopAdminCommand implements CommandExecutor {
                     + trace.manualOverrideApplied()
                     + "."
             );
+            if (!matchedButLost.isEmpty()) {
+                sender.sendMessage(ChatColor.GRAY + "Matched but lost: " + matchedButLost + ".");
+            }
+            if (!reviewBuckets.isEmpty()) {
+                sender.sendMessage(ChatColor.GREEN + "Review buckets: " + reviewBuckets + ".");
+            }
             if (trace.postRuleAdjustment() != null && !trace.postRuleAdjustment().isBlank()) {
                 sender.sendMessage(ChatColor.YELLOW + "Adjustment: " + trace.postRuleAdjustment());
             }
@@ -208,6 +227,7 @@ public final class ShopAdminCommand implements CommandExecutor {
     }
 
     private boolean runCatalogAction(
+
         final CommandSender sender,
         final String actionName,
         final boolean apply,
@@ -390,10 +410,36 @@ public final class ShopAdminCommand implements CommandExecutor {
         }
     }
 
+
+    private List<String> findReviewBuckets(
+        final AdminCatalogDecisionTrace trace,
+        final AdminCatalogPlanEntry planEntry
+    ) {
+        final List<String> buckets = new ArrayList<>();
+        if (planEntry != null && planEntry.policy() != CatalogPolicy.DISABLED && planEntry.category() == CatalogCategory.MISC) {
+            buckets.add("live-misc-items");
+        }
+        if (trace.derivationReason() == DerivationReason.NO_RECIPE_AND_NO_ROOT) {
+            buckets.add("no-root-path");
+        }
+        if (trace.derivationReason() == DerivationReason.ALL_PATHS_BLOCKED) {
+            buckets.add("blocked-paths");
+        }
+        if (trace.manualOverrideApplied()) {
+            buckets.add("manual-overrides");
+        }
+        if (trace.finalPolicy() == CatalogPolicy.SELL_ONLY) {
+            buckets.add("sell-only-review");
+        }
+        return buckets;
+    }
+
+
     private void sendUsage(final CommandSender sender) {
         sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin reload");
         sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin catalog <preview|validate|diff|apply>");
         sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin item <item_key>");
     }
 }
+
 

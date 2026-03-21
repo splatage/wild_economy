@@ -2,6 +2,7 @@ package com.splatage.wild_economy.catalog.admin;
 
 import com.splatage.wild_economy.catalog.model.CatalogPolicy;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -11,25 +12,36 @@ public record AdminCatalogRuleImpact(
     boolean hasMatchCriteria,
     int matchCount,
     int winCount,
+    int lossCount,
     Map<CatalogPolicy, Integer> winningPolicies,
+    Map<CatalogPolicy, Integer> lostToPolicies,
+    Map<String, Integer> lostToRules,
     List<String> sampleMatchedItems,
-    List<String> sampleWinningItems
+    List<String> sampleWinningItems,
+    List<String> sampleLostItems
 ) {
     public AdminCatalogRuleImpact {
-        final Map<CatalogPolicy, Integer> normalizedWinningPolicies = new EnumMap<>(CatalogPolicy.class);
+        winningPolicies = normalizePolicyMap(winningPolicies);
+        lostToPolicies = normalizePolicyMap(lostToPolicies);
+        lostToRules = lostToRules == null ? Map.of() : Map.copyOf(new LinkedHashMap<>(lostToRules));
+        sampleMatchedItems = sampleMatchedItems == null ? List.of() : List.copyOf(sampleMatchedItems);
+        sampleWinningItems = sampleWinningItems == null ? List.of() : List.copyOf(sampleWinningItems);
+        sampleLostItems = sampleLostItems == null ? List.of() : List.copyOf(sampleLostItems);
+    }
+
+    private static Map<CatalogPolicy, Integer> normalizePolicyMap(final Map<CatalogPolicy, Integer> source) {
+        final Map<CatalogPolicy, Integer> normalized = new EnumMap<>(CatalogPolicy.class);
         for (final CatalogPolicy policy : CatalogPolicy.values()) {
-            normalizedWinningPolicies.put(policy, Integer.valueOf(0));
+            normalized.put(policy, Integer.valueOf(0));
         }
-        if (winningPolicies != null) {
-            for (final Map.Entry<CatalogPolicy, Integer> entry : winningPolicies.entrySet()) {
+        if (source != null) {
+            for (final Map.Entry<CatalogPolicy, Integer> entry : source.entrySet()) {
                 if (entry.getKey() != null && entry.getValue() != null) {
-                    normalizedWinningPolicies.put(entry.getKey(), entry.getValue());
+                    normalized.put(entry.getKey(), entry.getValue());
                 }
             }
         }
-        winningPolicies = Map.copyOf(normalizedWinningPolicies);
-        sampleMatchedItems = sampleMatchedItems == null ? List.of() : List.copyOf(sampleMatchedItems);
-        sampleWinningItems = sampleWinningItems == null ? List.of() : List.copyOf(sampleWinningItems);
+        return Map.copyOf(normalized);
     }
 }
 
