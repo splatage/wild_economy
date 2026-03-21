@@ -15,7 +15,8 @@ public final class AdminMenuHolder implements InventoryHolder {
         RULE_IMPACT_LIST,
         RULE_IMPACT_DETAIL,
         RULE_IMPACT_SAMPLE_DETAIL,
-        ITEM_INSPECTOR
+        ITEM_INSPECTOR,
+        OVERRIDE_EDITOR
     }
 
     private final AdminCatalogViewState state;
@@ -29,6 +30,13 @@ public final class AdminMenuHolder implements InventoryHolder {
     private final String returnRuleId;
     private final int pageIndex;
     private final String sortMode;
+
+    private final String overridePolicy;
+    private final String overrideStockProfile;
+    private final String overrideEcoEnvelope;
+    private final String overrideNote;
+    private final String actionId;
+
     private Inventory inventory;
 
     private AdminMenuHolder(
@@ -42,7 +50,12 @@ public final class AdminMenuHolder implements InventoryHolder {
         final String returnBucketId,
         final String returnRuleId,
         final int pageIndex,
-        final String sortMode
+        final String sortMode,
+        final String overridePolicy,
+        final String overrideStockProfile,
+        final String overrideEcoEnvelope,
+        final String overrideNote,
+        final String actionId
     ) {
         this.state = Objects.requireNonNull(state, "state");
         this.viewType = Objects.requireNonNull(viewType, "viewType");
@@ -55,14 +68,19 @@ public final class AdminMenuHolder implements InventoryHolder {
         this.returnRuleId = returnRuleId;
         this.pageIndex = Math.max(0, pageIndex);
         this.sortMode = sortMode == null || sortMode.isBlank() ? "default" : sortMode;
+        this.overridePolicy = overridePolicy;
+        this.overrideStockProfile = overrideStockProfile;
+        this.overrideEcoEnvelope = overrideEcoEnvelope;
+        this.overrideNote = overrideNote;
+        this.actionId = actionId;
     }
 
     public static AdminMenuHolder root(final AdminCatalogViewState state) {
-        return new AdminMenuHolder(state, ViewType.ROOT, null, null, null, null, null, null, null, 0, "default");
+        return new AdminMenuHolder(state, ViewType.ROOT, null, null, null, null, null, null, null, 0, "default", null, null, null, null, null);
     }
 
     public static AdminMenuHolder reviewBucketList(final AdminCatalogViewState state, final int pageIndex, final String sortMode) {
-        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_LIST, null, null, null, null, null, null, null, pageIndex, sortMode);
+        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_LIST, null, null, null, null, null, null, null, pageIndex, sortMode, null, null, null, null, null);
     }
 
     public static AdminMenuHolder reviewBucketDetail(
@@ -71,7 +89,7 @@ public final class AdminMenuHolder implements InventoryHolder {
         final int pageIndex,
         final String sortMode
     ) {
-        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_DETAIL, bucketId, null, null, null, null, null, null, pageIndex, sortMode);
+        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_DETAIL, bucketId, null, null, null, null, null, null, pageIndex, sortMode, null, null, null, null, null);
     }
 
     public static AdminMenuHolder reviewBucketSubgroupDetail(
@@ -81,11 +99,11 @@ public final class AdminMenuHolder implements InventoryHolder {
         final int pageIndex,
         final String sortMode
     ) {
-        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_SUBGROUP_DETAIL, bucketId, subgroupId, null, null, null, null, null, pageIndex, sortMode);
+        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_SUBGROUP_DETAIL, bucketId, subgroupId, null, null, null, null, null, pageIndex, sortMode, null, null, null, null, null);
     }
 
     public static AdminMenuHolder ruleImpactList(final AdminCatalogViewState state, final int pageIndex, final String sortMode) {
-        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_LIST, null, null, null, null, null, null, null, pageIndex, sortMode);
+        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_LIST, null, null, null, null, null, null, null, pageIndex, sortMode, null, null, null, null, null);
     }
 
     public static AdminMenuHolder ruleImpactDetail(
@@ -94,7 +112,7 @@ public final class AdminMenuHolder implements InventoryHolder {
         final int pageIndex,
         final String sortMode
     ) {
-        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_DETAIL, null, null, ruleId, null, null, null, null, pageIndex, sortMode);
+        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_DETAIL, null, null, ruleId, null, null, null, null, pageIndex, sortMode, null, null, null, null, null);
     }
 
     public static AdminMenuHolder ruleImpactSampleDetail(
@@ -104,7 +122,7 @@ public final class AdminMenuHolder implements InventoryHolder {
         final int pageIndex,
         final String sortMode
     ) {
-        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_SAMPLE_DETAIL, null, null, ruleId, sampleGroupId, null, null, null, pageIndex, sortMode);
+        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_SAMPLE_DETAIL, null, null, ruleId, sampleGroupId, null, null, null, pageIndex, sortMode, null, null, null, null, null);
     }
 
     public static AdminMenuHolder itemInspector(
@@ -115,7 +133,40 @@ public final class AdminMenuHolder implements InventoryHolder {
         final int pageIndex,
         final String sortMode
     ) {
-        return new AdminMenuHolder(state, ViewType.ITEM_INSPECTOR, null, null, null, null, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode);
+        return new AdminMenuHolder(state, ViewType.ITEM_INSPECTOR, null, null, null, null, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode, null, null, null, null, null);
+    }
+
+    public static AdminMenuHolder overrideEditor(
+        final AdminCatalogViewState state,
+        final String itemKey,
+        final String returnBucketId,
+        final String returnRuleId,
+        final int pageIndex,
+        final String sortMode,
+        final String overridePolicy,
+        final String overrideStockProfile,
+        final String overrideEcoEnvelope,
+        final String overrideNote,
+        final String actionId
+    ) {
+        return new AdminMenuHolder(
+            state,
+            ViewType.OVERRIDE_EDITOR,
+            null,
+            null,
+            null,
+            null,
+            itemKey,
+            returnBucketId,
+            returnRuleId,
+            pageIndex,
+            sortMode,
+            overridePolicy,
+            overrideStockProfile,
+            overrideEcoEnvelope,
+            overrideNote,
+            actionId
+        );
     }
 
     public Inventory createInventory(final int size, final String title) {
@@ -142,5 +193,9 @@ public final class AdminMenuHolder implements InventoryHolder {
     public String returnRuleId() { return this.returnRuleId; }
     public int pageIndex() { return this.pageIndex; }
     public String sortMode() { return this.sortMode; }
+    public String overridePolicy() { return this.overridePolicy; }
+    public String overrideStockProfile() { return this.overrideStockProfile; }
+    public String overrideEcoEnvelope() { return this.overrideEcoEnvelope; }
+    public String overrideNote() { return this.overrideNote; }
+    public String actionId() { return this.actionId; }
 }
-

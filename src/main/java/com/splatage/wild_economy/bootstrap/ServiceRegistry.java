@@ -53,17 +53,18 @@ import com.splatage.wild_economy.exchange.stock.StockStateResolver;
 import com.splatage.wild_economy.exchange.stock.StockTurnoverService;
 import com.splatage.wild_economy.exchange.stock.StockTurnoverServiceImpl;
 import com.splatage.wild_economy.gui.ExchangeBrowseMenu;
-import com.splatage.wild_economy.gui.admin.AdminItemInspectorMenu;
-import com.splatage.wild_economy.gui.admin.AdminMenuListener;
-import com.splatage.wild_economy.gui.admin.AdminMenuRouter;
-import com.splatage.wild_economy.gui.admin.AdminReviewBucketMenu;
-import com.splatage.wild_economy.gui.admin.AdminRootMenu;
-import com.splatage.wild_economy.gui.admin.AdminRuleImpactMenu;
 import com.splatage.wild_economy.gui.ExchangeItemDetailMenu;
 import com.splatage.wild_economy.gui.ExchangeRootMenu;
 import com.splatage.wild_economy.gui.ExchangeSubcategoryMenu;
 import com.splatage.wild_economy.gui.ShopMenuListener;
 import com.splatage.wild_economy.gui.ShopMenuRouter;
+import com.splatage.wild_economy.gui.admin.AdminItemInspectorMenu;
+import com.splatage.wild_economy.gui.admin.AdminMenuListener;
+import com.splatage.wild_economy.gui.admin.AdminMenuRouter;
+import com.splatage.wild_economy.gui.admin.AdminOverrideEditMenu;
+import com.splatage.wild_economy.gui.admin.AdminReviewBucketMenu;
+import com.splatage.wild_economy.gui.admin.AdminRootMenu;
+import com.splatage.wild_economy.gui.admin.AdminRuleImpactMenu;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
 import com.splatage.wild_economy.persistence.MigrationManager;
 import com.splatage.wild_economy.platform.PaperFoliaPlatformExecutor;
@@ -121,7 +122,6 @@ public final class ServiceRegistry {
             case SQLITE -> new SqliteSchemaVersionRepository(this.databaseProvider);
             case MYSQL -> new MysqlSchemaVersionRepository(this.databaseProvider);
         };
-
         final MigrationManager migrationManager = new MigrationManager(this.databaseProvider, schemaVersionRepository);
         migrationManager.migrate();
 
@@ -129,7 +129,6 @@ public final class ServiceRegistry {
             case SQLITE -> new SqliteExchangeStockRepository(this.databaseProvider);
             case MYSQL -> new MysqlExchangeStockRepository(this.databaseProvider);
         };
-
         this.exchangeTransactionRepository = switch (this.databaseProvider.dialect()) {
             case SQLITE -> new SqliteExchangeTransactionRepository(this.databaseProvider);
             case MYSQL -> new MysqlExchangeTransactionRepository(this.databaseProvider);
@@ -137,30 +136,20 @@ public final class ServiceRegistry {
 
         final File rootValuesFile = new File(this.plugin.getDataFolder(), "root-values.yml");
         final File generatedCatalogFile = new File(new File(this.plugin.getDataFolder(), "generated"), "generated-catalog.yml");
-
         if (!generatedCatalogFile.exists()) {
-            this.plugin.getLogger().warning(
-                "generated/generated-catalog.yml not found. Runtime catalog will fall back to exchange-items.yml overrides only."
-            );
+            this.plugin.getLogger().warning("generated/generated-catalog.yml not found. Runtime catalog will fall back to exchange-items.yml overrides only.");
         }
 
         final GeneratedCatalogImporter generatedCatalogImporter = new GeneratedCatalogImporter();
         final RootValueImporter rootValueImporter = new RootValueImporter();
         final CatalogMergeService catalogMergeService = new CatalogMergeService();
-        final CatalogLoader catalogLoader = new CatalogLoader(
-            generatedCatalogImporter,
-            rootValueImporter,
-            catalogMergeService
-        );
-
-        this.exchangeCatalog = Objects.requireNonNull(
-            catalogLoader.load(this.exchangeItemsConfig, rootValuesFile, generatedCatalogFile),
-            "exchangeCatalog"
-        );
+        final CatalogLoader catalogLoader = new CatalogLoader(generatedCatalogImporter, rootValueImporter, catalogMergeService);
+        this.exchangeCatalog = Objects.requireNonNull(catalogLoader.load(this.exchangeItemsConfig, rootValuesFile, generatedCatalogFile), "exchangeCatalog");
 
         final CanonicalItemRules canonicalItemRules = new CanonicalItemRules();
         this.itemNormalizer = new BukkitItemNormalizer(canonicalItemRules);
         this.itemValidationService = new ItemValidationServiceImpl(this.itemNormalizer, this.exchangeCatalog);
+
         this.economyGateway = this.resolveVaultEconomy();
 
         final StockStateResolver stockStateResolver = new StockStateResolver();
@@ -172,7 +161,6 @@ public final class ServiceRegistry {
             this.databaseProvider.dialect(),
             this.databaseConfig.mysqlMaximumPoolSize()
         );
-
         this.pricingService = new PricingServiceImpl(this.exchangeCatalog);
         this.transactionLogService = new TransactionLogServiceImpl(
             this.exchangeTransactionRepository,
@@ -180,11 +168,7 @@ public final class ServiceRegistry {
             this.databaseProvider.dialect(),
             this.databaseConfig.mysqlMaximumPoolSize()
         );
-        this.stockTurnoverService = new StockTurnoverServiceImpl(
-            this.exchangeCatalog,
-            this.stockService,
-            this.transactionLogService
-        );
+        this.stockTurnoverService = new StockTurnoverServiceImpl(this.exchangeCatalog, this.stockService, this.transactionLogService);
         this.exchangeBrowseService = new ExchangeBrowseServiceImpl(this.exchangeCatalog, this.stockService);
 
         final ExchangeBuyService rawBuyService = new ExchangeBuyServiceImpl(
@@ -196,7 +180,6 @@ public final class ServiceRegistry {
             this.transactionLogService,
             this.globalConfig
         );
-
         final ExchangeSellServiceImpl rawSellService = new ExchangeSellServiceImpl(
             this.exchangeCatalog,
             this.itemValidationService,
@@ -208,47 +191,28 @@ public final class ServiceRegistry {
 
         this.exchangeBuyService = new FoliaSafeExchangeBuyService(rawBuyService);
         this.exchangeSellService = new FoliaSafeExchangeSellService(rawSellService);
-        this.exchangeService = new ExchangeServiceImpl(
-            this.exchangeBrowseService,
-            this.exchangeBuyService,
-            this.exchangeSellService
-        );
-        this.foliaContainerSellCoordinator = new FoliaContainerSellCoordinator(
-            this.platformExecutor,
-            this.exchangeService,
-            rawSellService
-        );
+        this.exchangeService = new ExchangeServiceImpl(this.exchangeBrowseService, this.exchangeBuyService, this.exchangeSellService);
+        this.foliaContainerSellCoordinator = new FoliaContainerSellCoordinator(this.platformExecutor, this.exchangeService, rawSellService);
 
         final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService);
         final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService);
         final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService);
         final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService, this.platformExecutor);
 
-        this.shopMenuRouter = new ShopMenuRouter(
-            this.platformExecutor,
-            rootMenu,
-            subcategoryMenu,
-            browseMenu,
-            itemDetailMenu
-        );
-
+        this.shopMenuRouter = new ShopMenuRouter(this.platformExecutor, rootMenu, subcategoryMenu, browseMenu, itemDetailMenu);
         rootMenu.setShopMenuRouter(this.shopMenuRouter);
         subcategoryMenu.setShopMenuRouter(this.shopMenuRouter);
         browseMenu.setShopMenuRouter(this.shopMenuRouter);
         itemDetailMenu.setShopMenuRouter(this.shopMenuRouter);
 
-        this.shopMenuListener = new ShopMenuListener(
-            rootMenu,
-            subcategoryMenu,
-            browseMenu,
-            itemDetailMenu
-        );
+        this.shopMenuListener = new ShopMenuListener(rootMenu, subcategoryMenu, browseMenu, itemDetailMenu);
         this.plugin.getServer().getPluginManager().registerEvents(this.shopMenuListener, this.plugin);
 
         final AdminRootMenu adminRootMenu = new AdminRootMenu();
         final AdminReviewBucketMenu adminReviewBucketMenu = new AdminReviewBucketMenu();
         final AdminRuleImpactMenu adminRuleImpactMenu = new AdminRuleImpactMenu();
         final AdminItemInspectorMenu adminItemInspectorMenu = new AdminItemInspectorMenu();
+        final AdminOverrideEditMenu adminOverrideEditMenu = new AdminOverrideEditMenu();
 
         this.adminMenuRouter = new AdminMenuRouter(
             this.plugin,
@@ -256,19 +220,22 @@ public final class ServiceRegistry {
             adminRootMenu,
             adminReviewBucketMenu,
             adminRuleImpactMenu,
-            adminItemInspectorMenu
+            adminItemInspectorMenu,
+            adminOverrideEditMenu
         );
 
         adminRootMenu.setAdminMenuRouter(this.adminMenuRouter);
         adminReviewBucketMenu.setAdminMenuRouter(this.adminMenuRouter);
         adminRuleImpactMenu.setAdminMenuRouter(this.adminMenuRouter);
         adminItemInspectorMenu.setAdminMenuRouter(this.adminMenuRouter);
+        adminOverrideEditMenu.setAdminMenuRouter(this.adminMenuRouter);
 
         this.adminMenuListener = new AdminMenuListener(
             adminRootMenu,
             adminReviewBucketMenu,
             adminRuleImpactMenu,
-            adminItemInspectorMenu
+            adminItemInspectorMenu,
+            adminOverrideEditMenu
         );
         this.plugin.getServer().getPluginManager().registerEvents(this.adminMenuListener, this.plugin);
     }
@@ -277,9 +244,7 @@ public final class ServiceRegistry {
         final ShopOpenSubcommand openSubcommand = new ShopOpenSubcommand(this.shopMenuRouter);
         final ShopSellHandSubcommand sellHandSubcommand = new ShopSellHandSubcommand(this.exchangeService, this.platformExecutor);
         final ShopSellAllSubcommand sellAllSubcommand = new ShopSellAllSubcommand(this.exchangeService, this.platformExecutor);
-        final ShopSellContainerSubcommand sellContainerSubcommand = new ShopSellContainerSubcommand(
-            this.foliaContainerSellCoordinator
-        );
+        final ShopSellContainerSubcommand sellContainerSubcommand = new ShopSellContainerSubcommand(this.foliaContainerSellCoordinator);
 
         final PluginCommand shop = this.plugin.getCommand("shop");
         if (shop != null) {
@@ -320,17 +285,14 @@ public final class ServiceRegistry {
             HandlerList.unregisterAll(this.shopMenuListener);
             this.shopMenuListener = null;
         }
-
         if (this.adminMenuListener != null) {
             HandlerList.unregisterAll(this.adminMenuListener);
             this.adminMenuListener = null;
         }
-
         if (this.shopMenuRouter != null) {
             this.shopMenuRouter.closeAllShopViews();
             this.shopMenuRouter = null;
         }
-
         if (this.adminMenuRouter != null) {
             this.adminMenuRouter.closeAllAdminViews();
             this.adminMenuRouter = null;
@@ -342,12 +304,10 @@ public final class ServiceRegistry {
             this.transactionLogService.shutdown();
             this.transactionLogService = null;
         }
-
         if (this.stockService != null) {
             this.stockService.shutdown();
             this.stockService = null;
         }
-
         if (this.databaseProvider != null) {
             this.databaseProvider.close();
             this.databaseProvider = null;
@@ -362,16 +322,11 @@ public final class ServiceRegistry {
     }
 
     private EconomyGateway resolveVaultEconomy() {
-        final RegisteredServiceProvider<Economy> registration = this.plugin.getServer()
-            .getServicesManager()
-            .getRegistration(Economy.class);
-
+        final RegisteredServiceProvider<Economy> registration =
+            this.plugin.getServer().getServicesManager().getRegistration(Economy.class);
         if (registration == null || registration.getProvider() == null) {
             throw new IllegalStateException("Vault economy provider not found");
         }
-
         return new VaultEconomyGateway(registration.getProvider());
     }
 }
-
-

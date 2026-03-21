@@ -2,6 +2,9 @@ package com.splatage.wild_economy.gui.admin;
 
 import com.splatage.wild_economy.WildEconomyPlugin;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogBuildResult;
+import com.splatage.wild_economy.catalog.admin.AdminCatalogDecisionTrace;
+import com.splatage.wild_economy.catalog.admin.AdminCatalogItemKeys;
+import com.splatage.wild_economy.catalog.admin.AdminCatalogManualOverride;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogPhaseOneService;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogReviewBucket;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogRuleImpact;
@@ -31,10 +34,12 @@ public final class AdminMenuRouter {
     private final WildEconomyPlugin plugin;
     private final PlatformExecutor platformExecutor;
     private final AdminCatalogPhaseOneService catalogService;
+    private final AdminManualOverrideEditor manualOverrideEditor;
     private final AdminRootMenu adminRootMenu;
     private final AdminReviewBucketMenu adminReviewBucketMenu;
     private final AdminRuleImpactMenu adminRuleImpactMenu;
     private final AdminItemInspectorMenu adminItemInspectorMenu;
+    private final AdminOverrideEditMenu adminOverrideEditMenu;
 
     public AdminMenuRouter(
         final WildEconomyPlugin plugin,
@@ -42,15 +47,18 @@ public final class AdminMenuRouter {
         final AdminRootMenu adminRootMenu,
         final AdminReviewBucketMenu adminReviewBucketMenu,
         final AdminRuleImpactMenu adminRuleImpactMenu,
-        final AdminItemInspectorMenu adminItemInspectorMenu
+        final AdminItemInspectorMenu adminItemInspectorMenu,
+        final AdminOverrideEditMenu adminOverrideEditMenu
     ) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
         this.catalogService = new AdminCatalogPhaseOneService(plugin);
+        this.manualOverrideEditor = new AdminManualOverrideEditor(plugin);
         this.adminRootMenu = Objects.requireNonNull(adminRootMenu, "adminRootMenu");
         this.adminReviewBucketMenu = Objects.requireNonNull(adminReviewBucketMenu, "adminReviewBucketMenu");
         this.adminRuleImpactMenu = Objects.requireNonNull(adminRuleImpactMenu, "adminRuleImpactMenu");
         this.adminItemInspectorMenu = Objects.requireNonNull(adminItemInspectorMenu, "adminItemInspectorMenu");
+        this.adminOverrideEditMenu = Objects.requireNonNull(adminOverrideEditMenu, "adminOverrideEditMenu");
     }
 
     public void openRoot(final Player player) {
@@ -162,6 +170,139 @@ public final class AdminMenuRouter {
         this.platformExecutor.runOnPlayer(player, () -> this.adminItemInspectorMenu.open(player, state, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode));
     }
 
+    public void openOverrideEditor(
+        final Player player,
+        final AdminCatalogViewState state,
+        final String itemKey,
+        final String returnBucketId,
+        final String returnRuleId,
+        final int pageIndex,
+        final String sortMode
+    ) {
+        final AdminCatalogDecisionTrace trace = state.findTrace(itemKey);
+        if (trace == null) {
+            player.sendMessage(ChatColor.RED + "No generated catalog decision found for '" + itemKey + "'.");
+            this.openRoot(player, state);
+            return;
+        }
+        final AdminCatalogManualOverride override = this.manualOverrideEditor.loadOverride(itemKey);
+        final String policy = override != null && override.policy() != null ? override.policy().name() : trace.finalPolicy().name();
+        final String stockProfile = override != null && hasText(override.stockProfile()) ? override.stockProfile() : trace.stockProfile();
+        final String ecoEnvelope = override != null && hasText(override.ecoEnvelope()) ? override.ecoEnvelope() : trace.ecoEnvelope();
+        final String note = override != null ? blankToEmpty(override.note()) : blankToEmpty(trace.note());
+        this.openOverrideEditor(player, state, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode, policy, stockProfile, ecoEnvelope, note, null);
+    }
+
+    public void openOverrideEditor(
+        final Player player,
+        final AdminCatalogViewState state,
+        final String itemKey,
+        final String returnBucketId,
+        final String returnRuleId,
+        final int pageIndex,
+        final String sortMode,
+        final String overridePolicy,
+        final String overrideStockProfile,
+        final String overrideEcoEnvelope,
+        final String overrideNote,
+        final String actionId
+    ) {
+        this.platformExecutor.runOnPlayer(player, () -> this.adminOverrideEditMenu.open(
+            player,
+            state,
+            itemKey,
+            returnBucketId,
+            returnRuleId,
+            pageIndex,
+            sortMode,
+            overridePolicy,
+            overrideStockProfile,
+            overrideEcoEnvelope,
+            overrideNote,
+            actionId
+        ));
+    }
+
+    public void saveManualOverrideAndInspect(
+        final Player player,
+        final AdminCatalogViewState state,
+        final String itemKey,
+        final String returnBucketId,
+        final String returnRuleId,
+        final int pageIndex,
+        final String sortMode,
+        final String overridePolicy,
+        final String overrideStockProfile,
+        final String overrideEcoEnvelope,
+        final String overrideNote
+    ) {
+        try {
+            if (!this.manualOverrideEditor.stockProfileExists(overrideStockProfile)) {
+                player.sendMessage(ChatColor.RED + "Unknown stock profile: " + overrideStockProfile);
+                return;
+            }
+            if (!this.manualOverrideEditor.ecoEnvelopeExists(overrideEcoEnvelope)) {
+                player.sendMessage(ChatColor.RED + "Unknown eco envelope: " + overrideEcoEnvelope);
+                return;
+            }
+            this.manualOverrideEditor.saveOverride(itemKey, overridePolicy, overrideStockProfile, overrideEcoEnvelope, overrideNote);
+            player.sendMessage(ChatColor.GREEN + "Saved manual override for " + AdminCatalogItemKeys.canonicalize(itemKey) + ".");
+            final AdminCatalogViewState refreshedState = this.buildState(false, "preview");
+            this.openItemInspector(player, refreshedState, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode);
+        } catch (final IOException exception) {
+            this.plugin.getLogger().log(Level.SEVERE, "Failed to save manual override for " + itemKey, exception);
+            player.sendMessage(ChatColor.RED + "Failed to save override: " + exception.getMessage());
+        }
+    }
+
+    public void removeManualOverrideAndInspect(
+        final Player player,
+        final AdminCatalogViewState state,
+        final String itemKey,
+        final String returnBucketId,
+        final String returnRuleId,
+        final int pageIndex,
+        final String sortMode
+    ) {
+        try {
+            final boolean removed = this.manualOverrideEditor.removeOverride(itemKey);
+            if (removed) {
+                player.sendMessage(ChatColor.GREEN + "Removed manual override for " + AdminCatalogItemKeys.canonicalize(itemKey) + ".");
+            } else {
+                player.sendMessage(ChatColor.YELLOW + "No manual override existed for " + AdminCatalogItemKeys.canonicalize(itemKey) + ".");
+            }
+            final AdminCatalogViewState refreshedState = this.buildState(false, "preview");
+            this.openItemInspector(player, refreshedState, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode);
+        } catch (final IOException exception) {
+            this.plugin.getLogger().log(Level.SEVERE, "Failed to remove manual override for " + itemKey, exception);
+            player.sendMessage(ChatColor.RED + "Failed to remove override: " + exception.getMessage());
+        }
+    }
+
+    public String nextPolicy(final String currentPolicy) {
+        return this.manualOverrideEditor.nextPolicy(currentPolicy);
+    }
+
+    public String nextStockProfile(final String currentProfile) {
+        return this.manualOverrideEditor.nextNamedValue(this.availableStockProfiles(), currentProfile);
+    }
+
+    public String nextEcoEnvelope(final String currentEnvelope) {
+        return this.manualOverrideEditor.nextNamedValue(this.availableEcoEnvelopes(), currentEnvelope);
+    }
+
+    public String nextOverrideNote(final String currentNote) {
+        return this.manualOverrideEditor.nextNote(currentNote);
+    }
+
+    public List<String> availableStockProfiles() {
+        return this.manualOverrideEditor.loadStockProfileNames();
+    }
+
+    public List<String> availableEcoEnvelopes() {
+        return this.manualOverrideEditor.loadEcoEnvelopeNames();
+    }
+
     public void goBack(final Player player) {
         final AdminMenuHolder holder = this.currentHolder(player);
         if (holder == null) {
@@ -185,6 +326,15 @@ public final class AdminMenuRouter {
                     this.openRoot(player, holder.state());
                 }
             }
+            case OVERRIDE_EDITOR -> this.openItemInspector(
+                player,
+                holder.state(),
+                holder.itemKey(),
+                holder.returnBucketId(),
+                holder.returnRuleId(),
+                holder.pageIndex(),
+                holder.sortMode()
+            );
         }
     }
 
@@ -211,15 +361,14 @@ public final class AdminMenuRouter {
     private AdminMenuHolder currentHolder(final Player player) {
         return getAdminMenuHolder(player.getOpenInventory().getTopInventory());
     }
+
     private AdminCatalogViewState buildState(final boolean apply, final String actionName) throws IOException {
         final AdminCatalogBuildResult buildResult = this.catalogService.build(apply);
         final File generatedDirectory = buildResult.generatedDirectory();
-        final List<AdminCatalogRuleImpact> ruleImpacts = this.loadRuleImpacts(
-            new File(generatedDirectory, "generated-rule-impacts.yml")
-        );
-        final List<AdminCatalogReviewBucket> reviewBuckets = this.loadReviewBuckets(
-            new File(generatedDirectory, "generated-review-buckets.yml")
-        );
+        final List<AdminCatalogRuleImpact> ruleImpacts =
+            this.loadRuleImpacts(new File(generatedDirectory, "generated-rule-impacts.yml"));
+        final List<AdminCatalogReviewBucket> reviewBuckets =
+            this.loadReviewBuckets(new File(generatedDirectory, "generated-review-buckets.yml"));
         return new AdminCatalogViewState(buildResult, ruleImpacts, reviewBuckets, actionName);
     }
 
@@ -335,11 +484,7 @@ public final class AdminMenuRouter {
                 + "."
         );
         player.sendMessage(
-            ChatColor.YELLOW + "Warnings "
-                + result.warningCount()
-                + ", errors "
-                + result.errorCount()
-                + ". Reports written to "
+            ChatColor.YELLOW + "Warnings " + result.warningCount() + ", errors " + result.errorCount() + ". Reports written to "
                 + result.generatedDirectory().getPath()
                 + "."
         );
@@ -352,13 +497,8 @@ public final class AdminMenuRouter {
     private void sendApplyConfirmMessage(final Player player, final AdminCatalogViewState state) {
         final AdminCatalogBuildResult result = state.buildResult();
         player.sendMessage(
-            ChatColor.RED + "Apply armed: "
-                + result.liveEntries().size()
-                + " live items, "
-                + result.warningCount()
-                + " warnings, "
-                + result.errorCount()
-                + " errors."
+            ChatColor.RED + "Apply armed: " + result.liveEntries().size() + " live items, " + result.warningCount()
+                + " warnings, " + result.errorCount() + " errors."
         );
         player.sendMessage(ChatColor.YELLOW + "Click Confirm Apply in the GUI to publish, or Cancel Apply to return.");
     }
@@ -372,5 +512,12 @@ public final class AdminMenuRouter {
         }
         player.sendMessage(ChatColor.YELLOW + "Reloading plugin to apply the new live catalog...");
     }
-}
 
+    private static boolean hasText(final String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private static String blankToEmpty(final String value) {
+        return value == null ? "" : value;
+    }
+}
