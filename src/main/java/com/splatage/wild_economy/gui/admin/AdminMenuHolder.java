@@ -27,6 +27,8 @@ public final class AdminMenuHolder implements InventoryHolder {
     private final String itemKey;
     private final String returnBucketId;
     private final String returnRuleId;
+    private final int pageIndex;
+    private final String sortMode;
     private Inventory inventory;
 
     private AdminMenuHolder(
@@ -38,7 +40,9 @@ public final class AdminMenuHolder implements InventoryHolder {
         final String sampleGroupId,
         final String itemKey,
         final String returnBucketId,
-        final String returnRuleId
+        final String returnRuleId,
+        final int pageIndex,
+        final String sortMode
     ) {
         this.state = Objects.requireNonNull(state, "state");
         this.viewType = Objects.requireNonNull(viewType, "viewType");
@@ -49,81 +53,69 @@ public final class AdminMenuHolder implements InventoryHolder {
         this.itemKey = itemKey;
         this.returnBucketId = returnBucketId;
         this.returnRuleId = returnRuleId;
+        this.pageIndex = Math.max(0, pageIndex);
+        this.sortMode = sortMode == null || sortMode.isBlank() ? "default" : sortMode;
     }
 
     public static AdminMenuHolder root(final AdminCatalogViewState state) {
-        return new AdminMenuHolder(state, ViewType.ROOT, null, null, null, null, null, null, null);
+        return new AdminMenuHolder(state, ViewType.ROOT, null, null, null, null, null, null, null, 0, "default");
     }
 
-    public static AdminMenuHolder reviewBucketList(final AdminCatalogViewState state) {
-        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_LIST, null, null, null, null, null, null, null);
+    public static AdminMenuHolder reviewBucketList(final AdminCatalogViewState state, final int pageIndex, final String sortMode) {
+        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_LIST, null, null, null, null, null, null, null, pageIndex, sortMode);
     }
 
-    public static AdminMenuHolder reviewBucketDetail(final AdminCatalogViewState state, final String bucketId) {
-        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_DETAIL, bucketId, null, null, null, null, null, null);
+    public static AdminMenuHolder reviewBucketDetail(
+        final AdminCatalogViewState state,
+        final String bucketId,
+        final int pageIndex,
+        final String sortMode
+    ) {
+        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_DETAIL, bucketId, null, null, null, null, null, null, pageIndex, sortMode);
     }
 
     public static AdminMenuHolder reviewBucketSubgroupDetail(
         final AdminCatalogViewState state,
         final String bucketId,
-        final String subgroupId
+        final String subgroupId,
+        final int pageIndex,
+        final String sortMode
     ) {
-        return new AdminMenuHolder(
-            state,
-            ViewType.REVIEW_BUCKET_SUBGROUP_DETAIL,
-            bucketId,
-            subgroupId,
-            null,
-            null,
-            null,
-            null,
-            null
-        );
+        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_SUBGROUP_DETAIL, bucketId, subgroupId, null, null, null, null, null, pageIndex, sortMode);
     }
 
-    public static AdminMenuHolder ruleImpactList(final AdminCatalogViewState state) {
-        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_LIST, null, null, null, null, null, null, null);
+    public static AdminMenuHolder ruleImpactList(final AdminCatalogViewState state, final int pageIndex, final String sortMode) {
+        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_LIST, null, null, null, null, null, null, null, pageIndex, sortMode);
     }
 
-    public static AdminMenuHolder ruleImpactDetail(final AdminCatalogViewState state, final String ruleId) {
-        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_DETAIL, null, null, ruleId, null, null, null, null);
+    public static AdminMenuHolder ruleImpactDetail(
+        final AdminCatalogViewState state,
+        final String ruleId,
+        final int pageIndex,
+        final String sortMode
+    ) {
+        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_DETAIL, null, null, ruleId, null, null, null, null, pageIndex, sortMode);
     }
 
     public static AdminMenuHolder ruleImpactSampleDetail(
         final AdminCatalogViewState state,
         final String ruleId,
-        final String sampleGroupId
+        final String sampleGroupId,
+        final int pageIndex,
+        final String sortMode
     ) {
-        return new AdminMenuHolder(
-            state,
-            ViewType.RULE_IMPACT_SAMPLE_DETAIL,
-            null,
-            null,
-            ruleId,
-            sampleGroupId,
-            null,
-            null,
-            null
-        );
+        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_SAMPLE_DETAIL, null, null, ruleId, sampleGroupId, null, null, null, pageIndex, sortMode);
     }
 
     public static AdminMenuHolder itemInspector(
         final AdminCatalogViewState state,
         final String itemKey,
         final String returnBucketId,
-        final String returnRuleId
+        final String returnRuleId,
+        final int pageIndex,
+        final String sortMode
     ) {
-        return new AdminMenuHolder(
-            state,
-            ViewType.ITEM_INSPECTOR,
-            null,
-            null,
-            null,
-            null,
-            itemKey,
-            returnBucketId,
-            returnRuleId
-        );
+        return new AdminMenuHolder(state, ViewType.ITEM_INSPECTOR, null, null, null, null, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode);
     }
 
     public Inventory createInventory(final int size, final String title) {
@@ -139,40 +131,16 @@ public final class AdminMenuHolder implements InventoryHolder {
         return this.inventory;
     }
 
-    public AdminCatalogViewState state() {
-        return this.state;
-    }
-
-    public ViewType viewType() {
-        return this.viewType;
-    }
-
-    public String bucketId() {
-        return this.bucketId;
-    }
-
-    public String subgroupId() {
-        return this.subgroupId;
-    }
-
-    public String ruleId() {
-        return this.ruleId;
-    }
-
-    public String sampleGroupId() {
-        return this.sampleGroupId;
-    }
-
-    public String itemKey() {
-        return this.itemKey;
-    }
-
-    public String returnBucketId() {
-        return this.returnBucketId;
-    }
-
-    public String returnRuleId() {
-        return this.returnRuleId;
-    }
+    public AdminCatalogViewState state() { return this.state; }
+    public ViewType viewType() { return this.viewType; }
+    public String bucketId() { return this.bucketId; }
+    public String subgroupId() { return this.subgroupId; }
+    public String ruleId() { return this.ruleId; }
+    public String sampleGroupId() { return this.sampleGroupId; }
+    public String itemKey() { return this.itemKey; }
+    public String returnBucketId() { return this.returnBucketId; }
+    public String returnRuleId() { return this.returnRuleId; }
+    public int pageIndex() { return this.pageIndex; }
+    public String sortMode() { return this.sortMode; }
 }
 

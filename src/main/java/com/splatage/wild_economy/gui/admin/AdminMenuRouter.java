@@ -18,8 +18,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
-import org.bukkit.ChatColor;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -85,43 +85,69 @@ public final class AdminMenuRouter {
     }
 
     public void openReviewBucketList(final Player player, final AdminCatalogViewState state) {
-        this.platformExecutor.runOnPlayer(player, () -> this.adminReviewBucketMenu.openList(player, state));
+        this.openReviewBucketList(player, state, 0, "count");
+    }
+
+    public void openReviewBucketList(final Player player, final AdminCatalogViewState state, final int pageIndex, final String sortMode) {
+        this.platformExecutor.runOnPlayer(player, () -> this.adminReviewBucketMenu.openList(player, state, pageIndex, sortMode));
     }
 
     public void openReviewBucketDetail(final Player player, final AdminCatalogViewState state, final String bucketId) {
-        this.platformExecutor.runOnPlayer(player, () -> this.adminReviewBucketMenu.openDetail(player, state, bucketId));
+        this.openReviewBucketDetail(player, state, bucketId, 0, "count");
+    }
+
+    public void openReviewBucketDetail(
+        final Player player,
+        final AdminCatalogViewState state,
+        final String bucketId,
+        final int pageIndex,
+        final String sortMode
+    ) {
+        this.platformExecutor.runOnPlayer(player, () -> this.adminReviewBucketMenu.openDetail(player, state, bucketId, pageIndex, sortMode));
     }
 
     public void openReviewBucketSubgroupDetail(
         final Player player,
         final AdminCatalogViewState state,
         final String bucketId,
-        final String subgroupId
+        final String subgroupId,
+        final int pageIndex,
+        final String sortMode
     ) {
-        this.platformExecutor.runOnPlayer(
-            player,
-            () -> this.adminReviewBucketMenu.openSubgroupDetail(player, state, bucketId, subgroupId)
-        );
+        this.platformExecutor.runOnPlayer(player, () -> this.adminReviewBucketMenu.openSubgroupDetail(player, state, bucketId, subgroupId, pageIndex, sortMode));
     }
 
     public void openRuleImpactList(final Player player, final AdminCatalogViewState state) {
-        this.platformExecutor.runOnPlayer(player, () -> this.adminRuleImpactMenu.openList(player, state));
+        this.openRuleImpactList(player, state, 0, "loss");
+    }
+
+    public void openRuleImpactList(final Player player, final AdminCatalogViewState state, final int pageIndex, final String sortMode) {
+        this.platformExecutor.runOnPlayer(player, () -> this.adminRuleImpactMenu.openList(player, state, pageIndex, sortMode));
     }
 
     public void openRuleImpactDetail(final Player player, final AdminCatalogViewState state, final String ruleId) {
-        this.platformExecutor.runOnPlayer(player, () -> this.adminRuleImpactMenu.openDetail(player, state, ruleId));
+        this.openRuleImpactDetail(player, state, ruleId, 0, "loss");
+    }
+
+    public void openRuleImpactDetail(
+        final Player player,
+        final AdminCatalogViewState state,
+        final String ruleId,
+        final int pageIndex,
+        final String sortMode
+    ) {
+        this.platformExecutor.runOnPlayer(player, () -> this.adminRuleImpactMenu.openDetail(player, state, ruleId, pageIndex, sortMode));
     }
 
     public void openRuleImpactSampleDetail(
         final Player player,
         final AdminCatalogViewState state,
         final String ruleId,
-        final String sampleGroupId
+        final String sampleGroupId,
+        final int pageIndex,
+        final String sortMode
     ) {
-        this.platformExecutor.runOnPlayer(
-            player,
-            () -> this.adminRuleImpactMenu.openSampleDetail(player, state, ruleId, sampleGroupId)
-        );
+        this.platformExecutor.runOnPlayer(player, () -> this.adminRuleImpactMenu.openSampleDetail(player, state, ruleId, sampleGroupId, pageIndex, sortMode));
     }
 
     public void openItemInspector(
@@ -129,12 +155,11 @@ public final class AdminMenuRouter {
         final AdminCatalogViewState state,
         final String itemKey,
         final String returnBucketId,
-        final String returnRuleId
+        final String returnRuleId,
+        final int pageIndex,
+        final String sortMode
     ) {
-        this.platformExecutor.runOnPlayer(
-            player,
-            () -> this.adminItemInspectorMenu.open(player, state, itemKey, returnBucketId, returnRuleId)
-        );
+        this.platformExecutor.runOnPlayer(player, () -> this.adminItemInspectorMenu.open(player, state, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode));
     }
 
     public void goBack(final Player player) {
@@ -143,20 +168,19 @@ public final class AdminMenuRouter {
             this.openRoot(player);
             return;
         }
-
         switch (holder.viewType()) {
             case ROOT -> this.openRoot(player);
             case REVIEW_BUCKET_LIST -> this.openRoot(player, holder.state());
-            case REVIEW_BUCKET_DETAIL -> this.openReviewBucketList(player, holder.state());
-            case REVIEW_BUCKET_SUBGROUP_DETAIL -> this.openReviewBucketDetail(player, holder.state(), holder.bucketId());
+            case REVIEW_BUCKET_DETAIL -> this.openReviewBucketList(player, holder.state(), holder.pageIndex(), holder.sortMode());
+            case REVIEW_BUCKET_SUBGROUP_DETAIL -> this.openReviewBucketDetail(player, holder.state(), holder.bucketId(), holder.pageIndex(), holder.sortMode());
             case RULE_IMPACT_LIST -> this.openRoot(player, holder.state());
-            case RULE_IMPACT_DETAIL -> this.openRuleImpactList(player, holder.state());
-            case RULE_IMPACT_SAMPLE_DETAIL -> this.openRuleImpactDetail(player, holder.state(), holder.ruleId());
+            case RULE_IMPACT_DETAIL -> this.openRuleImpactList(player, holder.state(), holder.pageIndex(), holder.sortMode());
+            case RULE_IMPACT_SAMPLE_DETAIL -> this.openRuleImpactDetail(player, holder.state(), holder.ruleId(), holder.pageIndex(), holder.sortMode());
             case ITEM_INSPECTOR -> {
                 if (holder.returnBucketId() != null) {
-                    this.openReviewBucketDetail(player, holder.state(), holder.returnBucketId());
+                    this.openReviewBucketDetail(player, holder.state(), holder.returnBucketId(), holder.pageIndex(), holder.sortMode());
                 } else if (holder.returnRuleId() != null) {
-                    this.openRuleImpactDetail(player, holder.state(), holder.returnRuleId());
+                    this.openRuleImpactDetail(player, holder.state(), holder.returnRuleId(), holder.pageIndex(), holder.sortMode());
                 } else {
                     this.openRoot(player, holder.state());
                 }
@@ -187,7 +211,6 @@ public final class AdminMenuRouter {
     private AdminMenuHolder currentHolder(final Player player) {
         return getAdminMenuHolder(player.getOpenInventory().getTopInventory());
     }
-
     private AdminCatalogViewState buildState(final boolean apply, final String actionName) throws IOException {
         final AdminCatalogBuildResult buildResult = this.catalogService.build(apply);
         final File generatedDirectory = buildResult.generatedDirectory();
