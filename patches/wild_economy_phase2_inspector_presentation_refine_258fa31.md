@@ -1,3 +1,19 @@
+# wild_economy inspector presentation refine (`258fa31292f7fe0f00f53fee9a87d5e745d4fe93`)
+
+This bundle contains the complete replacement file for the `/shopadmin item <item_key>` chat presentation refinement.
+
+Scope of this pass:
+- keep backend decision logic unchanged
+- improve chat readability for fallback-rule decisions
+- avoid awkward `X -> X` category output
+- separate base suggestion from final policy
+- present manual override and matched-but-lost rules more clearly
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/command/ShopAdminCommand.java`
+
+```java
 package com.splatage.wild_economy.command;
 
 import com.splatage.wild_economy.WildEconomyPlugin;
@@ -484,3 +500,4 @@ public final class ShopAdminCommand implements CommandExecutor {
 
 
 
+```
