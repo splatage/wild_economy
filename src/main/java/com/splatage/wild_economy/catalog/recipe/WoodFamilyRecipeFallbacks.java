@@ -29,6 +29,7 @@ public final class WoodFamilyRecipeFallbacks {
         for (final WoodFamily family : WOOD_FAMILIES) {
             applyPlanksFromLog(recipesByOutput, family);
             applyWoodFromLogs(recipesByOutput, family);
+            applyStrippedInputFromLog(recipesByOutput, family);
             applyWoodenSign(recipesByOutput, family);
             applyHangingSign(recipesByOutput, family);
             applyBoat(recipesByOutput, family);
@@ -76,6 +77,28 @@ public final class WoodFamilyRecipeFallbacks {
                 3,
                 "fallback_wood_from_logs",
                 List.of(new RecipeIngredient(family.inputLogKey(), 4))
+            )
+        );
+    }
+
+    private static void applyStrippedInputFromLog(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final WoodFamily family
+    ) {
+        if (!hasMaterial(family.inputLogKey()) || !hasMaterial(family.strippedInputLogKey())) {
+            return;
+        }
+        if (hasRecipes(recipesByOutput, family.strippedInputLogKey())) {
+            return;
+        }
+
+        addRecipe(
+            recipesByOutput,
+            new RecipeDefinition(
+                family.strippedInputLogKey(),
+                1,
+                "fallback_stripped_input_from_log",
+                List.of(new RecipeIngredient(family.inputLogKey(), 1))
             )
         );
     }
