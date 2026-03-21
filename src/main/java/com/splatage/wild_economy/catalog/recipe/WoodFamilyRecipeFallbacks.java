@@ -133,7 +133,10 @@ public final class WoodFamilyRecipeFallbacks {
         final Map<String, List<RecipeDefinition>> recipesByOutput,
         final WoodFamily family
     ) {
-        if (!hasMaterial(family.strippedInputLogKey()) || !hasMaterial(family.hangingSignKey()) || !hasMaterial("chain")) {
+        if (!hasMaterial(family.strippedInputLogKey()) || !hasMaterial(family.hangingSignKey())) {
+            return;
+        }
+        if (!hasMaterial("iron_ingot") || !hasMaterial("iron_nugget")) {
             return;
         }
         if (hasRecipes(recipesByOutput, family.hangingSignKey())) {
@@ -148,7 +151,8 @@ public final class WoodFamilyRecipeFallbacks {
                 "fallback_hanging_sign",
                 List.of(
                     new RecipeIngredient(family.strippedInputLogKey(), 6),
-                    new RecipeIngredient("chain", 2)
+                    new RecipeIngredient("iron_ingot", 2),
+                    new RecipeIngredient("iron_nugget", 4)
                 )
             )
         );
@@ -208,7 +212,7 @@ public final class WoodFamilyRecipeFallbacks {
         if (!family.supportsBoatRecipes()) {
             return;
         }
-        if (!hasMaterial(family.boatKey()) || !hasMaterial(family.chestBoatKey()) || !hasMaterial("chest")) {
+        if (!hasMaterial(family.planksKey()) || !hasMaterial(family.chestBoatKey())) {
             return;
         }
         if (hasRecipes(recipesByOutput, family.chestBoatKey())) {
@@ -221,10 +225,7 @@ public final class WoodFamilyRecipeFallbacks {
                 family.chestBoatKey(),
                 1,
                 "fallback_chest_boat",
-                List.of(
-                    new RecipeIngredient(family.boatKey(), 1),
-                    new RecipeIngredient("chest", 1)
-                )
+                List.of(new RecipeIngredient(family.planksKey(), 13))
             )
         );
     }
