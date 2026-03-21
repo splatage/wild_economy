@@ -1,3 +1,18 @@
+# wild_economy chest boat + hanging sign hotfix (`89e89777fe7358fb1f64edfaebe777231573e1c6`)
+
+This bundle contains the complete replacement file for the remaining wood-family derivation hotfix.
+
+Scope of this hotfix:
+- keep the Phase 1 admin/catalog pipeline unchanged
+- fix the remaining chest boat derivation gap
+- fix the remaining hanging sign derivation gap
+- make both fallback recipes participate even when Bukkit already exposes a recipe for the same output
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/catalog/recipe/WoodFamilyRecipeFallbacks.java`
+
+```java
 package com.splatage.wild_economy.catalog.recipe;
 
 import java.util.ArrayList;
@@ -291,3 +306,4 @@ public final class WoodFamilyRecipeFallbacks {
     }
 }
 
+```
