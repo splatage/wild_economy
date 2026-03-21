@@ -1,3 +1,14 @@
+# wild_economy Phase 1 fallback-rule patch (`6bb5a1a4dadbdcc503ee04e2c0ff19c503e31a75`)
+
+This bundle contains the complete replacement file for the next narrow Phase 1 admin/catalog pass.
+
+It fixes fallback-rule precedence so matchless catch-all rules only apply when no specific rule matched, and it adds separate `rule-wins` summary counts alongside `rule-matches`.
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/catalog/admin/AdminCatalogPhaseOneService.java`
+
+```java
 package com.splatage.wild_economy.catalog.admin;
 
 import com.splatage.wild_economy.catalog.classify.DefaultCategoryClassifier;
@@ -1174,3 +1185,4 @@ public final class AdminCatalogPhaseOneService {
     }
 }
 
+```
