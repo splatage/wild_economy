@@ -1,23 +1,25 @@
 # wild_economy — Repo-Ready Technical Spec (v1)
 
-## Status
+Revision date: 2026-03-21  
+Repo snapshot: `02c67a3f26db3817f95cbe72b3fb8cae3021b03f`  
+Status: Current intended v1 technical spec aligned to the repo direction and locked admin Phase 1 work.
 
-This document is the **current implementation-stage source of truth** for `wild_economy` v1.
+This document is the intended implementation-stage source of truth for `wild_economy` v1.
 
-It reflects the locked direction to date:
+It reflects the current direction to date:
 
-- **Exchange-first, likely Exchange-only**
-- **Player-stocked** is the default item mode
-- **Unlimited buy-only** is a narrow exception
-- **Disabled** protects progression and server identity
-- **Buying is GUI-driven**
-- **Selling is command-driven**
-- Prices are sourced from **Essentials `worth.yml`**, imported into an **internal catalog**
-- Player-stocked items use:
-  - soft stock-cap anchoring
-  - background turnover/drain
-  - stock-sensitive sell-price taper as stock saturates
-  - atomic buy-side stock consumption
+- Exchange-first, and likely Exchange-only in v1
+- player-stocked trade is the primary economic path
+- unlimited buy remains a narrow exception
+- disabled items protect progression and server identity
+- buying is GUI-driven
+- selling is command-driven
+- the catalog is built from a generated base plus explicit overrides
+- root values are anchored in `root-values.yml`
+- item derivation is recipe-graph based
+- generated catalog output is merged with explicit overrides for runtime use
+- player-stocked items use soft stock-cap anchoring, turnover, stock-sensitive sell taper, and atomic buy-side stock consumption
+- admin/catalog work is now moving toward a staged preview/validate/diff/apply pipeline, but that full admin workflow is not yet complete in code
 
 ---
 
@@ -31,7 +33,7 @@ It reflects the locked direction to date:
 
 ### Internal terminology
 
-Use **Shop** for player-facing command and menu language.
+Use **Shop** for player-facing command and menu language.  
 Use **Exchange** internally for the business/domain model.
 
 Examples:
@@ -46,35 +48,40 @@ This keeps the player UX intuitive while preserving clean domain language in cod
 
 ## 2. Scope boundaries
 
-## Included in v1
+### Included in v1
 
-- Curated Exchange item catalog
-- Item policy system
-- `PLAYER_STOCKED` items
-- `UNLIMITED_BUY` items
-- `DISABLED` items
-- Soft stock-cap anchors for player-stocked items
-- Background stock turnover/drain
-- Stock-sensitive sell-price taper
-- Stable, standardized buy pricing
-- Immediate payout on sell
+- curated Exchange item catalog
+- item policy system
+- generated base catalog from `root-values.yml` and recipe derivation
+- explicit override layer merged last
+- player-stocked items
+- unlimited-buy exception items
+- disabled items
+- soft stock-cap anchors for player-stocked items
+- background stock turnover/drain
+- stock-sensitive sell-price taper
+- stable, standardized buy pricing
+- immediate payout on sell
 - GUI browsing and buying
-- Command-driven selling
+- command-driven selling
 - SQLite support
 - MySQL/MariaDB support
-- Transaction logging sufficient for support/debugging
+- transaction logging sufficient for support/debugging
+- file-driven admin/catalog review pipeline work in phased form
 
-## Excluded from v1
+### Excluded from v1
 
 - Marketplace as a core system
-- Auctions
-- Bids/offers/negotiation
-- Dynamic buy-side market pricing
-- Public works integration
-- Fuzzy item matching
-- Broad support for every item by default
-- Progression-sensitive items in easy circulation
-- Large admin dashboards / analytics suites
+- auctions
+- bids/offers/negotiation
+- dynamic buy-side market pricing
+- public works integration
+- fuzzy item matching
+- broad support for every item by default
+- progression-sensitive items in easy circulation
+- broad admin dashboards as part of the initial runtime delivery
+- full GUI rule editing in the initial admin/catalog Phase 1
+- automatic publish of generated catalog proposals
 
 ---
 
@@ -92,83 +99,169 @@ This keeps the player UX intuitive while preserving clean domain language in cod
 10. **No Bukkit `Player` leakage into repositories.**
 11. **Soft stock caps reduce value; they do not hard-block sells.**
 12. **Player-stocked buy consumption must be atomic.**
+13. **The runtime catalog must be deterministic and explainable.**
+14. **Admin/catalog generation should happen off the normal player interaction path.**
+15. **Human-readable files remain the admin source of truth.**
 
 ---
 
-## 4. Item policy model
+## 4. Catalog architecture
 
-## `PLAYER_STOCKED`
+### 4.1 High-level model
+
+The runtime catalog is built from two layers:
+
+1. a **generated base catalog**
+2. an **explicit override layer** that wins last
+
+### 4.2 Root values and derivation
+
+`root-values.yml` is the anchor source for base item values.
+
+Generation uses a recipe graph to:
+
+- discover craft relationships
+- derive candidate values for non-root items from anchored roots
+- classify materials
+- suggest initial policy treatment
+- emit generated catalog files for review and runtime import
+
+### 4.3 Generated outputs
+
+The current generator writes proposal artifacts under a generated output area.  
+At the current repo snapshot, the implemented outputs are:
+
+- `generated/generated-catalog.yml`
+- `generated/generated-catalog-summary.yml`
+
+These files are part of the current generator path. The fuller staged publish/diff/snapshot workflow is planned admin work, not complete runtime behavior yet.
+
+### 4.4 Override layer
+
+Explicit item decisions and corrections are currently carried by the runtime override config layer.  
+That layer is used for:
+
+- exact per-item corrections
+- wildcard-driven bulk rules
+- final override of generated defaults
+
+### 4.5 Runtime merge rule
+
+The intended runtime merge rule is:
+
+1. root values anchor derivation
+2. generated catalog provides the default structured base
+3. explicit overrides win last
+
+This gives a scalable catalog without forcing hand-maintenance of every item.
+
+---
+
+## 5. Item policy model
+
+### 5.1 Runtime-facing policy states
+
+The current runtime remains centered on these core economic modes:
+
+- `PLAYER_STOCKED`
+- `UNLIMITED_BUY`
+- `DISABLED`
+
+These represent the actual runtime economic behavior.
+
+### 5.2 Admin-facing policy groups
+
+The admin/catalog generation direction now uses four higher-level policy groups:
+
+- `ALWAYS_AVAILABLE`
+- `EXCHANGE`
+- `SELL_ONLY`
+- `DISABLED`
+
+These are admin intent states. They may be mapped into current runtime flags and modes during import.
+
+### 5.3 Policy meanings
+
+#### `PLAYER_STOCKED` / `EXCHANGE`
 
 Default and primary mode.
+
 Used for whitelisted, standardized bulk goods, especially useful farm outputs and server-useful materials.
 
 Behavior:
 
-- Players can sell these items to the Exchange
-- Players are paid immediately
-- Sold items become Exchange stock
-- Other players can buy from that stock
-- Soft stock caps taper sell value as stock saturates
-- Sell intake is not hard-blocked just because stock is already high
+- players can sell these items to the Exchange
+- players are paid immediately
+- sold items become Exchange stock
+- other players can buy from that stock
+- soft stock caps taper sell value as stock saturates
+- sell intake is not hard-blocked just because stock is already high
 
 Purpose:
 
-- Reward useful production
-- Tie trade to real supply
-- Circulate practical goods without conjuring stock
+- reward useful production
+- tie trade to real supply
+- circulate practical goods without conjuring stock
 
-## `UNLIMITED_BUY`
+#### `UNLIMITED_BUY` / `ALWAYS_AVAILABLE`
 
 Narrow exception mode.
+
 Used for nuisance or world-damaging materials where the design goal is to reduce ugly harvesting and landscape damage.
 
-Behavior:
+Intended behavior:
 
-- Players can buy these items
-- They are not part of the normal sell-back loop
-- Supply is server-provided by policy
+- players can buy these items
+- they are not part of the normal stock-backed sell loop
+- supply is server-provided by policy
 
 Likely examples:
 
 - sand
 - red sand
 - ice
-- logs
+- selected logs
 
-## `DISABLED`
+#### `SELL_ONLY`
+
+Admin-facing intent state used where admins want to reward collection, disposal, or cleanup without turning the item into a normal public stock-backed buy item.
+
+This remains an admin/catalog capability rather than a large runtime expansion in early v1.
+
+#### `DISABLED`
 
 Used for progression-sensitive or shortcutting items.
 
 Behavior:
 
-- Not buyable
-- Not sellable
+- not buyable
+- not sellable
 
 Purpose:
 
-- Preserve progression
-- Keep rare/important items out of easy circulation
+- preserve progression
+- keep rare, unsafe, or identity-breaking items out of easy circulation
 
 ---
 
-## 5. Stock model
+## 6. Stock model
 
-All `PLAYER_STOCKED` items track live stock.
+All player-stocked items track live stock.
 
 Each catalog entry may define:
 
 - `stock-cap`
-- `turnover-amount-per-interval`
+- turnover amount and interval
 - stock-state thresholds
-- sell-price bands
+- sell-price bands or equivalent taper controls
 
 ### Behavior
 
-- Player sells increase live stock
-- Player purchases drain live stock quickly
-- Background turnover drains live stock slowly over time
+- player sells increase live stock
+- player purchases drain live stock quickly
+- background turnover drains live stock slowly over time
 - `stock-cap` acts as a pricing anchor, not a hard sell ceiling
-- At or above the cap, sell value floors at the configured minimum band
+- at or above the cap, sell value floors at the configured minimum band
 
 ### Design intent
 
@@ -176,31 +269,32 @@ This acts like a **soft-capped / leaky-bucket stock model**:
 
 - bursty production can be absorbed
 - player demand drains stock naturally
-- background turnover helps desaturate stock even if player buy demand is weak
+- background turnover helps desaturate stock even if player demand is weak
 - stock can rise above cap, but oversupply is discouraged through lower sell value rather than rejection
 
 ### Important interpretation
 
-Background turnover is **not merely cleanup**.
+Background turnover is **not merely cleanup**.  
 It is a deliberate form of **passive server-side consumption / turnover**.
 
 ---
 
-## 6. Pricing model
+## 7. Pricing model
 
-## Source of truth
+### 7.1 Source of truth
 
-Use Essentials `worth.yml` as the base standardized value source.
+The economic anchor is no longer described as direct runtime dependence on Essentials `worth.yml`.
 
-At startup/reload:
+The intended v1 source flow is:
 
-- import values from `worth.yml`
-- merge them with explicit item config
-- build an internal Exchange catalog
+1. anchor root/basic values in `root-values.yml`
+2. derive generated values through recipe relationships
+3. merge generated defaults with explicit overrides
+4. use the internal runtime catalog for all runtime pricing logic
 
-Runtime logic must use the internal catalog, not poke through `worth.yml` repeatedly.
+Runtime code should use the internal catalog, not repeatedly consult an external worth file.
 
-## Buy pricing
+### 7.2 Buy pricing
 
 Buy prices must remain:
 
@@ -210,7 +304,7 @@ Buy prices must remain:
 
 Buy-side pricing should **not** behave like a live market simulator.
 
-## Sell pricing
+### 7.3 Sell pricing
 
 Sell prices taper downward as stock fills.
 
@@ -221,7 +315,7 @@ Meaning:
 - at or above cap = minimum configured sell value floor
 - soft caps reduce reward; they do not reject the sell
 
-### Batch quote model
+### 7.4 Batch quote model
 
 For v1, sell pricing is calculated **per item key batch**, not per slot.
 
@@ -238,51 +332,39 @@ For one sell action of one item key:
 
 This keeps pricing understandable while preventing large same-action sells from being overpaid at the initial rate.
 
-### Recommended v1 bands
-
-Example only:
-
-- 0.00–0.25 fill → 100%
-- 0.25–0.50 fill → 85%
-- 0.50–0.75 fill → 65%
-- 0.75–0.90 fill → 40%
-- 0.90–1.00+ fill → 20%
-
-This is intentionally simpler and more explainable than a formula-heavy curve.
-
 ---
 
-## 7. Player interaction model
+## 8. Player interaction model
 
-## Buying
+### 8.1 Buying
 
 Buying is GUI-driven.
 
 Player flow:
 
 1. `/shop`
-2. Browse categories
-3. Browse items
-4. Open item detail
-5. Select quantity
-6. Confirm buy
+2. browse categories
+3. browse items
+4. open item detail
+5. select quantity
+6. confirm buy
 
 The GUI should show:
 
 - item name
 - buy price
 - stock state
-- available stock
+- available stock where relevant
 
 ### Buy correctness rules
 
-For `PLAYER_STOCKED` items:
+For player-stocked items:
 
-- per-click buy amount is limited to 64
+- per-click buy amount is limited
 - stock must be consumed atomically before finalizing the purchase
 - the system must not allow two buyers to receive the same remaining stock
 
-## Selling
+### 8.2 Selling
 
 Selling is command-driven.
 
@@ -307,7 +389,7 @@ Nothing should be silently lost or skipped.
 
 ---
 
-## 8. Service responsibilities
+## 9. Service responsibilities
 
 ### `StockService`
 
@@ -352,11 +434,23 @@ Responsibilities:
 - apply a floor split when a batch crosses the soft cap
 - round once at the end of each sell batch quote
 
+### Catalog/admin generation services
+
+Responsibilities:
+
+- scan the material universe
+- build recipe relationships
+- resolve anchored derivations
+- classify materials
+- suggest policy treatment
+- emit generated catalog proposal files
+- stay off the hot runtime interaction path
+
 ---
 
-## 9. Mandatory domain objects
+## 10. Mandatory domain objects
 
-## `ItemKey`
+### `ItemKey`
 
 Canonical Exchange key.
 
@@ -368,38 +462,39 @@ Example values:
 
 This must be strict. No fuzzy matching in v1.
 
-## `ItemPolicyMode`
+### `ItemPolicyMode`
 
-Initial v1 enum:
+Current core runtime enum:
 
 - `PLAYER_STOCKED`
 - `UNLIMITED_BUY`
 - `DISABLED`
 
-`SELL_ONLY` is intentionally left out of the core v1 path unless later reintroduced deliberately.
+Admin/catalog work may use a richer intent layer above this.
 
-## `ExchangeCatalogEntry`
+### `ExchangeCatalogEntry`
 
 This is the central runtime config object.
 
-Each entry must capture:
+Each entry should capture at minimum:
 
 - item key
 - display name
-- category
+- category / grouping info
 - policy mode
-- base worth
+- base worth / anchor-derived price basis
 - buy price
 - sell price
 - stock cap
-- turnover amount per interval
-- sell-price bands
+- turnover settings
+- sell taper settings
 - buy enabled
 - sell enabled
 
-## `StockSnapshot`
+### `StockSnapshot`
 
 Used by pricing and GUI view logic.
+
 Should include:
 
 - item key
@@ -408,11 +503,11 @@ Should include:
 - fill ratio
 - stock state
 
-## `BuyQuote` / `SellQuote`
+### `BuyQuote` / `SellQuote`
 
 Structured pricing outputs.
 
-Sell quote must include:
+Sell quote should include:
 
 - base unit price
 - effective unit price
@@ -420,9 +515,10 @@ Sell quote must include:
 - fill ratio
 - whether tapering was applied
 
-## Result models
+### Result models
 
 Use structured result objects rather than booleans.
+
 At minimum:
 
 - `SellHandResult`
@@ -433,7 +529,40 @@ At minimum:
 
 ---
 
-## 10. Runtime expectations
+## 11. Admin/catalog direction for v1
+
+The current admin/catalog direction is deliberately file-driven and staged.
+
+### Phase 1 admin/catalog deliverables
+
+The locked Phase 1 admin/catalog slice is:
+
+1. `policy-rules.yml`
+2. `manual-overrides.yml`
+3. `stock-profiles.yml`
+4. `eco-envelopes.yml`
+5. `/shopadmin catalog preview`
+6. `/shopadmin catalog validate`
+7. `/shopadmin catalog diff`
+8. `/shopadmin catalog apply`
+9. generated summary + diff reports
+10. item decision trace backend
+
+### Not part of Phase 1
+
+Do not treat the following as current Phase 1 deliverables:
+
+- full GUI rule editor
+- rollback browser UI
+- stock dashboard UI
+- quote simulator UI
+- broad admin dashboards
+
+These belong to later tooling phases, not the initial admin/catalog implementation slice.
+
+---
+
+## 12. Runtime expectations
 
 The runtime design priority is:
 
@@ -441,12 +570,14 @@ The runtime design priority is:
 2. keep database persistence off the main interaction path
 3. ensure buy-side stock correctness before deeper optimization work
 4. prefer clean per-item-key batch handling over noisy per-slot work
+5. keep catalog/admin heavy work off player-critical paths
 
 This means:
 
 - pricing math stays on the gameplay path
-- inventory/economy work stays on the gameplay path
+- inventory and economy work stay on the gameplay path
 - stock persistence stays asynchronous
 - transaction logging stays asynchronous
+- generation, diffing, validation, and report building should not burden normal player interaction paths
 
 That is the intended v1 balance between correctness, performance, and simplicity.
