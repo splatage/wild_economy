@@ -2,9 +2,14 @@ package com.splatage.wild_economy.command;
 
 import com.splatage.wild_economy.WildEconomyPlugin;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogBuildResult;
+import com.splatage.wild_economy.catalog.admin.AdminCatalogDecisionTrace;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogDiffEntry;
+import com.splatage.wild_economy.catalog.admin.AdminCatalogItemKeys;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogPhaseOneService;
+import com.splatage.wild_economy.catalog.admin.AdminCatalogPlanEntry;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogValidationIssue;
+import com.splatage.wild_economy.catalog.derive.DerivationReason;
+import com.splatage.wild_economy.catalog.model.CatalogCategory;
 import com.splatage.wild_economy.catalog.model.CatalogPolicy;
 import java.io.IOException;
 import java.util.EnumMap;
@@ -34,7 +39,7 @@ public final class ShopAdminCommand implements CommandExecutor {
         final String[] args
     ) {
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin reload or /shopadmin catalog <preview|validate|diff|apply>.");
+            this.sendUsage(sender);
             return true;
         }
 
@@ -43,9 +48,10 @@ public final class ShopAdminCommand implements CommandExecutor {
             case "reload" -> this.handleReload(sender);
             case "generatecatalog" -> this.handleCatalogPreview(sender);
             case "catalog" -> this.handleCatalog(sender, args);
+            case "item" -> this.handleItemInspect(sender, args);
             default -> {
                 sender.sendMessage(ChatColor.RED + "Unknown admin subcommand.");
-                sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin reload or /shopadmin catalog <preview|validate|diff|apply>.");
+                this.sendUsage(sender);
                 yield true;
             }
         };
@@ -99,6 +105,108 @@ public final class ShopAdminCommand implements CommandExecutor {
         return this.runCatalogAction(sender, "apply", true, false);
     }
 
+    private boolean handleItemInspect(final CommandSender sender, final String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin item <item_key>.");
+            return true;
+        }
+
+        try {
+            final AdminCatalogBuildResult result = this.catalogService.build(false);
+            final String requestedKey = AdminCatalogItemKeys.canonicalize(args[1]);
+            AdminCatalogDecisionTrace trace = null;
+            for (final AdminCatalogDecisionTrace candidate : result.decisionTraces()) {
+                if (requestedKey.equals(AdminCatalogItemKeys.canonicalize(candidate.itemKey()))) {
+                    trace = candidate;
+                    break;
+                }
+            }
+
+            if (trace == null) {
+                sender.sendMessage(ChatColor.RED + "No generated catalog decision found for '" + requestedKey + "'.");
+                sender.sendMessage(ChatColor.YELLOW + "Run /shopadmin catalog preview and confirm the item key.");
+                return true;
+            }
+
+            AdminCatalogPlanEntry planEntry = null;
+            for (final AdminCatalogPlanEntry candidate : result.proposedEntries()) {
+                if (requestedKey.equals(AdminCatalogItemKeys.canonicalize(candidate.itemKey()))) {
+                    planEntry = candidate;
+                    break;
+                }
+            }
+
+            sender.sendMessage(ChatColor.GOLD + "Item inspector: " + trace.displayName() + ChatColor.GRAY + " (" + trace.itemKey() + ")");
+            sender.sendMessage(
+                ChatColor.YELLOW
+                    + "Category "
+                    + trace.classifiedCategory().name()
+                    + " -> "
+                    + trace.finalCategory().name()
+                    + ", derivation "
+                    + trace.derivationReason().name()
+                    + ", depth "
+                    + String.valueOf(trace.derivationDepth())
+                    + "."
+            );
+            sender.sendMessage(
+                ChatColor.AQUA
+                    + "Policy "
+                    + trace.baseSuggestedPolicy().name()
+                    + " -> "
+                    + trace.finalPolicy().name()
+                    + ", stock-profile "
+                    + trace.stockProfile()
+                    + ", eco-envelope "
+                    + trace.ecoEnvelope()
+                    + "."
+            );
+            if (planEntry != null) {
+                sender.sendMessage(
+                    ChatColor.AQUA
+                        + "Runtime "
+                        + planEntry.runtimePolicy()
+                        + ", buy="
+                        + planEntry.buyEnabled()
+                        + ", sell="
+                        + planEntry.sellEnabled()
+                        + ", buy-price="
+                        + String.valueOf(planEntry.buyPrice())
+                        + ", sell-price="
+                        + String.valueOf(planEntry.sellPrice())
+                        + "."
+                );
+            }
+            sender.sendMessage(
+                ChatColor.GRAY
+                    + "Winning rule: "
+                    + String.valueOf(trace.winningRuleId())
+                    + ", matched rules: "
+                    + trace.matchedRuleIds()
+                    + ", manual override="
+                    + trace.manualOverrideApplied()
+                    + "."
+            );
+            if (trace.postRuleAdjustment() != null && !trace.postRuleAdjustment().isBlank()) {
+                sender.sendMessage(ChatColor.YELLOW + "Adjustment: " + trace.postRuleAdjustment());
+            }
+            if (trace.note() != null && !trace.note().isBlank()) {
+                sender.sendMessage(ChatColor.GRAY + "Notes: " + trace.note());
+            }
+            sender.sendMessage(
+                ChatColor.GREEN
+                    + "Detailed traces are also written to "
+                    + result.generatedDirectory().getPath()
+                    + "/item-decision-traces.yml."
+            );
+            return true;
+        } catch (final IOException exception) {
+            this.plugin.getLogger().log(Level.SEVERE, "Failed to inspect generated catalog item", exception);
+            sender.sendMessage(ChatColor.RED + "Item inspect failed: " + exception.getMessage());
+            return true;
+        }
+    }
+
     private boolean runCatalogAction(
         final CommandSender sender,
         final String actionName,
@@ -111,6 +219,7 @@ public final class ShopAdminCommand implements CommandExecutor {
             this.sendSummary(sender, result, actionName);
             this.sendValidationSummary(sender, result);
             this.sendPolicySummary(sender, result);
+            this.sendReviewSummary(sender, result);
             this.sendDiffSummary(sender, result, includeTopItems);
 
             if (apply) {
@@ -126,6 +235,10 @@ public final class ShopAdminCommand implements CommandExecutor {
             } else {
                 sender.sendMessage(ChatColor.GREEN + "Generated reports written to " + result.generatedDirectory().getPath());
             }
+            sender.sendMessage(
+                ChatColor.GREEN
+                    + "Additional review reports: generated/generated-rule-impacts.yml and generated/generated-review-buckets.yml."
+            );
             return true;
         } catch (final IOException exception) {
             this.plugin.getLogger().log(Level.SEVERE, "Failed to " + actionName + " catalog", exception);
@@ -201,6 +314,43 @@ public final class ShopAdminCommand implements CommandExecutor {
         );
     }
 
+    private void sendReviewSummary(final CommandSender sender, final AdminCatalogBuildResult result) {
+        int liveMiscCount = 0;
+        int noRootPathCount = 0;
+        int blockedPathCount = 0;
+        int manualOverrideCount = 0;
+
+        for (final AdminCatalogPlanEntry entry : result.proposedEntries()) {
+            if (entry.policy() != CatalogPolicy.DISABLED && entry.category() == CatalogCategory.MISC) {
+                liveMiscCount++;
+            }
+        }
+        for (final AdminCatalogDecisionTrace trace : result.decisionTraces()) {
+            if (trace.derivationReason() == DerivationReason.NO_RECIPE_AND_NO_ROOT) {
+                noRootPathCount++;
+            }
+            if (trace.derivationReason() == DerivationReason.ALL_PATHS_BLOCKED) {
+                blockedPathCount++;
+            }
+            if (trace.manualOverrideApplied()) {
+                manualOverrideCount++;
+            }
+        }
+
+        sender.sendMessage(
+            ChatColor.AQUA
+                + "Review buckets: live-MISC="
+                + liveMiscCount
+                + ", no-root-path="
+                + noRootPathCount
+                + ", blocked-paths="
+                + blockedPathCount
+                + ", manual-overrides="
+                + manualOverrideCount
+                + "."
+        );
+    }
+
     private void sendDiffSummary(
         final CommandSender sender,
         final AdminCatalogBuildResult result,
@@ -239,4 +389,11 @@ public final class ShopAdminCommand implements CommandExecutor {
             }
         }
     }
+
+    private void sendUsage(final CommandSender sender) {
+        sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin reload");
+        sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin catalog <preview|validate|diff|apply>");
+        sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin item <item_key>");
+    }
 }
+
