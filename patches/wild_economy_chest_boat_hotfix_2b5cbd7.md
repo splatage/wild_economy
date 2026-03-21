@@ -1,3 +1,17 @@
+# wild_economy chest boat hotfix (`2b5cbd7b153db8d7d03498e3f71c188d74aca1bc`)
+
+This bundle contains the complete replacement file for the chest boat derivation hotfix.
+
+Scope of this hotfix:
+- keep the Phase 1 admin/catalog pipeline unchanged
+- fix the remaining chest boat derivation gap
+- make chest boats derive directly from planks instead of depending on a separately derivable `chest`
+
+---
+
+## File: `src/main/java/com/splatage/wild_economy/catalog/recipe/WoodFamilyRecipeFallbacks.java`
+
+```java
 package com.splatage.wild_economy.catalog.recipe;
 
 import java.util.ArrayList;
@@ -286,3 +300,4 @@ public final class WoodFamilyRecipeFallbacks {
         }
     }
 }
+```
