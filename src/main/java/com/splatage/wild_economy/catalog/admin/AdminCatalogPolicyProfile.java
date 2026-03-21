@@ -24,3 +24,4 @@ public record AdminCatalogPolicyProfile(
             + ", unlimited-buy=" + this.unlimitedBuy();
     }
 }
+

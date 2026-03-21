@@ -191,14 +191,26 @@ public final class ShopAdminCommand implements CommandExecutor {
                     ChatColor.AQUA
                         + "Runtime: "
                         + planEntry.runtimePolicy()
-                        + ", buy="
-                        + planEntry.buyEnabled()
-                        + ", sell="
-                        + planEntry.sellEnabled()
+                        + ", policy-profile="
+                        + planEntry.policyProfileId()
                         + ", buy-price="
                         + String.valueOf(planEntry.buyPrice())
                         + ", sell-price="
                         + String.valueOf(planEntry.sellPrice())
+                        + "."
+                );
+                sender.sendMessage(
+                    ChatColor.AQUA
+                        + "Effective behavior: buyable="
+                        + planEntry.buyEnabled()
+                        + ", sellable="
+                        + planEntry.sellEnabled()
+                        + ", stock-backed="
+                        + planEntry.stockBacked()
+                        + ", unlimited-buy="
+                        + planEntry.unlimitedBuy()
+                        + ", requires-player-stock="
+                        + planEntry.requiresPlayerStockToBuy()
                         + "."
                 );
             }
@@ -480,6 +492,7 @@ public final class ShopAdminCommand implements CommandExecutor {
         sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin item <item_key>");
     }
 }
+
 
 
 

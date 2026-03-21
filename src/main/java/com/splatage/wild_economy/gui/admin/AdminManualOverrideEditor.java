@@ -3,15 +3,18 @@ package com.splatage.wild_economy.gui.admin;
 import com.splatage.wild_economy.WildEconomyPlugin;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogItemKeys;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogManualOverride;
+import com.splatage.wild_economy.catalog.admin.AdminCatalogPolicyProfile;
+import com.splatage.wild_economy.catalog.admin.AdminCatalogPolicyProfileLoader;
 import com.splatage.wild_economy.catalog.model.CatalogPolicy;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -46,6 +49,48 @@ public final class AdminManualOverrideEditor {
         );
     }
 
+    public Map<CatalogPolicy, AdminCatalogPolicyProfile> loadPolicyProfiles() {
+        try {
+            return AdminCatalogPolicyProfileLoader.load(this.policyProfileFile());
+        } catch (final IOException exception) {
+            this.plugin.getLogger().log(Level.SEVERE, "Failed to load policy profiles", exception);
+            final Map<CatalogPolicy, AdminCatalogPolicyProfile> fallback = new java.util.EnumMap<>(CatalogPolicy.class);
+            for (final CatalogPolicy policy : CatalogPolicy.values()) {
+                fallback.put(policy, AdminCatalogPolicyProfileLoader.defaultProfile(policy));
+            }
+            return fallback;
+        }
+    }
+
+    public List<String> loadPolicyProfileIds() {
+        final Map<CatalogPolicy, AdminCatalogPolicyProfile> profiles = this.loadPolicyProfiles();
+        final List<String> ids = new ArrayList<>();
+        for (final CatalogPolicy policy : CatalogPolicy.values()) {
+            final AdminCatalogPolicyProfile profile = profiles.get(policy);
+            if (profile != null) {
+                ids.add(profile.id());
+            }
+        }
+        return ids;
+    }
+
+    public String policyBehaviorSummary(final String policyName) {
+        final CatalogPolicy policy = parsePolicy(policyName);
+        if (policy == null) {
+            return "Unknown policy.";
+        }
+        final AdminCatalogPolicyProfile profile = this.loadPolicyProfiles().get(policy);
+        if (profile == null) {
+            return "Unknown policy.";
+        }
+        return profile.description()
+            + " Runtime=" + profile.runtimePolicy()
+            + ", buy=" + profile.buyEnabled()
+            + ", sell=" + profile.sellEnabled()
+            + ", stock-backed=" + profile.stockBacked()
+            + ", unlimited-buy=" + profile.unlimitedBuy();
+    }
+
     public List<String> loadStockProfileNames() {
         return this.loadTopLevelKeys("stock-profiles.yml", "stock-profiles");
     }
@@ -55,13 +100,18 @@ public final class AdminManualOverrideEditor {
     }
 
     public String nextPolicy(final String currentPolicy) {
-        final CatalogPolicy[] values = CatalogPolicy.values();
-        CatalogPolicy current = parsePolicy(currentPolicy);
-        if (current == null) {
-            current = CatalogPolicy.EXCHANGE;
+        final List<String> ids = this.loadPolicyProfileIds();
+        if (ids.isEmpty()) {
+            return CatalogPolicy.EXCHANGE.name();
         }
-        final int index = Arrays.asList(values).indexOf(current);
-        return values[(index + 1) % values.length].name();
+        final String canonicalCurrent = parsePolicy(currentPolicy) == null
+            ? ids.get(0)
+            : parsePolicy(currentPolicy).name();
+        final int index = ids.indexOf(canonicalCurrent);
+        if (index < 0) {
+            return ids.get(0);
+        }
+        return ids.get((index + 1) % ids.size());
     }
 
     public String nextNamedValue(final List<String> values, final String current) {
@@ -115,7 +165,8 @@ public final class AdminManualOverrideEditor {
             section = overrides.createSection(canonical);
         }
 
-        section.set("policy", parsePolicy(policyName).name());
+        final CatalogPolicy policy = parsePolicy(policyName);
+        section.set("policy", (policy == null ? CatalogPolicy.EXCHANGE : policy).name());
         section.set("stock-profile", trimToNull(stockProfile));
         section.set("eco-envelope", trimToNull(ecoEnvelope));
         section.set("note", trimToNull(note));
@@ -157,6 +208,10 @@ public final class AdminManualOverrideEditor {
         return new File(this.plugin.getDataFolder(), "manual-overrides.yml");
     }
 
+    private File policyProfileFile() {
+        return new File(this.plugin.getDataFolder(), "policy-profiles.yml");
+    }
+
     private static CatalogPolicy parsePolicy(final String value) {
         if (value == null || value.isBlank()) {
             return CatalogPolicy.EXCHANGE;
@@ -176,3 +231,4 @@ public final class AdminManualOverrideEditor {
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
+

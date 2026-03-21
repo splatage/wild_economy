@@ -213,16 +213,23 @@ public final class AdminOverrideEditMenu {
         lore.add("Current eco envelope: " + trace.ecoEnvelope());
         lore.add("Override exists: " + (trace.manualOverrideApplied() ? "yes" : "no"));
         if (planEntry != null) {
+            lore.add("Policy profile: " + planEntry.policyProfileId());
             lore.add("Runtime: " + planEntry.runtimePolicy());
+            lore.add("Players can buy: " + planEntry.buyEnabled());
+            lore.add("Players can sell: " + planEntry.sellEnabled());
+            lore.add("Stock-backed: " + planEntry.stockBacked());
+            lore.add("Unlimited buy: " + planEntry.unlimitedBuy());
         }
         return this.item(this.resolveMaterial(trace.itemKey()), trace.displayName(), lore);
     }
 
     private ItemStack policyButton(final String overridePolicy) {
-        return this.item(Material.COMPARATOR, "Policy", List.of(
-            "Current: " + safeDisplay(overridePolicy),
-            "Click to cycle."
-        ));
+        final List<String> lore = new ArrayList<>();
+        lore.add("Current: " + safeDisplay(overridePolicy));
+        lore.add(this.adminMenuRouter.policyBehaviorSummary(overridePolicy));
+        lore.add("Available: " + this.adminMenuRouter.availablePolicyIds().size());
+        lore.add("Click to cycle.");
+        return this.item(Material.COMPARATOR, "Policy", lore);
     }
 
     private ItemStack namedValueButton(final Material material, final String label, final String current, final List<String> values) {
@@ -282,3 +289,4 @@ public final class AdminOverrideEditMenu {
         return Material.matchMaterial(enumName);
     }
 }
+

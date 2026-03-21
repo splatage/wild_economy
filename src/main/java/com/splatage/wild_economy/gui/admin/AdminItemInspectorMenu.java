@@ -135,9 +135,13 @@ public final class AdminItemInspectorMenu {
         if (planEntry == null) {
             lore.add("No runtime plan entry recorded.");
         } else {
+            lore.add("Policy profile: " + planEntry.policyProfileId());
             lore.add("Runtime policy: " + planEntry.runtimePolicy());
-            lore.add("Buy enabled: " + planEntry.buyEnabled());
-            lore.add("Sell enabled: " + planEntry.sellEnabled());
+            lore.add("Players can buy: " + planEntry.buyEnabled());
+            lore.add("Players can sell: " + planEntry.sellEnabled());
+            lore.add("Stock-backed: " + planEntry.stockBacked());
+            lore.add("Unlimited buy: " + planEntry.unlimitedBuy());
+            lore.add("Requires player stock to buy: " + planEntry.requiresPlayerStockToBuy());
             lore.add("Stock profile: " + planEntry.stockProfile());
             lore.add("Eco envelope: " + planEntry.ecoEnvelope());
             lore.add("Anchor: " + String.valueOf(planEntry.anchorValue()));
@@ -281,3 +285,4 @@ public final class AdminItemInspectorMenu {
         return Material.matchMaterial(AdminCatalogItemKeys.canonicalize(itemKey).replace("minecraft:", "").toUpperCase(Locale.ROOT));
     }
 }
+

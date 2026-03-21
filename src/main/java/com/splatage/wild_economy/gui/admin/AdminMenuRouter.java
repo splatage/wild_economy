@@ -279,6 +279,14 @@ public final class AdminMenuRouter {
         }
     }
 
+    public List<String> availablePolicyIds() {
+        return this.manualOverrideEditor.loadPolicyProfileIds();
+    }
+
+    public String policyBehaviorSummary(final String policyId) {
+        return this.manualOverrideEditor.policyBehaviorSummary(policyId);
+    }
+
     public String nextPolicy(final String currentPolicy) {
         return this.manualOverrideEditor.nextPolicy(currentPolicy);
     }
@@ -521,3 +529,4 @@ public final class AdminMenuRouter {
         return value == null ? "" : value;
     }
 }
+

@@ -62,6 +62,7 @@ public final class AdminCatalogPhaseOneService {
         final DefaultPolicySuggestionService basePolicyService = new DefaultPolicySuggestionService(DEFAULT_MAX_AUTO_INCLUSION_DEPTH);
 
         final List<AdminCatalogPolicyRule> rules = this.loadPolicyRules(new File(dataFolder, "policy-rules.yml"));
+        final Map<CatalogPolicy, AdminCatalogPolicyProfile> policyProfiles = AdminCatalogPolicyProfileLoader.load(new File(dataFolder, "policy-profiles.yml"));
         final Map<String, Integer> ruleMatchCounts = new LinkedHashMap<>();
         final Map<String, Integer> ruleApplicationCounts = new LinkedHashMap<>();
         for (final AdminCatalogPolicyRule rule : rules) {
@@ -92,8 +93,8 @@ public final class AdminCatalogPhaseOneService {
             final List<AdminCatalogPolicyRule> fallbackRules = new ArrayList<>();
             String winningRuleId = null;
             AdminCatalogPolicyRule winningRule = null;
-            String stockProfileName = this.defaultStockProfileName(policy);
-            String ecoEnvelopeName = this.defaultEcoEnvelopeName(policy);
+            String stockProfileName = this.defaultStockProfileName(policy, policyProfiles);
+            String ecoEnvelopeName = this.defaultEcoEnvelopeName(policy, policyProfiles);
             boolean stockProfileExplicit = false;
             boolean ecoEnvelopeExplicit = false;
             String postRuleAdjustment = null;
@@ -123,7 +124,8 @@ public final class AdminCatalogPhaseOneService {
                     stockProfileExplicit,
                     ecoEnvelopeName,
                     ecoEnvelopeExplicit,
-                    note
+                    note,
+                    policyProfiles
                 );
                 policy = applied.policy();
                 stockProfileName = applied.stockProfileName();
@@ -144,7 +146,8 @@ public final class AdminCatalogPhaseOneService {
                         stockProfileExplicit,
                         ecoEnvelopeName,
                         ecoEnvelopeExplicit,
-                        note
+                        note,
+                        policyProfiles
                     );
                     policy = applied.policy();
                     stockProfileName = applied.stockProfileName();
@@ -166,11 +169,11 @@ public final class AdminCatalogPhaseOneService {
                 if (override.policy() != null) {
                     policy = override.policy();
                     if (!this.hasText(override.stockProfile())) {
-                        stockProfileName = this.defaultStockProfileName(policy);
+                        stockProfileName = this.defaultStockProfileName(policy, policyProfiles);
                         stockProfileExplicit = false;
                     }
                     if (!this.hasText(override.ecoEnvelope())) {
-                        ecoEnvelopeName = this.defaultEcoEnvelopeName(policy);
+                        ecoEnvelopeName = this.defaultEcoEnvelopeName(policy, policyProfiles);
                         ecoEnvelopeExplicit = false;
                     }
                 }
@@ -192,8 +195,8 @@ public final class AdminCatalogPhaseOneService {
 
             if (policy != CatalogPolicy.DISABLED && !derivation.rootValuePresent() && derivation.derivedValue() == null) {
                 policy = CatalogPolicy.DISABLED;
-                stockProfileName = this.defaultStockProfileName(policy);
-                ecoEnvelopeName = this.defaultEcoEnvelopeName(policy);
+                stockProfileName = this.defaultStockProfileName(policy, policyProfiles);
+                ecoEnvelopeName = this.defaultEcoEnvelopeName(policy, policyProfiles);
                 stockProfileExplicit = false;
                 ecoEnvelopeExplicit = false;
                 postRuleAdjustment = "Forced to DISABLED because no rooted value path was resolved.";
@@ -221,22 +224,39 @@ public final class AdminCatalogPhaseOneService {
                 );
             }
 
+            final AdminCatalogPolicyProfile policyProfile = this.resolvePolicyProfile(policy, policyProfiles);
+            if (policyProfile == null) {
+                validationIssues.add(
+                    new AdminCatalogValidationIssue(
+                        AdminCatalogValidationIssue.Severity.ERROR,
+                        facts.key() + " references missing policy profile for '" + policy.name() + "'."
+                    )
+                );
+            }
+
             final BigDecimal anchorValue = this.resolveAnchorValue(derivation);
             final BigDecimal buyPrice = this.computeBuyPrice(anchorValue, ecoEnvelope);
             final BigDecimal sellPrice = this.computeSellPrice(anchorValue, ecoEnvelope);
 
-            final String runtimePolicy = this.toRuntimePolicy(policy);
-            final boolean buyEnabled = policy == CatalogPolicy.ALWAYS_AVAILABLE || policy == CatalogPolicy.EXCHANGE;
-            final boolean sellEnabled = policy == CatalogPolicy.EXCHANGE || policy == CatalogPolicy.SELL_ONLY;
+            final String runtimePolicy = policyProfile == null ? this.toRuntimePolicy(policy) : policyProfile.runtimePolicy();
+            final boolean buyEnabled = policyProfile != null && policyProfile.buyEnabled();
+            final boolean sellEnabled = policyProfile != null && policyProfile.sellEnabled();
+            final boolean stockBacked = policyProfile != null && policyProfile.stockBacked();
+            final boolean unlimitedBuy = policyProfile != null && policyProfile.unlimitedBuy();
+            final boolean requiresPlayerStockToBuy = policyProfile != null && policyProfile.requiresPlayerStockToBuy();
 
             final AdminCatalogPlanEntry planEntry = new AdminCatalogPlanEntry(
                 facts.key(),
                 this.buildDisplayName(facts.material()),
                 finalCategory,
                 policy,
+                policyProfile == null ? policy.name() : policyProfile.id(),
                 runtimePolicy,
                 buyEnabled,
                 sellEnabled,
+                stockBacked,
+                unlimitedBuy,
+                requiresPlayerStockToBuy,
                 stockProfile == null ? 0 : stockProfile.stockCap(),
                 stockProfile == null ? 0 : stockProfile.turnoverAmountPerInterval(),
                 anchorValue,
@@ -588,11 +608,15 @@ public final class AdminCatalogPhaseOneService {
             yaml.set(base + ".display-name", entry.displayName());
             yaml.set(base + ".category", entry.category().name());
             yaml.set(base + ".admin-policy", entry.policy().name());
+            yaml.set(base + ".policy-profile", entry.policyProfileId());
             yaml.set(base + ".runtime-policy", entry.runtimePolicy());
             yaml.set(base + ".stock-profile", entry.stockProfile());
             yaml.set(base + ".eco-envelope", entry.ecoEnvelope());
             yaml.set(base + ".buy-enabled", entry.buyEnabled());
             yaml.set(base + ".sell-enabled", entry.sellEnabled());
+            yaml.set(base + ".stock-backed", entry.stockBacked());
+            yaml.set(base + ".unlimited-buy", entry.unlimitedBuy());
+            yaml.set(base + ".requires-player-stock-to-buy", entry.requiresPlayerStockToBuy());
             yaml.set(base + ".stock-cap", entry.stockCap());
             yaml.set(base + ".turnover-amount-per-interval", entry.turnoverAmountPerInterval());
             yaml.set(base + ".anchor-value", decimal(entry.anchorValue()));
@@ -629,6 +653,29 @@ public final class AdminCatalogPhaseOneService {
         for (final CatalogPolicy policy : CatalogPolicy.values()) {
             yaml.set("counts.policy." + policy.name(), policyCounts.get(policy));
         }
+
+        int unlimitedBuyCount = 0;
+        int stockBackedCount = 0;
+        int buyEnabledCount = 0;
+        int sellEnabledCount = 0;
+        for (final AdminCatalogPlanEntry entry : proposedEntries) {
+            if (entry.unlimitedBuy()) {
+                unlimitedBuyCount++;
+            }
+            if (entry.stockBacked()) {
+                stockBackedCount++;
+            }
+            if (entry.buyEnabled()) {
+                buyEnabledCount++;
+            }
+            if (entry.sellEnabled()) {
+                sellEnabledCount++;
+            }
+        }
+        yaml.set("counts.effective-behavior.unlimited-buy", unlimitedBuyCount);
+        yaml.set("counts.effective-behavior.stock-backed", stockBackedCount);
+        yaml.set("counts.effective-behavior.buy-enabled", buyEnabledCount);
+        yaml.set("counts.effective-behavior.sell-enabled", sellEnabledCount);
 
         final Map<CatalogCategory, Integer> categoryCounts = new EnumMap<>(CatalogCategory.class);
         for (final CatalogCategory category : CatalogCategory.values()) {
@@ -1020,9 +1067,14 @@ public final class AdminCatalogPhaseOneService {
             final String base = "items." + entry.itemKey();
             yaml.set(base + ".display-name", entry.displayName());
             yaml.set(base + ".category", entry.category().name());
+            yaml.set(base + ".admin-policy", entry.policy().name());
+            yaml.set(base + ".policy-profile", entry.policyProfileId());
             yaml.set(base + ".policy", entry.runtimePolicy());
             yaml.set(base + ".buy-enabled", entry.buyEnabled());
             yaml.set(base + ".sell-enabled", entry.sellEnabled());
+            yaml.set(base + ".stock-backed", entry.stockBacked());
+            yaml.set(base + ".unlimited-buy", entry.unlimitedBuy());
+            yaml.set(base + ".requires-player-stock-to-buy", entry.requiresPlayerStockToBuy());
             yaml.set(base + ".stock-cap", entry.stockCap());
             yaml.set(base + ".turnover-amount-per-interval", entry.turnoverAmountPerInterval());
             yaml.set(base + ".buy-price", decimal(entry.buyPrice()));
@@ -1058,6 +1110,7 @@ public final class AdminCatalogPhaseOneService {
         for (final String fileName : List.of(
             "exchange-items.yml",
             "policy-rules.yml",
+            "policy-profiles.yml",
             "manual-overrides.yml",
             "stock-profiles.yml",
             "eco-envelopes.yml"
@@ -1104,7 +1157,21 @@ public final class AdminCatalogPhaseOneService {
         };
     }
 
-    private String defaultStockProfileName(final CatalogPolicy policy) {
+    private AdminCatalogPolicyProfile resolvePolicyProfile(
+        final CatalogPolicy policy,
+        final Map<CatalogPolicy, AdminCatalogPolicyProfile> policyProfiles
+    ) {
+        return policyProfiles.get(policy);
+    }
+
+    private String defaultStockProfileName(
+        final CatalogPolicy policy,
+        final Map<CatalogPolicy, AdminCatalogPolicyProfile> policyProfiles
+    ) {
+        final AdminCatalogPolicyProfile profile = this.resolvePolicyProfile(policy, policyProfiles);
+        if (profile != null && this.hasText(profile.defaultStockProfile())) {
+            return profile.defaultStockProfile();
+        }
         return switch (policy) {
             case ALWAYS_AVAILABLE -> "unlimited_buy_utility";
             case EXCHANGE -> "exchange_default";
@@ -1113,7 +1180,14 @@ public final class AdminCatalogPhaseOneService {
         };
     }
 
-    private String defaultEcoEnvelopeName(final CatalogPolicy policy) {
+    private String defaultEcoEnvelopeName(
+        final CatalogPolicy policy,
+        final Map<CatalogPolicy, AdminCatalogPolicyProfile> policyProfiles
+    ) {
+        final AdminCatalogPolicyProfile profile = this.resolvePolicyProfile(policy, policyProfiles);
+        if (profile != null && this.hasText(profile.defaultEcoEnvelope())) {
+            return profile.defaultEcoEnvelope();
+        }
         return switch (policy) {
             case ALWAYS_AVAILABLE -> "world_damage_unlimited_buy";
             case EXCHANGE -> "exchange_default";
@@ -1200,7 +1274,8 @@ public final class AdminCatalogPhaseOneService {
         final boolean currentStockProfileExplicit,
         final String currentEcoEnvelopeName,
         final boolean currentEcoEnvelopeExplicit,
-        final String currentNote
+        final String currentNote,
+        final Map<CatalogPolicy, AdminCatalogPolicyProfile> policyProfiles
     ) {
         CatalogPolicy policy = currentPolicy;
         String stockProfileName = currentStockProfileName;
@@ -1212,10 +1287,10 @@ public final class AdminCatalogPhaseOneService {
         if (rule.policy() != null) {
             policy = rule.policy();
             if (!stockProfileExplicit) {
-                stockProfileName = this.defaultStockProfileName(policy);
+                stockProfileName = this.defaultStockProfileName(policy, policyProfiles);
             }
             if (!ecoEnvelopeExplicit) {
-                ecoEnvelopeName = this.defaultEcoEnvelopeName(policy);
+                ecoEnvelopeName = this.defaultEcoEnvelopeName(policy, policyProfiles);
             }
         }
         if (this.hasText(rule.stockProfile())) {
@@ -1554,6 +1629,7 @@ public final class AdminCatalogPhaseOneService {
     ) {
     }
 }
+
 
 
 

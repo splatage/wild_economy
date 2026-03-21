@@ -151,3 +151,4 @@ public final class AdminCatalogPolicyProfileLoader {
         yaml.save(file);
     }
 }
+

@@ -29,3 +29,4 @@ public record AdminCatalogPlanEntry(
     String excludeReason,
     String notes
 ) { }
+
