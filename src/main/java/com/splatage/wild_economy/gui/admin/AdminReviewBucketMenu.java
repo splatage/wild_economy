@@ -82,6 +82,45 @@ public final class AdminReviewBucketMenu {
         player.openInventory(inventory);
     }
 
+    public void openSubgroupDetail(
+        final Player player,
+        final AdminCatalogViewState state,
+        final String bucketId,
+        final String subgroupId
+    ) {
+        final AdminCatalogReviewBucket bucket = state.findReviewBucket(bucketId);
+        if (bucket == null) {
+            player.sendMessage("Unknown review bucket: " + bucketId);
+            this.openList(player, state);
+            return;
+        }
+        if (!bucket.subgroupCounts().containsKey(subgroupId)) {
+            player.sendMessage("Unknown review bucket subgroup: " + subgroupId);
+            this.openDetail(player, state, bucketId);
+            return;
+        }
+
+        final AdminMenuHolder holder = AdminMenuHolder.reviewBucketSubgroupDetail(state, bucketId, subgroupId);
+        final Inventory inventory = holder.createInventory(54, "Subgroup - " + subgroupId);
+
+        inventory.setItem(4, this.subgroupSummaryItem(bucket, subgroupId));
+
+        int sampleSlot = 18;
+        for (final String itemKey : bucket.subgroupSampleItems().getOrDefault(subgroupId, List.of())) {
+            if (sampleSlot >= 45) {
+                break;
+            }
+            inventory.setItem(sampleSlot, this.itemButton(itemKey, "Open inspector"));
+            sampleSlot++;
+        }
+
+        inventory.setItem(45, this.button(Material.ARROW, "Back"));
+        inventory.setItem(49, this.button(Material.CHEST, "Bucket Detail"));
+        inventory.setItem(53, this.button(Material.BARRIER, "Close"));
+
+        player.openInventory(inventory);
+    }
+
     public void handleClick(final InventoryClickEvent event, final AdminMenuHolder holder) {
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
@@ -89,6 +128,7 @@ public final class AdminReviewBucketMenu {
         switch (holder.viewType()) {
             case REVIEW_BUCKET_LIST -> this.handleListClick(event, player, holder.state());
             case REVIEW_BUCKET_DETAIL -> this.handleDetailClick(event, player, holder);
+            case REVIEW_BUCKET_SUBGROUP_DETAIL -> this.handleSubgroupDetailClick(event, player, holder);
             default -> {
             }
         }
@@ -129,10 +169,12 @@ public final class AdminReviewBucketMenu {
                 .toList();
             if (index < subgroups.size()) {
                 final String subgroupId = subgroups.get(index).getKey();
-                final List<String> sample = bucket.subgroupSampleItems().getOrDefault(subgroupId, List.of());
-                if (!sample.isEmpty()) {
-                    this.adminMenuRouter.openItemInspector(player, holder.state(), sample.get(0), bucket.bucketId(), null);
-                }
+                this.adminMenuRouter.openReviewBucketSubgroupDetail(
+                    player,
+                    holder.state(),
+                    bucket.bucketId(),
+                    subgroupId
+                );
             }
             return;
         }
@@ -153,6 +195,42 @@ public final class AdminReviewBucketMenu {
 
         switch (slot) {
             case 45, 49 -> this.adminMenuRouter.openReviewBucketList(player, holder.state());
+            case 53 -> player.closeInventory();
+            default -> {
+            }
+        }
+    }
+
+    private void handleSubgroupDetailClick(
+        final InventoryClickEvent event,
+        final Player player,
+        final AdminMenuHolder holder
+    ) {
+        final int slot = event.getRawSlot();
+        final AdminCatalogReviewBucket bucket = holder.state().findReviewBucket(holder.bucketId());
+        if (bucket == null || holder.subgroupId() == null) {
+            this.adminMenuRouter.openReviewBucketList(player, holder.state());
+            return;
+        }
+
+        final List<String> subgroupItems = bucket.subgroupSampleItems().getOrDefault(holder.subgroupId(), List.of());
+
+        if (slot >= 18 && slot < 45) {
+            final int index = slot - 18;
+            if (index < subgroupItems.size()) {
+                this.adminMenuRouter.openItemInspector(
+                    player,
+                    holder.state(),
+                    subgroupItems.get(index),
+                    bucket.bucketId(),
+                    null
+                );
+            }
+            return;
+        }
+
+        switch (slot) {
+            case 45, 49 -> this.adminMenuRouter.openReviewBucketDetail(player, holder.state(), bucket.bucketId());
             case 53 -> player.closeInventory();
             default -> {
             }
@@ -192,9 +270,24 @@ public final class AdminReviewBucketMenu {
                 lore.add("Top subgroup: " + topSubgroup.getKey() + " (" + topSubgroup.getValue() + ")");
             }
         }
-        lore.add("Subgroup buttons inspect the first subgroup sample.");
+        lore.add("Subgroup buttons open subgroup detail.");
         lore.add("Item buttons inspect direct sample items.");
         return this.item(Material.ENDER_CHEST, this.displayBucketId(bucket.bucketId()), lore);
+    }
+
+    private ItemStack subgroupSummaryItem(final AdminCatalogReviewBucket bucket, final String subgroupId) {
+        final List<String> lore = new ArrayList<>();
+        lore.add(bucket.description());
+        lore.add("Subgroup: " + subgroupId);
+        lore.add("Count: " + bucket.subgroupCounts().getOrDefault(subgroupId, Integer.valueOf(0)));
+        final List<String> sample = bucket.subgroupSampleItems().getOrDefault(subgroupId, List.of());
+        if (sample.isEmpty()) {
+            lore.add("No subgroup sample items.");
+        } else {
+            lore.add("Showing subgroup sample items.");
+        }
+        lore.add("Click an item below to inspect it.");
+        return this.item(Material.ENDER_CHEST, subgroupId, lore);
     }
 
     private ItemStack subgroupItem(
@@ -208,7 +301,7 @@ public final class AdminReviewBucketMenu {
         for (final String itemKey : sample.stream().limit(4).toList()) {
             lore.add(itemKey);
         }
-        lore.add(sample.isEmpty() ? "No subgroup sample items." : "Click to inspect the first subgroup sample.");
+        lore.add(sample.isEmpty() ? "No subgroup sample items." : "Click to open subgroup detail.");
         return this.item(Material.PAPER, subgroupId, lore);
     }
 

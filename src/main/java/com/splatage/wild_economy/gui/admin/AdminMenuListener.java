@@ -36,7 +36,7 @@ public final class AdminMenuListener implements Listener {
 
         switch (holder.viewType()) {
             case ROOT -> this.adminRootMenu.handleClick(event, holder);
-            case REVIEW_BUCKET_LIST, REVIEW_BUCKET_DETAIL -> this.adminReviewBucketMenu.handleClick(event, holder);
+            case REVIEW_BUCKET_LIST, REVIEW_BUCKET_DETAIL, REVIEW_BUCKET_SUBGROUP_DETAIL -> this.adminReviewBucketMenu.handleClick(event, holder);
             case RULE_IMPACT_LIST, RULE_IMPACT_DETAIL -> this.adminRuleImpactMenu.handleClick(event, holder);
             case ITEM_INSPECTOR -> this.adminItemInspectorMenu.handleClick(event, holder);
         }

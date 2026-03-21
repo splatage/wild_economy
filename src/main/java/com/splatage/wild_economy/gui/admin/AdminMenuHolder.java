@@ -11,6 +11,7 @@ public final class AdminMenuHolder implements InventoryHolder {
         ROOT,
         REVIEW_BUCKET_LIST,
         REVIEW_BUCKET_DETAIL,
+        REVIEW_BUCKET_SUBGROUP_DETAIL,
         RULE_IMPACT_LIST,
         RULE_IMPACT_DETAIL,
         ITEM_INSPECTOR
@@ -19,6 +20,7 @@ public final class AdminMenuHolder implements InventoryHolder {
     private final AdminCatalogViewState state;
     private final ViewType viewType;
     private final String bucketId;
+    private final String subgroupId;
     private final String ruleId;
     private final String itemKey;
     private final String returnBucketId;
@@ -29,6 +31,7 @@ public final class AdminMenuHolder implements InventoryHolder {
         final AdminCatalogViewState state,
         final ViewType viewType,
         final String bucketId,
+        final String subgroupId,
         final String ruleId,
         final String itemKey,
         final String returnBucketId,
@@ -37,6 +40,7 @@ public final class AdminMenuHolder implements InventoryHolder {
         this.state = Objects.requireNonNull(state, "state");
         this.viewType = Objects.requireNonNull(viewType, "viewType");
         this.bucketId = bucketId;
+        this.subgroupId = subgroupId;
         this.ruleId = ruleId;
         this.itemKey = itemKey;
         this.returnBucketId = returnBucketId;
@@ -44,23 +48,40 @@ public final class AdminMenuHolder implements InventoryHolder {
     }
 
     public static AdminMenuHolder root(final AdminCatalogViewState state) {
-        return new AdminMenuHolder(state, ViewType.ROOT, null, null, null, null, null);
+        return new AdminMenuHolder(state, ViewType.ROOT, null, null, null, null, null, null);
     }
 
     public static AdminMenuHolder reviewBucketList(final AdminCatalogViewState state) {
-        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_LIST, null, null, null, null, null);
+        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_LIST, null, null, null, null, null, null);
     }
 
     public static AdminMenuHolder reviewBucketDetail(final AdminCatalogViewState state, final String bucketId) {
-        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_DETAIL, bucketId, null, null, null, null);
+        return new AdminMenuHolder(state, ViewType.REVIEW_BUCKET_DETAIL, bucketId, null, null, null, null, null);
+    }
+
+    public static AdminMenuHolder reviewBucketSubgroupDetail(
+        final AdminCatalogViewState state,
+        final String bucketId,
+        final String subgroupId
+    ) {
+        return new AdminMenuHolder(
+            state,
+            ViewType.REVIEW_BUCKET_SUBGROUP_DETAIL,
+            bucketId,
+            subgroupId,
+            null,
+            null,
+            null,
+            null
+        );
     }
 
     public static AdminMenuHolder ruleImpactList(final AdminCatalogViewState state) {
-        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_LIST, null, null, null, null, null);
+        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_LIST, null, null, null, null, null, null);
     }
 
     public static AdminMenuHolder ruleImpactDetail(final AdminCatalogViewState state, final String ruleId) {
-        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_DETAIL, null, ruleId, null, null, null);
+        return new AdminMenuHolder(state, ViewType.RULE_IMPACT_DETAIL, null, null, ruleId, null, null, null);
     }
 
     public static AdminMenuHolder itemInspector(
@@ -69,7 +90,16 @@ public final class AdminMenuHolder implements InventoryHolder {
         final String returnBucketId,
         final String returnRuleId
     ) {
-        return new AdminMenuHolder(state, ViewType.ITEM_INSPECTOR, null, null, itemKey, returnBucketId, returnRuleId);
+        return new AdminMenuHolder(
+            state,
+            ViewType.ITEM_INSPECTOR,
+            null,
+            null,
+            null,
+            itemKey,
+            returnBucketId,
+            returnRuleId
+        );
     }
 
     public Inventory createInventory(final int size, final String title) {
@@ -95,6 +125,10 @@ public final class AdminMenuHolder implements InventoryHolder {
 
     public String bucketId() {
         return this.bucketId;
+    }
+
+    public String subgroupId() {
+        return this.subgroupId;
     }
 
     public String ruleId() {
