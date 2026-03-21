@@ -72,7 +72,11 @@ public final class AdminMenuRouter {
                 player.sendMessage(ChatColor.GREEN + "wild_economy reloaded with the published catalog.");
                 return;
             }
-            this.sendActionSummary(player, state, actionName);
+            if (this.isApplyConfirmAction(actionName)) {
+                this.sendApplyConfirmMessage(player, state);
+            } else {
+                this.sendActionSummary(player, state, actionName);
+            }
             this.platformExecutor.runOnPlayer(player, () -> this.adminRootMenu.open(player, state));
         } catch (final IOException exception) {
             this.plugin.getLogger().log(Level.SEVERE, "Failed to " + actionName + " catalog from admin GUI", exception);
@@ -290,6 +294,24 @@ public final class AdminMenuRouter {
                 + result.generatedDirectory().getPath()
                 + "."
         );
+    }
+
+    private boolean isApplyConfirmAction(final String actionName) {
+        return "apply-confirm".equalsIgnoreCase(actionName);
+    }
+
+    private void sendApplyConfirmMessage(final Player player, final AdminCatalogViewState state) {
+        final AdminCatalogBuildResult result = state.buildResult();
+        player.sendMessage(
+            ChatColor.RED + "Apply armed: "
+                + result.liveEntries().size()
+                + " live items, "
+                + result.warningCount()
+                + " warnings, "
+                + result.errorCount()
+                + " errors."
+        );
+        player.sendMessage(ChatColor.YELLOW + "Click Confirm Apply in the GUI to publish, or Cancel Apply to return.");
     }
 
     private void sendApplyMessages(final Player player, final AdminCatalogViewState state) {

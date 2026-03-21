@@ -22,6 +22,7 @@ public final class AdminRootMenu {
 
     private static final int[] TOP_BUCKET_SLOTS = {18, 19, 20};
     private static final int[] TOP_RULE_SLOTS = {24, 25, 26};
+    private static final String APPLY_CONFIRM_ACTION = "apply-confirm";
 
     private AdminMenuRouter adminMenuRouter;
 
@@ -32,6 +33,7 @@ public final class AdminRootMenu {
     public void open(final Player player, final AdminCatalogViewState state) {
         final AdminMenuHolder holder = AdminMenuHolder.root(state);
         final Inventory inventory = holder.createInventory(54, "Shop Admin");
+        final boolean applyConfirm = this.isApplyConfirmState(state);
 
         inventory.setItem(10, this.summaryItem(state.buildResult(), state.lastAction(), state));
         inventory.setItem(12, this.policyItem(state.buildResult()));
@@ -40,7 +42,10 @@ public final class AdminRootMenu {
         inventory.setItem(28, this.actionButton(Material.LIME_STAINED_GLASS_PANE, "Preview"));
         inventory.setItem(29, this.actionButton(Material.YELLOW_STAINED_GLASS_PANE, "Validate"));
         inventory.setItem(30, this.actionButton(Material.PAPER, "Diff"));
-        inventory.setItem(32, this.actionButton(Material.EMERALD_BLOCK, "Apply"));
+        inventory.setItem(32, applyConfirm ? this.confirmApplyButton() : this.actionButton(Material.EMERALD_BLOCK, "Apply"));
+        if (applyConfirm) {
+            inventory.setItem(33, this.cancelApplyButton());
+        }
         inventory.setItem(34, this.actionButton(Material.CHEST, "Review Buckets"));
         inventory.setItem(35, this.actionButton(Material.COMPARATOR, "Rule Impacts"));
 
@@ -66,11 +71,17 @@ public final class AdminRootMenu {
         }
 
         final int slot = event.getRawSlot();
+        final boolean applyConfirm = this.isApplyConfirmState(holder.state());
         switch (slot) {
             case 28 -> this.adminMenuRouter.rebuildAndOpenRoot(player, "preview", false);
             case 29 -> this.adminMenuRouter.rebuildAndOpenRoot(player, "validate", false);
             case 30 -> this.adminMenuRouter.rebuildAndOpenRoot(player, "diff", false);
-            case 32 -> this.adminMenuRouter.rebuildAndOpenRoot(player, "apply", true);
+            case 32 -> this.adminMenuRouter.rebuildAndOpenRoot(player, applyConfirm ? "apply" : APPLY_CONFIRM_ACTION, applyConfirm);
+            case 33 -> {
+                if (applyConfirm) {
+                    this.adminMenuRouter.rebuildAndOpenRoot(player, "preview", false);
+                }
+            }
             case 34 -> this.adminMenuRouter.openReviewBucketList(player, holder.state());
             case 35 -> this.adminMenuRouter.openRuleImpactList(player, holder.state());
             case 45 -> this.adminMenuRouter.rebuildAndOpenRoot(player, "preview", false);
@@ -104,7 +115,7 @@ public final class AdminRootMenu {
         final AdminCatalogViewState state
     ) {
         final List<String> lore = new ArrayList<>();
-        lore.add("Last action: " + lastAction);
+        lore.add("Last action: " + this.displayAction(lastAction));
         lore.add("Scanned: " + result.totalScanned());
         lore.add("Proposed: " + result.proposedEntries().size());
         lore.add("Live-enabled: " + result.liveEntries().size());
@@ -115,6 +126,10 @@ public final class AdminRootMenu {
         final AdminCatalogReviewBucket topBucket = this.sortedBuckets(state).stream().findFirst().orElse(null);
         if (topBucket != null) {
             lore.add("Top review bucket: " + topBucket.bucketId() + " (" + topBucket.count() + ")");
+        }
+        if (this.isApplyConfirmAction(lastAction)) {
+            lore.add("Apply confirmation active.");
+            lore.add("Review this state, then click Confirm Apply.");
         }
         return this.item(Material.BOOK, "Catalog Summary", lore);
     }
@@ -200,6 +215,29 @@ public final class AdminRootMenu {
         return this.item(material, name, List.of());
     }
 
+    private ItemStack confirmApplyButton() {
+        return this.item(
+            Material.REDSTONE_BLOCK,
+            "Confirm Apply",
+            List.of(
+                "Publishes the current generated catalog",
+                "and reloads the plugin.",
+                "Use only after review."
+            )
+        );
+    }
+
+    private ItemStack cancelApplyButton() {
+        return this.item(
+            Material.BARRIER,
+            "Cancel Apply",
+            List.of(
+                "Returns to a normal preview state",
+                "without publishing changes."
+            )
+        );
+    }
+
     private ItemStack button(final Material material, final String name) {
         return this.item(material, name, List.of());
     }
@@ -215,6 +253,21 @@ public final class AdminRootMenu {
             stack.setItemMeta(meta);
         }
         return stack;
+    }
+
+    private boolean isApplyConfirmState(final AdminCatalogViewState state) {
+        return this.isApplyConfirmAction(state.lastAction());
+    }
+
+    private boolean isApplyConfirmAction(final String action) {
+        return APPLY_CONFIRM_ACTION.equalsIgnoreCase(action);
+    }
+
+    private String displayAction(final String action) {
+        if (this.isApplyConfirmAction(action)) {
+            return "apply confirm";
+        }
+        return action.replace('-', ' ');
     }
 
     private String pretty(final String raw) {
