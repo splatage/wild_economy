@@ -1,0 +1,6 @@
+overrides:
+  minecraft:diamond:
+    policy: EXCHANGE
+    stock-profile: ore_precious
+    eco-envelope: ore_precious_tight
+    note: "Explicitly keep diamonds exchange-backed."
