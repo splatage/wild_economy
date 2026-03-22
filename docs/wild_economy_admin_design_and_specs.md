@@ -1,7 +1,7 @@
 # wild_economy Admin Design and Specifications
 
-Revision date: 2026-03-21  
-Repo snapshot: `02c67a3f26db3817f95cbe72b3fb8cae3021b03f`  
+Revision date: 2026-03-22  
+Repo snapshot: `3d73036e5d764b26f96b8b36738dc8fecb9a8724`  
 Status: Locked Phase 1 admin/catalog design with current implementation notes  
 Scope: Admin-facing catalog, classification, policy, stock-profile, and economic-envelope tooling for `wild_economy`
 
@@ -16,11 +16,11 @@ The design goal is to make catalog and economy administration:
 - rule-driven first
 - override-driven second
 - human-readable on disk
-- safe to preview, validate, diff, publish, and roll back
+- safe to preview, validate, diff, publish, and recover
 - explainable item-by-item
 - performant and non-invasive to player-facing runtime paths
 
-This spec is aligned to the current plugin direction:
+This document is aligned to the current plugin direction:
 
 - Exchange-first economy
 - generated catalog + override merge model
@@ -30,51 +30,72 @@ This spec is aligned to the current plugin direction:
 
 ---
 
-## 2. Current implementation snapshot at `02c67a3`
+## 2. Current implementation snapshot at `3d73036`
 
-The repo already contains a useful backend foundation, but the full admin control plane is not complete yet.
+The repo now contains a substantial Phase 1 admin/catalog foundation. This is no longer just a future design target.
 
 ### 2.1 Implemented today
 
 At this snapshot, the implemented admin/catalog pieces include:
 
 - `/shopadmin reload`
+- `/shopadmin`
+- `/shopadmin gui`
 - `/shopadmin generatecatalog`
-- a catalog generator facade that:
-  - loads `root-values.yml`
-  - builds a Bukkit recipe graph
-  - derives anchored values
-  - classifies items
-  - suggests policy states
-- generator outputs:
-  - `generated/generated-catalog.yml`
-  - `generated/generated-catalog-summary.yml`
-- runtime catalog loading from generated base + explicit overrides
-- wildcard-capable override loading through `exchange-items.yml`
-- a single broad admin permission: `wild_economy.admin`
-
-### 2.2 Not implemented yet
-
-At this snapshot, the following Phase 1 admin/catalog work is still missing:
-
-- `policy-rules.yml`
-- `manual-overrides.yml` as a distinct file separate from the current override model
-- `stock-profiles.yml`
-- `eco-envelopes.yml`
 - `/shopadmin catalog preview`
 - `/shopadmin catalog validate`
 - `/shopadmin catalog diff`
 - `/shopadmin catalog apply`
-- generated diff artifact
-- publish/published state separation
-- snapshot and rollback pipeline
-- item decision trace backend as a first-class operator surface
-- granular admin permission tiers
+- `/shopadmin item <item_key>`
 
-### 2.3 Important current implementation notes
+The admin backend includes:
 
-At this snapshot, generated catalog output is still used directly as the runtime generated base.  
-The fuller staged `generated` proposal vs `published` live-state split described below is therefore a **target design**, not current behavior.
+- catalog generation from Bukkit/Paper material and recipe data
+- rule-driven policy/category/profile/envelope assignment
+- generated reports written under `generated/`
+- live catalog publish to `exchange-items.yml`
+- item decision traces
+- review bucket reports
+- rule impact reports
+- manual overrides stored in `manual-overrides.yml`
+- admin GUI flows for review, inspection, and manual override editing
+
+The admin config surface now includes these managed files:
+
+- `policy-rules.yml`
+- `policy-profiles.yml`
+- `manual-overrides.yml`
+- `stock-profiles.yml`
+- `eco-envelopes.yml`
+
+### 2.2 Managed config integrity model
+
+Required managed config files are not supposed to be invented ad hoc inside individual loaders.
+
+The current desired model is:
+
+- bootstrap/reload performs centralized managed-file materialization
+- missing required managed files are regenerated from bundled defaults
+- regeneration emits a clear warning and admin next-step guidance
+- loaders are responsible for reading and validation, not file creation
+- admin commands and GUI screens consume config only; they are not config authors
+
+This keeps configuration recovery graceful without scattering hidden side effects through admin code paths.
+
+### 2.3 Current implementation note: permission model
+
+At this snapshot the admin permission model is still effectively broad and simple.
+
+Current state:
+
+- `/shopadmin` is treated as an op/admin capability
+- the command and GUI surface are intended for trusted operators
+
+Planned improvement:
+
+- split admin permissions into narrower capabilities such as view, reload, apply, and override once the current command/router structure is cleaned up
+
+This permission split is desirable, but it should follow a cleaner command architecture rather than being layered onto monolithic handlers indefinitely.
 
 ---
 
@@ -90,7 +111,7 @@ Admin intent must be stored in human-readable files that can be:
 - edited by hand
 - restored from backup
 
-Any GUI added later should act as an editor, inspector, and reviewer for those files, not as an opaque second source of truth.
+Any GUI acts as an editor, inspector, and reviewer for those files. It must not become an opaque second source of truth.
 
 ### 3.2 Preview before publish
 
@@ -101,7 +122,7 @@ Generation and admin edits must support a staging workflow:
 3. validate proposal
 4. inspect diff
 5. publish explicitly
-6. roll back if necessary
+6. reload/apply explicitly
 
 No major catalog mutation should happen silently.
 
@@ -115,7 +136,7 @@ Manual item overrides remain important, but should be sparse, explicit, and easy
 
 Admin tooling must not compromise the fast runtime path of the player-facing exchange.
 
-Heavy generation, diffing, validation, and report building should stay off the gameplay-critical path.
+Heavy generation, diffing, validation, and report building should stay off the gameplay-critical path wherever practical.
 
 ### 3.5 Explainability
 
@@ -140,6 +161,7 @@ Admins need control over:
 4. how economic guardrails are assigned by reusable envelopes
 5. which generated changes are acceptable before going live
 6. how to trace and review a decision for one item or one rule
+7. how to recover cleanly from missing managed config files
 
 ---
 
@@ -149,18 +171,22 @@ This document is locked to **Phase 1 admin/catalog work only**.
 
 ### 5.1 Deliverables
 
-Phase 1 must deliver:
+Phase 1 includes:
 
 1. `policy-rules.yml`
-2. `manual-overrides.yml`
-3. `stock-profiles.yml`
-4. `eco-envelopes.yml`
-5. `/shopadmin catalog preview`
-6. `/shopadmin catalog validate`
-7. `/shopadmin catalog diff`
-8. `/shopadmin catalog apply`
-9. generated summary + diff reports
-10. item decision trace backend
+2. `policy-profiles.yml`
+3. `manual-overrides.yml`
+4. `stock-profiles.yml`
+5. `eco-envelopes.yml`
+6. `/shopadmin catalog preview`
+7. `/shopadmin catalog validate`
+8. `/shopadmin catalog diff`
+9. `/shopadmin catalog apply`
+10. generated summary + diff + validation reports
+11. item decision trace backend
+12. review bucket reporting
+13. rule impact reporting
+14. GUI inspection and manual override editing
 
 ### 5.2 Explicit non-deliverables for Phase 1
 
@@ -175,13 +201,13 @@ Do **not** scope-creep Phase 1 with the following:
 - free-form scripting DSL
 - marketplace admin tooling
 
-These may be revisited in later phases only after the Phase 1 file-and-command pipeline is solid.
+These may be revisited later only after the Phase 1 file-and-command pipeline is solid.
 
 ---
 
 ## 6. Catalog policy model
 
-The admin system should support four policy groups:
+The admin system supports four policy groups:
 
 - `ALWAYS_AVAILABLE`
 - `EXCHANGE`
@@ -200,7 +226,7 @@ Examples:
 - nuisance-harvest materials
 - special utility materials chosen by policy
 
-These should usually be buy-enabled and not depend on live player stock.
+These are usually buy-enabled and do not depend on live player stock.
 
 #### `EXCHANGE`
 
@@ -229,7 +255,7 @@ Examples:
 
 ## 7. Classification model
 
-The admin system should classify items in two dimensions.
+The admin system classifies items in two dimensions.
 
 ### 7.1 GUI group
 
@@ -293,25 +319,29 @@ Assigns:
 
 This is the broad rule-driven layer.
 
+#### `policy-profiles.yml`
+
+Defines reusable policy behavior profiles that bridge the admin-facing catalog policy model and the runtime exchange behavior.
+
+Typical fields include:
+
+- runtime policy mapping
+- buy enabled
+- sell enabled
+- stock-backed
+- unlimited-buy
+- requires-player-stock-to-buy
+- default stock profile
+- default eco envelope
+- description
+
 #### `manual-overrides.yml`
 
 Explicit per-item corrections that win last.
 
 This is for exceptions, not for replacing the whole rule system.
 
-### 8.2 Rule matching ideas
-
-The rule system should support practical, human-readable matching such as:
-
-- exact item key
-- namespace prefix
-- wildcard or glob-style material patterns
-- derived depth thresholds
-- root-anchored / non-root-anchored conditions
-- category matches
-- group matches
-
-### 8.3 Rule ordering philosophy
+### 8.2 Rule ordering philosophy
 
 - broad rules first
 - more specific rules later
@@ -328,9 +358,9 @@ Stock profiles are reusable tuning profiles for item stock behavior.
 
 A stock profile should let admins change stock behavior for many items at once without repeating fields everywhere.
 
-### 9.2 Suggested stock profile fields
+### 9.2 Typical stock profile fields
 
-Each stock profile should support:
+A stock profile may support fields such as:
 
 - `target-stock`
 - `soft-cap`
@@ -343,326 +373,148 @@ Each stock profile should support:
 - `turnover-decay-rate`
 - `notes`
 
-### 9.3 Example profile names
-
-- `farm_bulk_default`
-- `ore_standard`
-- `wood_bulk`
-- `sell_only_cleanup`
-- `rare_drop_tight`
-- `unlimited_buy_utility`
-
 ---
 
-## 10. Stock buckets
-
-Stock buckets are derived states used for reporting and tuning.
-
-### 10.1 Suggested stock buckets
-
-- `EMPTY`
-- `LOW`
-- `HEALTHY`
-- `HIGH`
-- `SATURATED`
-- `OVERFLOW`
-
-### 10.2 Purpose of stock buckets
-
-Stock buckets support:
-
-- reports
-- pricing diagnostics
-- alerts
-- eco-envelope behavior
-- admin review
-
-They do not need to be player-facing in Phase 1.
-
----
-
-## 11. Eco envelopes
+## 10. Eco envelopes
 
 Eco envelopes are reusable guardrail profiles that constrain economic behavior.
 
-### 11.1 Purpose
+### 10.1 Purpose
 
-An eco envelope defines the permitted economic behavior range for an item or group of items.
+An eco envelope should make it easy to reuse consistent economic guardrails across many items.
 
-This is not just one price number. It is the allowed envelope within which stock-based pricing logic operates.
+### 10.2 Typical envelope fields
 
-### 11.2 Suggested eco envelope fields
+Examples include:
 
-- `base-sell-multiplier`
-- `minimum-sell-multiplier`
-- `low-stock-bonus-multiplier`
-- `soft-cap-floor-multiplier`
-- `overflow-penalty-multiplier`
-- `turnover-recovery-speed`
-- `max-anchor-drift`
-- `allow-always-available`
-- `allow-sell-only`
-- `show-stock-publicly`
-- `notes`
-
-### 11.3 Example envelope names
-
-- `farm_bulk_default`
-- `ore_precious_tight`
-- `world_damage_unlimited_buy`
-- `sell_only_cleanup`
-- `progression_sensitive_locked`
+- minimum sell multiplier
+- maximum buy multiplier
+- soft-cap taper behavior
+- emergency suppression toggles
+- notes
 
 ---
 
-## 12. Phase 1 command flow
+## 11. Admin command and artifact flow
 
-Phase 1 command work should be explicit and reviewable.
+### 11.1 Command intent
 
-### 12.1 `/shopadmin catalog preview`
+- `reload` refreshes managed config and plugin runtime state
+- `preview` builds the staged/generated view without publishing
+- `validate` reports problems
+- `diff` compares staged output against the current live catalog
+- `apply` publishes the generated live catalog and reloads runtime state
+- `item` explains one item’s generated decision path
 
-Purpose:
+### 11.2 Generated outputs
 
-- generate proposal state without making it live
-- write proposal outputs
-- show summary counts
+The admin pipeline writes report artifacts under `generated/`, including outputs such as:
 
-Expected outputs:
+- generated catalog
+- summary
+- validation report
+- diff report
+- item decision traces
+- rule impacts
+- review buckets
 
-- generated proposal catalog
-- generated summary report
-- decision-trace backing data
+### 11.3 Live output
 
-### 12.2 `/shopadmin catalog validate`
+Publishing writes the live catalog to `exchange-items.yml`.
 
-Purpose:
+### 11.4 Snapshot behavior
 
-- validate rules, references, categories, policies, and proposal coherence
-- refuse publish if validation fails
-
-### 12.3 `/shopadmin catalog diff`
-
-Purpose:
-
-- compare proposal state against current live/published state
-- summarize additions, removals, and changed fields
-
-### 12.4 `/shopadmin catalog apply`
-
-Purpose:
-
-- explicitly promote reviewed proposal state into live/published state
-- create a snapshot for rollback
-- refuse apply if validation fails
+Apply may create a snapshot of the prior live state before publishing the new catalog.
 
 ---
 
-## 13. Generated and published files
+## 12. Admin GUI surface
 
-The design should distinguish proposal artifacts from live artifacts.
+The current admin GUI is intended to support review rather than replace the file model.
 
-### 13.1 Proposal files
+Current GUI role:
 
-Generated by preview/build steps:
+- open root review view
+- browse review buckets
+- browse rule impacts
+- inspect one item decision
+- edit/remove manual overrides
+- stage and confirm apply
 
-- `generated/generated-catalog.yml`
-- `generated/generated-catalog-summary.yml`
-- `generated/generated-catalog-diff.yml`
-- decision-trace output as needed for inspection and review
-
-### 13.2 Live files
-
-Published runtime-facing artifacts should live separately from raw proposal outputs.
-
-Recommended direction:
-
-- `published/published-catalog.yml`
-- `published/published-summary.yml`
-
-This separation is a **target Phase 1 design correction**. It is not the full current repo behavior yet.
-
-### 13.3 Snapshot files
-
-Every apply should produce a timestamped snapshot of coherent state.
-
-Recommended snapshot contents:
-
-- published catalog
-- policy rules
-- manual overrides
-- stock profiles
-- eco envelopes
+The GUI is intentionally an inspection/editor layer over files and generated reports, not a standalone source of truth.
 
 ---
 
-## 14. Decision trace backend
+## 13. Managed config recovery contract
 
-Phase 1 must include an item decision trace backend.
+Missing managed files should be handled centrally during bootstrap/reload.
 
-For each item, the trace should be able to answer:
+Desired behavior:
 
-- was the item scanned as valid or rejected early?
-- is it rooted or derived?
-- what root value or derived value was chosen?
-- what derivation depth was used?
-- what rule matched?
-- which policy, group, category, stock profile, and eco envelope were assigned?
-- did a manual override replace any of those values?
-- why was the final item included, excluded, or blocked?
+- if a required managed file is missing, regenerate it from bundled defaults
+- log a prominent warning
+- include admin next-step guidance in the warning
+- continue with a valid, reviewable default file on disk
 
-This backend does not require a full GUI in Phase 1. It does require structured data the operator can inspect and report on.
+Example guidance style:
 
----
+- file regenerated from defaults
+- review the regenerated file before catalog changes
+- run `/shopadmin catalog validate`
+- reload or restart after review if required
 
-## 15. Validation model
-
-### 15.1 Minimum validation checks
-
-- YAML parse success
-- duplicate exact overrides
-- invalid wildcard syntax
-- missing stock profile reference
-- missing eco envelope reference
-- invalid GUI group
-- invalid detail category
-- invalid policy name
-- conflicting forced include/exclude rules
-- unresolved critical items
-- blocked illegal combinations
-
-### 15.2 Example invalid combinations
-
-Examples of combinations the validator may reject:
-
-- `ALWAYS_AVAILABLE` with an envelope that forbids always-available
-- `SELL_ONLY` with a stock profile intended for public buying
-- disabled item assigned public buy stock behavior
-- missing GUI group on a live item
-- missing published item key identity
+This central materialization pass is preferred over silent self-healing in individual loaders.
 
 ---
 
-## 16. Diff, snapshot, and rollback
+## 14. Current architectural debt
 
-### 16.1 Diff output
+The admin system is now functionally useful, but the code shape is not yet as elegant as it should be.
 
-Generated diff should summarize:
+The main debt areas are:
 
-- additions
-- removals
-- policy changes
-- group/category changes
-- stock profile changes
-- eco envelope changes
-- changed notes
-- unresolved-to-resolved transitions
-- resolved-to-unresolved regressions
+- `ShopAdminCommand` carries command parsing, permission checks, orchestration, and summary rendering together
+- `AdminMenuRouter` carries navigation, state building, apply flow, permission gates, and some recovery behavior together
+- generated report loading is too close to GUI navigation concerns
+- command and GUI paths duplicate parts of the same admin action workflow
 
-### 16.2 Snapshots
-
-Every apply should produce a timestamped snapshot of:
-
-- live catalog
-- rules
-- overrides
-- stock profiles
-- eco envelopes
-
-### 16.3 Rollback
-
-Rollback should restore a full coherent state, not just one file.
-
-A full rollback UI is **not** part of Phase 1, but snapshot compatibility should be built so rollback can be added cleanly later.
+This does not block Phase 1 use, but it is the next good cleanup slice.
 
 ---
 
-## 17. Permissions model
+## 15. Next structural goal after Phase 1 hardening
 
-The admin tooling should support at least four permission tiers:
+The next major improvement should be to make the admin code less monolithic by separating:
 
-- `wild_economy.admin.view`
-- `wild_economy.admin.catalog`
-- `wild_economy.admin.economy`
-- `wild_economy.admin.publish`
+- command dispatch
+- permission policy
+- catalog action orchestration
+- summary/report formatting
+- GUI navigation
+- generated-report loading
+- manual-override application services
 
-### 17.1 Recommended meaning
-
-#### `view`
-
-May inspect reports, traces, and summary data.
-
-#### `catalog`
-
-May edit rules, groups, and item assignments.
-
-#### `economy`
-
-May edit stock profiles and eco envelopes.
-
-#### `publish`
-
-May apply and roll back live changes.
-
-### 17.2 Current implementation note
-
-At repo snapshot `02c67a3`, the plugin still exposes a single broad admin permission.  
-The granular permission model above is a Phase 1 target, not current completed behavior.
+That refactor should preserve behavior and file formats while improving readability, testability, and future extension.
 
 ---
 
-## 18. Recommended defaults
+## 16. Summary
 
-### 18.1 Publish behavior
+The admin/catalog system is now a real Phase 1 control plane, not just a future design.
 
-- explicit apply only
-- snapshot on every apply
-- validate before apply
-- refuse publish if validation fails
+What is already true:
 
-### 18.2 Rule philosophy
+- files are central
+- preview/validate/diff/apply exists
+- generated artifacts exist
+- manual overrides exist
+- GUI review exists
+- managed config recovery is intended to be central, not loader-local
 
-- broad rules first
-- specific rules later
-- manual overrides last
-- explainable final decisions
+What still needs improvement:
 
-### 18.3 Performance behavior
+- narrower admin permissions
+- cleaner decomposition of command/router code
+- better separation between orchestration and presentation
+- eventual rollback/admin UX improvements in later phases
 
-- generation and diffing should not burden normal player interactions
-- validation should be operator-triggered and bounded
-- runtime catalog loading should stay deterministic and fast
-- do not add a large GUI/editor dependency to Phase 1
-
----
-
-## 19. Later-phase ideas, explicitly deferred
-
-These are realistic future operator features, but they are **not part of the current locked Phase 1**:
-
-- GUI rule editor
-- catalog review GUI
-- publish screen UI
-- stock dashboard
-- quote simulator
-- dead-stock review UI
-- classification-confidence UI
-- rollback browser UI
-
-Keep them deferred until the file-backed command pipeline is complete and stable.
-
----
-
-## 20. Summary
-
-The recommended Phase 1 admin model for `wild_economy` is:
-
-- files remain canonical
-- rules drive most decisions
-- overrides handle edge cases
-- stock behavior uses reusable stock profiles
-- economic constraints use reusable eco envelopes
-- all major changes are previewed, validated, diffed, and explicitly applied
-- every published decision is explainable
-- every apply creates a rollback-capable snapshot foundation
-
-This gives admins strong control without sacrificing clarity, safety, or maintainability.
