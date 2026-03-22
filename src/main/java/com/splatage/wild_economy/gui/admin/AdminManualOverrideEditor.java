@@ -9,6 +9,8 @@ import com.splatage.wild_economy.catalog.model.CatalogPolicy;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -21,8 +23,13 @@ import org.bukkit.configuration.file.YamlConfiguration;
 public final class AdminManualOverrideEditor {
 
     private static final String DEFAULT_GUI_NOTE = "Manual override from admin GUI.";
+    private static final String POLICY_PROFILE_RECOVERY_MESSAGE =
+        "Policy profiles are unavailable. Run /shopadmin reload to regenerate bundled defaults, then review policy-profiles.yml.";
+    private static final String ADMIN_OVERRIDE_REVIEW_MESSAGE =
+        "Review the managed config file, then run /shopadmin catalog validate before saving overrides.";
 
     private final WildEconomyPlugin plugin;
+    private final Set<String> loggedConfigIssues = Collections.synchronizedSet(new HashSet<>());
 
     public AdminManualOverrideEditor(final WildEconomyPlugin plugin) {
         this.plugin = plugin;
@@ -53,12 +60,17 @@ public final class AdminManualOverrideEditor {
         try {
             return AdminCatalogPolicyProfileLoader.load(this.policyProfileFile());
         } catch (final IOException exception) {
-            this.plugin.getLogger().log(Level.SEVERE, "Failed to load policy profiles", exception);
-            final Map<CatalogPolicy, AdminCatalogPolicyProfile> fallback = new java.util.EnumMap<>(CatalogPolicy.class);
-            for (final CatalogPolicy policy : CatalogPolicy.values()) {
-                fallback.put(policy, AdminCatalogPolicyProfileLoader.defaultProfile(policy));
-            }
-            return fallback;
+            final File policyProfileFile = this.policyProfileFile();
+            this.logConfigIssueOnce(
+                "missing-policy-profiles",
+                Level.SEVERE,
+                "Failed to load managed config file 'policy-profiles.yml' from "
+                    + policyProfileFile.getAbsolutePath()
+                    + ". "
+                    + POLICY_PROFILE_RECOVERY_MESSAGE,
+                exception
+            );
+            return Map.of();
         }
     }
 
@@ -79,9 +91,16 @@ public final class AdminManualOverrideEditor {
         if (policy == null) {
             return "Unknown policy.";
         }
-        final AdminCatalogPolicyProfile profile = this.loadPolicyProfiles().get(policy);
+        final Map<CatalogPolicy, AdminCatalogPolicyProfile> profiles = this.loadPolicyProfiles();
+        if (profiles.isEmpty()) {
+            return POLICY_PROFILE_RECOVERY_MESSAGE;
+        }
+        final AdminCatalogPolicyProfile profile = profiles.get(policy);
         if (profile == null) {
-            return "Unknown policy.";
+            return "Policy profile '"
+                + policy.name()
+                + "' is not configured in policy-profiles.yml. "
+                + ADMIN_OVERRIDE_REVIEW_MESSAGE;
         }
         return profile.description()
             + " Runtime=" + profile.runtimePolicy()
@@ -102,11 +121,13 @@ public final class AdminManualOverrideEditor {
     public String nextPolicy(final String currentPolicy) {
         final List<String> ids = this.loadPolicyProfileIds();
         if (ids.isEmpty()) {
-            return CatalogPolicy.EXCHANGE.name();
+            final String canonicalCurrent = canonicalPolicyNameOrNull(currentPolicy);
+            return canonicalCurrent == null ? CatalogPolicy.EXCHANGE.name() : canonicalCurrent;
         }
-        final String canonicalCurrent = parsePolicy(currentPolicy) == null
-            ? ids.get(0)
-            : parsePolicy(currentPolicy).name();
+        final String canonicalCurrent = canonicalPolicyNameOrNull(currentPolicy);
+        if (canonicalCurrent == null) {
+            return ids.get(0);
+        }
         final int index = ids.indexOf(canonicalCurrent);
         if (index < 0) {
             return ids.get(0);
@@ -195,9 +216,32 @@ public final class AdminManualOverrideEditor {
     }
 
     private List<String> loadTopLevelKeys(final String fileName, final String rootPath) {
-        final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(new File(this.plugin.getDataFolder(), fileName));
+        final File file = new File(this.plugin.getDataFolder(), fileName);
+        if (!file.isFile()) {
+            this.logConfigIssueOnce(
+                "missing-managed-file:" + fileName,
+                Level.SEVERE,
+                "Required managed config file '"
+                    + fileName
+                    + "' is missing at "
+                    + file.getAbsolutePath()
+                    + ". Run /shopadmin reload to regenerate bundled defaults, then review the file before using the admin override editor."
+            );
+            return List.of();
+        }
+        final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         final ConfigurationSection section = yaml.getConfigurationSection(rootPath);
         if (section == null) {
+            this.logConfigIssueOnce(
+                "missing-root:" + fileName + "#" + rootPath,
+                Level.WARNING,
+                "Managed config file '"
+                    + fileName
+                    + "' is missing required root section '"
+                    + rootPath
+                    + "'. "
+                    + ADMIN_OVERRIDE_REVIEW_MESSAGE
+            );
             return List.of();
         }
         final Set<String> keys = new LinkedHashSet<>(section.getKeys(false));
@@ -212,6 +256,21 @@ public final class AdminManualOverrideEditor {
         return new File(this.plugin.getDataFolder(), "policy-profiles.yml");
     }
 
+    private void logConfigIssueOnce(final String key, final Level level, final String message) {
+        this.logConfigIssueOnce(key, level, message, null);
+    }
+
+    private void logConfigIssueOnce(final String key, final Level level, final String message, final Throwable throwable) {
+        if (!this.loggedConfigIssues.add(key)) {
+            return;
+        }
+        if (throwable == null) {
+            this.plugin.getLogger().log(level, message);
+            return;
+        }
+        this.plugin.getLogger().log(level, message, throwable);
+    }
+
     private static CatalogPolicy parsePolicy(final String value) {
         if (value == null || value.isBlank()) {
             return CatalogPolicy.EXCHANGE;
@@ -220,6 +279,17 @@ public final class AdminManualOverrideEditor {
             return CatalogPolicy.valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (final IllegalArgumentException ignored) {
             return CatalogPolicy.EXCHANGE;
+        }
+    }
+
+    private static String canonicalPolicyNameOrNull(final String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return CatalogPolicy.valueOf(value.trim().toUpperCase(Locale.ROOT)).name();
+        } catch (final IllegalArgumentException ignored) {
+            return null;
         }
     }
 

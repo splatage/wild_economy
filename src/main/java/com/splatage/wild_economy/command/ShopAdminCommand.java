@@ -297,7 +297,6 @@ public final class ShopAdminCommand implements CommandExecutor {
                     sender.sendMessage(ChatColor.GREEN + "Snapshot created at " + result.snapshotDirectory().getPath());
                 }
                 sender.sendMessage(ChatColor.YELLOW + "Reloading plugin to apply the new live catalog...");
-                this.plugin.reloadConfig();
                 this.plugin.getBootstrap().reload();
                 sender.sendMessage(ChatColor.GREEN + "wild_economy reloaded with the published catalog.");
             } else {
@@ -491,3 +490,4 @@ public final class ShopAdminCommand implements CommandExecutor {
         sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin item <item_key>");
     }
 }
+

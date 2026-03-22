@@ -75,7 +75,6 @@ public final class AdminMenuRouter {
             if (apply) {
                 this.sendApplyMessages(player, state);
                 this.platformExecutor.runOnPlayer(player, player::closeInventory);
-                this.plugin.reloadConfig();
                 this.plugin.getBootstrap().reload();
                 player.sendMessage(ChatColor.GREEN + "wild_economy reloaded with the published catalog.");
                 return;
@@ -529,4 +528,5 @@ public final class AdminMenuRouter {
         return value == null ? "" : value;
     }
 }
+
 
