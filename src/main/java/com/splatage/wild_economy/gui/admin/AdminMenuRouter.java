@@ -1,30 +1,16 @@
 package com.splatage.wild_economy.gui.admin;
 
 import com.splatage.wild_economy.WildEconomyPlugin;
-import com.splatage.wild_economy.catalog.admin.AdminCatalogBuildResult;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogDecisionTrace;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogItemKeys;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogManualOverride;
-import com.splatage.wild_economy.catalog.admin.AdminCatalogPhaseOneService;
-import com.splatage.wild_economy.catalog.admin.AdminCatalogReviewBucket;
-import com.splatage.wild_economy.catalog.admin.AdminCatalogRuleImpact;
-import com.splatage.wild_economy.catalog.model.CatalogPolicy;
 import com.splatage.wild_economy.platform.PlatformExecutor;
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.EnumMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -37,7 +23,7 @@ public final class AdminMenuRouter {
 
     private final WildEconomyPlugin plugin;
     private final PlatformExecutor platformExecutor;
-    private final AdminCatalogPhaseOneService catalogService;
+    private final AdminCatalogViewStateFactory viewStateFactory;
     private final AdminManualOverrideEditor manualOverrideEditor;
     private final AdminRootMenu adminRootMenu;
     private final AdminReviewBucketMenu adminReviewBucketMenu;
@@ -56,7 +42,7 @@ public final class AdminMenuRouter {
     ) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
-        this.catalogService = new AdminCatalogPhaseOneService(plugin);
+        this.viewStateFactory = new AdminCatalogViewStateFactory(plugin);
         this.manualOverrideEditor = new AdminManualOverrideEditor(plugin);
         this.adminRootMenu = Objects.requireNonNull(adminRootMenu, "adminRootMenu");
         this.adminReviewBucketMenu = Objects.requireNonNull(adminReviewBucketMenu, "adminReviewBucketMenu");
@@ -89,7 +75,7 @@ public final class AdminMenuRouter {
         }
 
         try {
-            final AdminCatalogViewState state = this.buildState(apply, actionName);
+            final AdminCatalogViewState state = this.viewStateFactory.buildState(apply, actionName);
             if (apply) {
                 this.sendApplyMessages(player, state);
                 this.platformExecutor.runOnPlayer(player, player::closeInventory);
@@ -312,7 +298,7 @@ public final class AdminMenuRouter {
             this.manualOverrideEditor.saveOverride(itemKey, overridePolicy, overrideStockProfile, overrideEcoEnvelope, overrideNote);
             player.sendMessage(ChatColor.GREEN + "Saved manual override for " + AdminCatalogItemKeys.canonicalize(itemKey) + ".");
 
-            final AdminCatalogViewState refreshedState = this.buildState(false, "preview");
+            final AdminCatalogViewState refreshedState = this.viewStateFactory.buildState(false, "preview");
             this.openItemInspector(player, refreshedState, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode);
         } catch (final IOException exception) {
             this.plugin.getLogger().log(Level.SEVERE, "Failed to save manual override for " + itemKey, exception);
@@ -341,7 +327,7 @@ public final class AdminMenuRouter {
                 player.sendMessage(ChatColor.YELLOW + "No manual override existed for " + AdminCatalogItemKeys.canonicalize(itemKey) + ".");
             }
 
-            final AdminCatalogViewState refreshedState = this.buildState(false, "preview");
+            final AdminCatalogViewState refreshedState = this.viewStateFactory.buildState(false, "preview");
             this.openItemInspector(player, refreshedState, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode);
         } catch (final IOException exception) {
             this.plugin.getLogger().log(Level.SEVERE, "Failed to remove manual override for " + itemKey, exception);
@@ -445,126 +431,8 @@ public final class AdminMenuRouter {
         return getAdminMenuHolder(player.getOpenInventory().getTopInventory());
     }
 
-    private AdminCatalogViewState buildState(final boolean apply, final String actionName) throws IOException {
-        final AdminCatalogBuildResult buildResult = this.catalogService.build(apply);
-        final File generatedDirectory = buildResult.generatedDirectory();
-        final List<AdminCatalogRuleImpact> ruleImpacts = this.loadRuleImpacts(new File(generatedDirectory, "generated-rule-impacts.yml"));
-        final List<AdminCatalogReviewBucket> reviewBuckets = this.loadReviewBuckets(new File(generatedDirectory, "generated-review-buckets.yml"));
-        return new AdminCatalogViewState(buildResult, ruleImpacts, reviewBuckets, actionName);
-    }
-
-    private List<AdminCatalogRuleImpact> loadRuleImpacts(final File file) {
-        if (!file.isFile()) {
-            return List.of();
-        }
-
-        final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
-        final ConfigurationSection rulesSection = yaml.getConfigurationSection("rules");
-        if (rulesSection == null) {
-            return List.of();
-        }
-
-        final List<AdminCatalogRuleImpact> ruleImpacts = new ArrayList<>();
-        for (final String ruleId : rulesSection.getKeys(false)) {
-            final ConfigurationSection section = rulesSection.getConfigurationSection(ruleId);
-            if (section == null) {
-                continue;
-            }
-            ruleImpacts.add(
-                new AdminCatalogRuleImpact(
-                    ruleId,
-                    section.getBoolean("fallback-rule"),
-                    section.getBoolean("has-match-criteria"),
-                    section.getInt("match-count"),
-                    section.getInt("win-count"),
-                    section.getInt("loss-count"),
-                    this.loadPolicyCounts(section.getConfigurationSection("winning-policies")),
-                    this.loadPolicyCounts(section.getConfigurationSection("lost-to-policies")),
-                    this.loadStringCounts(section.getConfigurationSection("lost-to-rules")),
-                    section.getStringList("sample-matched-items"),
-                    section.getStringList("sample-winning-items"),
-                    section.getStringList("sample-lost-items")
-                )
-            );
-        }
-        return ruleImpacts;
-    }
-
-    private List<AdminCatalogReviewBucket> loadReviewBuckets(final File file) {
-        if (!file.isFile()) {
-            return List.of();
-        }
-
-        final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
-        final ConfigurationSection bucketsSection = yaml.getConfigurationSection("buckets");
-        if (bucketsSection == null) {
-            return List.of();
-        }
-
-        final List<AdminCatalogReviewBucket> reviewBuckets = new ArrayList<>();
-        for (final String bucketId : bucketsSection.getKeys(false)) {
-            final ConfigurationSection section = bucketsSection.getConfigurationSection(bucketId);
-            if (section == null) {
-                continue;
-            }
-            reviewBuckets.add(
-                new AdminCatalogReviewBucket(
-                    bucketId,
-                    section.getString("description", ""),
-                    section.getInt("count"),
-                    section.getStringList("sample-items"),
-                    this.loadStringCounts(section.getConfigurationSection("subgroup-counts")),
-                    this.loadSampleMap(section.getConfigurationSection("subgroup-sample-items"))
-                )
-            );
-        }
-
-        reviewBuckets.sort(Comparator.comparingInt(AdminCatalogReviewBucket::count).reversed());
-        return reviewBuckets;
-    }
-
-    private Map<CatalogPolicy, Integer> loadPolicyCounts(final ConfigurationSection section) {
-        final Map<CatalogPolicy, Integer> counts = new EnumMap<>(CatalogPolicy.class);
-        for (final CatalogPolicy policy : CatalogPolicy.values()) {
-            counts.put(policy, 0);
-        }
-        if (section == null) {
-            return counts;
-        }
-
-        for (final String key : section.getKeys(false)) {
-            try {
-                counts.put(CatalogPolicy.valueOf(key.toUpperCase(Locale.ROOT)), section.getInt(key));
-            } catch (final IllegalArgumentException ignored) {
-            }
-        }
-        return counts;
-    }
-
-    private Map<String, Integer> loadStringCounts(final ConfigurationSection section) {
-        final Map<String, Integer> counts = new LinkedHashMap<>();
-        if (section == null) {
-            return counts;
-        }
-        for (final String key : section.getKeys(false)) {
-            counts.put(key, section.getInt(key));
-        }
-        return counts;
-    }
-
-    private Map<String, List<String>> loadSampleMap(final ConfigurationSection section) {
-        final Map<String, List<String>> sampleMap = new LinkedHashMap<>();
-        if (section == null) {
-            return sampleMap;
-        }
-        for (final String key : section.getKeys(false)) {
-            sampleMap.put(key, List.copyOf(section.getStringList(key)));
-        }
-        return sampleMap;
-    }
-
     private void sendActionSummary(final Player player, final AdminCatalogViewState state, final String actionName) {
-        final AdminCatalogBuildResult result = state.buildResult();
+        final var result = state.buildResult();
         player.sendMessage(
             ChatColor.GOLD
                 + "Catalog "
@@ -594,7 +462,7 @@ public final class AdminMenuRouter {
     }
 
     private void sendApplyConfirmMessage(final Player player, final AdminCatalogViewState state) {
-        final AdminCatalogBuildResult result = state.buildResult();
+        final var result = state.buildResult();
         player.sendMessage(
             ChatColor.RED
                 + "Apply armed: "
@@ -609,7 +477,7 @@ public final class AdminMenuRouter {
     }
 
     private void sendApplyMessages(final Player player, final AdminCatalogViewState state) {
-        final AdminCatalogBuildResult result = state.buildResult();
+        final var result = state.buildResult();
         player.sendMessage(ChatColor.GREEN + "Published catalog written to " + result.liveCatalogFile().getPath());
         player.sendMessage(ChatColor.GREEN + "Generated reports written to " + result.generatedDirectory().getPath());
         if (result.snapshotDirectory() != null) {
