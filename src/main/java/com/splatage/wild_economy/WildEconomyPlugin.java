@@ -9,16 +9,6 @@ public final class WildEconomyPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        this.saveDefaultConfig();
-        this.saveResource("database.yml", false);
-        this.saveResource("exchange-items.yml", false);
-        this.saveResource("root-values.yml", false);
-        this.saveResource("messages.yml", false);
-        this.saveResource("policy-rules.yml", false);
-        this.saveResource("policy-profiles.yml", false);
-        this.saveResource("manual-overrides.yml", false);
-        this.saveResource("stock-profiles.yml", false);
-        this.saveResource("eco-envelopes.yml", false);
         this.bootstrap = new PluginBootstrap(this);
         this.bootstrap.enable();
     }

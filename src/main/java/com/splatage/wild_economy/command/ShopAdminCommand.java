@@ -99,7 +99,6 @@ public final class ShopAdminCommand implements CommandExecutor {
 
     private boolean handleReload(final CommandSender sender) {
         try {
-            this.plugin.reloadConfig();
             this.plugin.getBootstrap().reload();
             sender.sendMessage(ChatColor.GREEN + "wild_economy reloaded.");
         } catch (final RuntimeException exception) {
@@ -492,8 +491,3 @@ public final class ShopAdminCommand implements CommandExecutor {
         sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin item <item_key>");
     }
 }
-
-
-
-
-

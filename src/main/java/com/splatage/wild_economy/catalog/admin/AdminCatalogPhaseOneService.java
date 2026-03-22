@@ -50,9 +50,11 @@ public final class AdminCatalogPhaseOneService {
         }
 
         final File rootValuesFile = new File(dataFolder, "root-values.yml");
-        if (!rootValuesFile.isFile()) {
-            throw new IOException("root-values.yml not found at " + rootValuesFile.getAbsolutePath());
-        }
+        this.requireManagedFile(
+            rootValuesFile,
+            "root-values.yml",
+            "Run /shopadmin reload to regenerate bundled defaults, then review root-values.yml before rerunning this action."
+        );
 
         final RootValueLoader rootValues = RootValueLoader.fromFile(rootValuesFile);
         final RecipeGraph recipeGraph = new BukkitRecipeGraphBuilder().build();
@@ -309,6 +311,11 @@ public final class AdminCatalogPhaseOneService {
         }
 
         final File liveCatalogFile = new File(dataFolder, "exchange-items.yml");
+        this.requireManagedFile(
+            liveCatalogFile,
+            "exchange-items.yml",
+            "Run /shopadmin reload to regenerate bundled defaults, then review exchange-items.yml before rerunning this action."
+        );
         final Map<String, LiveSnapshotEntry> currentLive = this.loadLiveSnapshot(liveCatalogFile);
         final List<AdminCatalogPlanEntry> liveEntries = proposedEntries.stream()
             .filter(entry -> entry.policy() != CatalogPolicy.DISABLED)
@@ -370,7 +377,12 @@ public final class AdminCatalogPhaseOneService {
         );
     }
 
-    private List<AdminCatalogPolicyRule> loadPolicyRules(final File file) {
+    private List<AdminCatalogPolicyRule> loadPolicyRules(final File file) throws IOException {
+        this.requireManagedFile(
+            file,
+            "policy-rules.yml",
+            "Run /shopadmin reload to regenerate bundled defaults, then review policy-rules.yml before rerunning this action."
+        );
         final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         final List<Map<?, ?>> rawRules = yaml.getMapList("rules");
         final List<AdminCatalogPolicyRule> rules = new ArrayList<>(rawRules.size());
@@ -400,7 +412,12 @@ public final class AdminCatalogPhaseOneService {
         return rules;
     }
 
-    private Map<String, AdminCatalogManualOverride> loadManualOverrides(final File file) {
+    private Map<String, AdminCatalogManualOverride> loadManualOverrides(final File file) throws IOException {
+        this.requireManagedFile(
+            file,
+            "manual-overrides.yml",
+            "Run /shopadmin reload to regenerate bundled defaults, then review manual-overrides.yml before rerunning this action."
+        );
         final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         final ConfigurationSection overridesSection = yaml.getConfigurationSection("overrides");
         final Map<String, AdminCatalogManualOverride> overrides = new LinkedHashMap<>();
@@ -430,7 +447,12 @@ public final class AdminCatalogPhaseOneService {
         return overrides;
     }
 
-    private Map<String, AdminCatalogStockProfile> loadStockProfiles(final File file) {
+    private Map<String, AdminCatalogStockProfile> loadStockProfiles(final File file) throws IOException {
+        this.requireManagedFile(
+            file,
+            "stock-profiles.yml",
+            "Run /shopadmin reload to regenerate bundled defaults, then review stock-profiles.yml before rerunning this action."
+        );
         final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         final ConfigurationSection section = yaml.getConfigurationSection("stock-profiles");
         final Map<String, AdminCatalogStockProfile> profiles = new LinkedHashMap<>();
@@ -458,7 +480,12 @@ public final class AdminCatalogPhaseOneService {
         return profiles;
     }
 
-    private Map<String, AdminCatalogEcoEnvelope> loadEcoEnvelopes(final File file) {
+    private Map<String, AdminCatalogEcoEnvelope> loadEcoEnvelopes(final File file) throws IOException {
+        this.requireManagedFile(
+            file,
+            "eco-envelopes.yml",
+            "Run /shopadmin reload to regenerate bundled defaults, then review eco-envelopes.yml before rerunning this action."
+        );
         final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         final ConfigurationSection section = yaml.getConfigurationSection("eco-envelopes");
         final Map<String, AdminCatalogEcoEnvelope> envelopes = new LinkedHashMap<>();
@@ -501,6 +528,24 @@ public final class AdminCatalogPhaseOneService {
         }
 
         return envelopes;
+    }
+
+    private void requireManagedFile(
+        final File file,
+        final String resourceName,
+        final String nextStep
+    ) throws IOException {
+        if (file.isFile()) {
+            return;
+        }
+        throw new IOException(
+            "Required config file '"
+                + resourceName
+                + "' is missing at "
+                + file.getAbsolutePath()
+                + ". "
+                + nextStep
+        );
     }
 
     private List<AdminCatalogDiffEntry> diff(
@@ -1629,7 +1674,3 @@ public final class AdminCatalogPhaseOneService {
     ) {
     }
 }
-
-
-
-

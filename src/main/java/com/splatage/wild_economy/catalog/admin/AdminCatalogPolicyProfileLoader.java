@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.logging.Level;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -17,7 +16,7 @@ public final class AdminCatalogPolicyProfileLoader {
 
     public static Map<CatalogPolicy, AdminCatalogPolicyProfile> load(final File file) throws IOException {
         Objects.requireNonNull(file, "file");
-        ensureExists(file);
+        requireFile(file);
         final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         final ConfigurationSection section = yaml.getConfigurationSection("policies");
         final Map<CatalogPolicy, AdminCatalogPolicyProfile> profiles = new EnumMap<>(CatalogPolicy.class);
@@ -126,29 +125,14 @@ public final class AdminCatalogPolicyProfileLoader {
         }
     }
 
-    private static void ensureExists(final File file) throws IOException {
+    private static void requireFile(final File file) throws IOException {
         if (file.isFile()) {
             return;
         }
-        final File parent = file.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            throw new IOException("Failed to create policy profile directory: " + parent.getAbsolutePath());
-        }
-        final YamlConfiguration yaml = new YamlConfiguration();
-        for (final CatalogPolicy policy : CatalogPolicy.values()) {
-            final AdminCatalogPolicyProfile profile = defaultProfile(policy);
-            final String base = "policies." + profile.id();
-            yaml.set(base + ".runtime-policy", profile.runtimePolicy());
-            yaml.set(base + ".buy-enabled", profile.buyEnabled());
-            yaml.set(base + ".sell-enabled", profile.sellEnabled());
-            yaml.set(base + ".stock-backed", profile.stockBacked());
-            yaml.set(base + ".unlimited-buy", profile.unlimitedBuy());
-            yaml.set(base + ".requires-player-stock-to-buy", profile.requiresPlayerStockToBuy());
-            yaml.set(base + ".default-stock-profile", profile.defaultStockProfile());
-            yaml.set(base + ".default-eco-envelope", profile.defaultEcoEnvelope());
-            yaml.set(base + ".description", profile.description());
-        }
-        yaml.save(file);
+        throw new IOException(
+            "Required config file 'policy-profiles.yml' is missing at "
+                + file.getAbsolutePath()
+                + ". Run /shopadmin reload to regenerate bundled defaults, then review the file before rerunning this action."
+        );
     }
 }
-

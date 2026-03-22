@@ -257,8 +257,14 @@ public final class ConfigLoader {
 
     private FileConfiguration loadYaml(final String resourceName) {
         final File file = new File(this.plugin.getDataFolder(), resourceName);
-        if (!file.exists()) {
-            this.plugin.saveResource(resourceName, false);
+        if (!file.isFile()) {
+            throw new IllegalStateException(
+                "Required config file '"
+                    + resourceName
+                    + "' is missing at "
+                    + file.getAbsolutePath()
+                    + ". Run /shopadmin reload to regenerate bundled defaults, then review the file before continuing."
+            );
         }
         return YamlConfiguration.loadConfiguration(file);
     }
@@ -344,4 +350,3 @@ public final class ConfigLoader {
         }
     }
 }
-

@@ -1,16 +1,19 @@
 package com.splatage.wild_economy.bootstrap;
 
 import com.splatage.wild_economy.WildEconomyPlugin;
+import com.splatage.wild_economy.config.ManagedConfigMaterializer;
 
 public final class PluginBootstrap {
 
     private final WildEconomyPlugin plugin;
+    private final ManagedConfigMaterializer managedConfigMaterializer;
     private final Object lifecycleLock = new Object();
 
     private ServiceRegistry services;
 
     public PluginBootstrap(final WildEconomyPlugin plugin) {
         this.plugin = plugin;
+        this.managedConfigMaterializer = new ManagedConfigMaterializer(plugin);
     }
 
     public void enable() {
@@ -47,6 +50,9 @@ public final class PluginBootstrap {
     }
 
     private ServiceRegistry startServices() {
+        this.managedConfigMaterializer.ensureManagedFiles();
+        this.plugin.reloadConfig();
+
         final ServiceRegistry registry = new ServiceRegistry(this.plugin);
         registry.initialize();
         registry.registerCommands();
