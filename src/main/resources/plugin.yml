@@ -18,36 +18,72 @@ commands:
     usage: /shop [sellhand|sellall|sellcontainer]
     aliases: [exchange]
     permission: wild_economy.shop
+
   sellhand:
     description: Sell the item in your hand to the Exchange.
     usage: /sellhand
     permission: wild_economy.shop.sell
+
   sellall:
     description: Sell all sellable items in your inventory to the Exchange.
     usage: /sellall
     permission: wild_economy.shop.sell
+
   sellcontainer:
     description: Sell the contents of a looked-at container or held shulker box.
     usage: /sellcontainer
     permission: wild_economy.shop.sellcontainer
+
   shopadmin:
     description: Admin commands for wild_economy.
     usage: /shopadmin
-    permission: wild_economy.admin
+    permission: wild_economy.admin.view
 
 permissions:
   wild_economy.shop:
     description: Allows use of player shop commands.
     default: true
+
   wild_economy.shop.sell:
     description: Allows selling to the Exchange.
     default: true
+
   wild_economy.shop.sellcontainer:
     description: Allows selling the contents of supported containers.
     default: true
+
   wild_economy.shop.buy:
     description: Allows buying from the Exchange.
     default: true
+
   wild_economy.admin:
-    description: Allows administrative use of wild_economy.
+    description: Allows full administrative use of wild_economy.
     default: op
+    children:
+      wild_economy.admin.view: true
+      wild_economy.admin.reload: true
+      wild_economy.admin.apply: true
+      wild_economy.admin.override: true
+
+  wild_economy.admin.view:
+    description: Allows viewing admin catalog reports and the admin review GUI.
+    default: op
+
+  wild_economy.admin.reload:
+    description: Allows reloading managed configs and wild_economy runtime state.
+    default: op
+    children:
+      wild_economy.admin.view: true
+
+  wild_economy.admin.apply:
+    description: Allows publishing the generated live catalog.
+    default: op
+    children:
+      wild_economy.admin.view: true
+
+  wild_economy.admin.override:
+    description: Allows editing manual catalog overrides from the admin GUI.
+    default: op
+    children:
+      wild_economy.admin.view: true
+

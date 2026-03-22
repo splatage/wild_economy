@@ -31,6 +31,10 @@ import org.bukkit.inventory.InventoryHolder;
 
 public final class AdminMenuRouter {
 
+    private static final String PERMISSION_VIEW = "wild_economy.admin.view";
+    private static final String PERMISSION_APPLY = "wild_economy.admin.apply";
+    private static final String PERMISSION_OVERRIDE = "wild_economy.admin.override";
+
     private final WildEconomyPlugin plugin;
     private final PlatformExecutor platformExecutor;
     private final AdminCatalogPhaseOneService catalogService;
@@ -62,14 +66,28 @@ public final class AdminMenuRouter {
     }
 
     public void openRoot(final Player player) {
+        if (!this.ensureViewPermission(player)) {
+            return;
+        }
         this.rebuildAndOpenRoot(player, "preview", false);
     }
 
     public void openRoot(final Player player, final AdminCatalogViewState state) {
+        if (!this.ensureViewPermission(player)) {
+            return;
+        }
         this.platformExecutor.runOnPlayer(player, () -> this.adminRootMenu.open(player, state));
     }
 
     public void rebuildAndOpenRoot(final Player player, final String actionName, final boolean apply) {
+        if (apply || this.isApplyConfirmAction(actionName)) {
+            if (!this.ensureApplyPermission(player)) {
+                return;
+            }
+        } else if (!this.ensureViewPermission(player)) {
+            return;
+        }
+
         try {
             final AdminCatalogViewState state = this.buildState(apply, actionName);
             if (apply) {
@@ -96,6 +114,9 @@ public final class AdminMenuRouter {
     }
 
     public void openReviewBucketList(final Player player, final AdminCatalogViewState state, final int pageIndex, final String sortMode) {
+        if (!this.ensureViewPermission(player)) {
+            return;
+        }
         this.platformExecutor.runOnPlayer(player, () -> this.adminReviewBucketMenu.openList(player, state, pageIndex, sortMode));
     }
 
@@ -110,6 +131,9 @@ public final class AdminMenuRouter {
         final int pageIndex,
         final String sortMode
     ) {
+        if (!this.ensureViewPermission(player)) {
+            return;
+        }
         this.platformExecutor.runOnPlayer(player, () -> this.adminReviewBucketMenu.openDetail(player, state, bucketId, pageIndex, sortMode));
     }
 
@@ -121,7 +145,13 @@ public final class AdminMenuRouter {
         final int pageIndex,
         final String sortMode
     ) {
-        this.platformExecutor.runOnPlayer(player, () -> this.adminReviewBucketMenu.openSubgroupDetail(player, state, bucketId, subgroupId, pageIndex, sortMode));
+        if (!this.ensureViewPermission(player)) {
+            return;
+        }
+        this.platformExecutor.runOnPlayer(
+            player,
+            () -> this.adminReviewBucketMenu.openSubgroupDetail(player, state, bucketId, subgroupId, pageIndex, sortMode)
+        );
     }
 
     public void openRuleImpactList(final Player player, final AdminCatalogViewState state) {
@@ -129,6 +159,9 @@ public final class AdminMenuRouter {
     }
 
     public void openRuleImpactList(final Player player, final AdminCatalogViewState state, final int pageIndex, final String sortMode) {
+        if (!this.ensureViewPermission(player)) {
+            return;
+        }
         this.platformExecutor.runOnPlayer(player, () -> this.adminRuleImpactMenu.openList(player, state, pageIndex, sortMode));
     }
 
@@ -143,6 +176,9 @@ public final class AdminMenuRouter {
         final int pageIndex,
         final String sortMode
     ) {
+        if (!this.ensureViewPermission(player)) {
+            return;
+        }
         this.platformExecutor.runOnPlayer(player, () -> this.adminRuleImpactMenu.openDetail(player, state, ruleId, pageIndex, sortMode));
     }
 
@@ -154,7 +190,13 @@ public final class AdminMenuRouter {
         final int pageIndex,
         final String sortMode
     ) {
-        this.platformExecutor.runOnPlayer(player, () -> this.adminRuleImpactMenu.openSampleDetail(player, state, ruleId, sampleGroupId, pageIndex, sortMode));
+        if (!this.ensureViewPermission(player)) {
+            return;
+        }
+        this.platformExecutor.runOnPlayer(
+            player,
+            () -> this.adminRuleImpactMenu.openSampleDetail(player, state, ruleId, sampleGroupId, pageIndex, sortMode)
+        );
     }
 
     public void openItemInspector(
@@ -166,7 +208,13 @@ public final class AdminMenuRouter {
         final int pageIndex,
         final String sortMode
     ) {
-        this.platformExecutor.runOnPlayer(player, () -> this.adminItemInspectorMenu.open(player, state, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode));
+        if (!this.ensureViewPermission(player)) {
+            return;
+        }
+        this.platformExecutor.runOnPlayer(
+            player,
+            () -> this.adminItemInspectorMenu.open(player, state, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode)
+        );
     }
 
     public void openOverrideEditor(
@@ -178,17 +226,23 @@ public final class AdminMenuRouter {
         final int pageIndex,
         final String sortMode
     ) {
+        if (!this.ensureOverridePermission(player)) {
+            return;
+        }
+
         final AdminCatalogDecisionTrace trace = state.findTrace(itemKey);
         if (trace == null) {
             player.sendMessage(ChatColor.RED + "No generated catalog decision found for '" + itemKey + "'.");
             this.openRoot(player, state);
             return;
         }
+
         final AdminCatalogManualOverride override = this.manualOverrideEditor.loadOverride(itemKey);
         final String policy = override != null && override.policy() != null ? override.policy().name() : trace.finalPolicy().name();
         final String stockProfile = override != null && hasText(override.stockProfile()) ? override.stockProfile() : trace.stockProfile();
         final String ecoEnvelope = override != null && hasText(override.ecoEnvelope()) ? override.ecoEnvelope() : trace.ecoEnvelope();
         final String note = override != null ? blankToEmpty(override.note()) : blankToEmpty(trace.note());
+
         this.openOverrideEditor(player, state, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode, policy, stockProfile, ecoEnvelope, note, null);
     }
 
@@ -206,20 +260,26 @@ public final class AdminMenuRouter {
         final String overrideNote,
         final String actionId
     ) {
-        this.platformExecutor.runOnPlayer(player, () -> this.adminOverrideEditMenu.open(
+        if (!this.ensureOverridePermission(player)) {
+            return;
+        }
+        this.platformExecutor.runOnPlayer(
             player,
-            state,
-            itemKey,
-            returnBucketId,
-            returnRuleId,
-            pageIndex,
-            sortMode,
-            overridePolicy,
-            overrideStockProfile,
-            overrideEcoEnvelope,
-            overrideNote,
-            actionId
-        ));
+            () -> this.adminOverrideEditMenu.open(
+                player,
+                state,
+                itemKey,
+                returnBucketId,
+                returnRuleId,
+                pageIndex,
+                sortMode,
+                overridePolicy,
+                overrideStockProfile,
+                overrideEcoEnvelope,
+                overrideNote,
+                actionId
+            )
+        );
     }
 
     public void saveManualOverrideAndInspect(
@@ -235,6 +295,10 @@ public final class AdminMenuRouter {
         final String overrideEcoEnvelope,
         final String overrideNote
     ) {
+        if (!this.ensureOverridePermission(player)) {
+            return;
+        }
+
         try {
             if (!this.manualOverrideEditor.stockProfileExists(overrideStockProfile)) {
                 player.sendMessage(ChatColor.RED + "Unknown stock profile: " + overrideStockProfile);
@@ -244,8 +308,10 @@ public final class AdminMenuRouter {
                 player.sendMessage(ChatColor.RED + "Unknown eco envelope: " + overrideEcoEnvelope);
                 return;
             }
+
             this.manualOverrideEditor.saveOverride(itemKey, overridePolicy, overrideStockProfile, overrideEcoEnvelope, overrideNote);
             player.sendMessage(ChatColor.GREEN + "Saved manual override for " + AdminCatalogItemKeys.canonicalize(itemKey) + ".");
+
             final AdminCatalogViewState refreshedState = this.buildState(false, "preview");
             this.openItemInspector(player, refreshedState, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode);
         } catch (final IOException exception) {
@@ -263,6 +329,10 @@ public final class AdminMenuRouter {
         final int pageIndex,
         final String sortMode
     ) {
+        if (!this.ensureOverridePermission(player)) {
+            return;
+        }
+
         try {
             final boolean removed = this.manualOverrideEditor.removeOverride(itemKey);
             if (removed) {
@@ -270,6 +340,7 @@ public final class AdminMenuRouter {
             } else {
                 player.sendMessage(ChatColor.YELLOW + "No manual override existed for " + AdminCatalogItemKeys.canonicalize(itemKey) + ".");
             }
+
             final AdminCatalogViewState refreshedState = this.buildState(false, "preview");
             this.openItemInspector(player, refreshedState, itemKey, returnBucketId, returnRuleId, pageIndex, sortMode);
         } catch (final IOException exception) {
@@ -311,11 +382,16 @@ public final class AdminMenuRouter {
     }
 
     public void goBack(final Player player) {
+        if (!this.ensureViewPermission(player)) {
+            return;
+        }
+
         final AdminMenuHolder holder = this.currentHolder(player);
         if (holder == null) {
             this.openRoot(player);
             return;
         }
+
         switch (holder.viewType()) {
             case ROOT -> this.openRoot(player);
             case REVIEW_BUCKET_LIST -> this.openRoot(player, holder.state());
@@ -372,10 +448,8 @@ public final class AdminMenuRouter {
     private AdminCatalogViewState buildState(final boolean apply, final String actionName) throws IOException {
         final AdminCatalogBuildResult buildResult = this.catalogService.build(apply);
         final File generatedDirectory = buildResult.generatedDirectory();
-        final List<AdminCatalogRuleImpact> ruleImpacts =
-            this.loadRuleImpacts(new File(generatedDirectory, "generated-rule-impacts.yml"));
-        final List<AdminCatalogReviewBucket> reviewBuckets =
-            this.loadReviewBuckets(new File(generatedDirectory, "generated-review-buckets.yml"));
+        final List<AdminCatalogRuleImpact> ruleImpacts = this.loadRuleImpacts(new File(generatedDirectory, "generated-rule-impacts.yml"));
+        final List<AdminCatalogReviewBucket> reviewBuckets = this.loadReviewBuckets(new File(generatedDirectory, "generated-review-buckets.yml"));
         return new AdminCatalogViewState(buildResult, ruleImpacts, reviewBuckets, actionName);
     }
 
@@ -383,31 +457,35 @@ public final class AdminMenuRouter {
         if (!file.isFile()) {
             return List.of();
         }
+
         final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         final ConfigurationSection rulesSection = yaml.getConfigurationSection("rules");
         if (rulesSection == null) {
             return List.of();
         }
+
         final List<AdminCatalogRuleImpact> ruleImpacts = new ArrayList<>();
         for (final String ruleId : rulesSection.getKeys(false)) {
             final ConfigurationSection section = rulesSection.getConfigurationSection(ruleId);
             if (section == null) {
                 continue;
             }
-            ruleImpacts.add(new AdminCatalogRuleImpact(
-                ruleId,
-                section.getBoolean("fallback-rule"),
-                section.getBoolean("has-match-criteria"),
-                section.getInt("match-count"),
-                section.getInt("win-count"),
-                section.getInt("loss-count"),
-                this.loadPolicyCounts(section.getConfigurationSection("winning-policies")),
-                this.loadPolicyCounts(section.getConfigurationSection("lost-to-policies")),
-                this.loadStringCounts(section.getConfigurationSection("lost-to-rules")),
-                section.getStringList("sample-matched-items"),
-                section.getStringList("sample-winning-items"),
-                section.getStringList("sample-lost-items")
-            ));
+            ruleImpacts.add(
+                new AdminCatalogRuleImpact(
+                    ruleId,
+                    section.getBoolean("fallback-rule"),
+                    section.getBoolean("has-match-criteria"),
+                    section.getInt("match-count"),
+                    section.getInt("win-count"),
+                    section.getInt("loss-count"),
+                    this.loadPolicyCounts(section.getConfigurationSection("winning-policies")),
+                    this.loadPolicyCounts(section.getConfigurationSection("lost-to-policies")),
+                    this.loadStringCounts(section.getConfigurationSection("lost-to-rules")),
+                    section.getStringList("sample-matched-items"),
+                    section.getStringList("sample-winning-items"),
+                    section.getStringList("sample-lost-items")
+                )
+            );
         }
         return ruleImpacts;
     }
@@ -416,26 +494,31 @@ public final class AdminMenuRouter {
         if (!file.isFile()) {
             return List.of();
         }
+
         final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         final ConfigurationSection bucketsSection = yaml.getConfigurationSection("buckets");
         if (bucketsSection == null) {
             return List.of();
         }
+
         final List<AdminCatalogReviewBucket> reviewBuckets = new ArrayList<>();
         for (final String bucketId : bucketsSection.getKeys(false)) {
             final ConfigurationSection section = bucketsSection.getConfigurationSection(bucketId);
             if (section == null) {
                 continue;
             }
-            reviewBuckets.add(new AdminCatalogReviewBucket(
-                bucketId,
-                section.getString("description", ""),
-                section.getInt("count"),
-                section.getStringList("sample-items"),
-                this.loadStringCounts(section.getConfigurationSection("subgroup-counts")),
-                this.loadSampleMap(section.getConfigurationSection("subgroup-sample-items"))
-            ));
+            reviewBuckets.add(
+                new AdminCatalogReviewBucket(
+                    bucketId,
+                    section.getString("description", ""),
+                    section.getInt("count"),
+                    section.getStringList("sample-items"),
+                    this.loadStringCounts(section.getConfigurationSection("subgroup-counts")),
+                    this.loadSampleMap(section.getConfigurationSection("subgroup-sample-items"))
+                )
+            );
         }
+
         reviewBuckets.sort(Comparator.comparingInt(AdminCatalogReviewBucket::count).reversed());
         return reviewBuckets;
     }
@@ -443,14 +526,15 @@ public final class AdminMenuRouter {
     private Map<CatalogPolicy, Integer> loadPolicyCounts(final ConfigurationSection section) {
         final Map<CatalogPolicy, Integer> counts = new EnumMap<>(CatalogPolicy.class);
         for (final CatalogPolicy policy : CatalogPolicy.values()) {
-            counts.put(policy, Integer.valueOf(0));
+            counts.put(policy, 0);
         }
         if (section == null) {
             return counts;
         }
+
         for (final String key : section.getKeys(false)) {
             try {
-                counts.put(CatalogPolicy.valueOf(key.toUpperCase(Locale.ROOT)), Integer.valueOf(section.getInt(key)));
+                counts.put(CatalogPolicy.valueOf(key.toUpperCase(Locale.ROOT)), section.getInt(key));
             } catch (final IllegalArgumentException ignored) {
             }
         }
@@ -463,7 +547,7 @@ public final class AdminMenuRouter {
             return counts;
         }
         for (final String key : section.getKeys(false)) {
-            counts.put(key, Integer.valueOf(section.getInt(key)));
+            counts.put(key, section.getInt(key));
         }
         return counts;
     }
@@ -482,7 +566,10 @@ public final class AdminMenuRouter {
     private void sendActionSummary(final Player player, final AdminCatalogViewState state, final String actionName) {
         final AdminCatalogBuildResult result = state.buildResult();
         player.sendMessage(
-            ChatColor.GOLD + "Catalog " + actionName + " complete: scanned "
+            ChatColor.GOLD
+                + "Catalog "
+                + actionName
+                + " complete: scanned "
                 + result.totalScanned()
                 + ", proposed "
                 + result.proposedEntries().size()
@@ -491,7 +578,12 @@ public final class AdminMenuRouter {
                 + "."
         );
         player.sendMessage(
-            ChatColor.YELLOW + "Warnings " + result.warningCount() + ", errors " + result.errorCount() + ". Reports written to "
+            ChatColor.YELLOW
+                + "Warnings "
+                + result.warningCount()
+                + ", errors "
+                + result.errorCount()
+                + ". Reports written to "
                 + result.generatedDirectory().getPath()
                 + "."
         );
@@ -504,8 +596,14 @@ public final class AdminMenuRouter {
     private void sendApplyConfirmMessage(final Player player, final AdminCatalogViewState state) {
         final AdminCatalogBuildResult result = state.buildResult();
         player.sendMessage(
-            ChatColor.RED + "Apply armed: " + result.liveEntries().size() + " live items, " + result.warningCount()
-                + " warnings, " + result.errorCount() + " errors."
+            ChatColor.RED
+                + "Apply armed: "
+                + result.liveEntries().size()
+                + " live items, "
+                + result.warningCount()
+                + " warnings, "
+                + result.errorCount()
+                + " errors."
         );
         player.sendMessage(ChatColor.YELLOW + "Click Confirm Apply in the GUI to publish, or Cancel Apply to return.");
     }
@@ -520,6 +618,38 @@ public final class AdminMenuRouter {
         player.sendMessage(ChatColor.YELLOW + "Reloading plugin to apply the new live catalog...");
     }
 
+    private boolean ensureViewPermission(final Player player) {
+        return this.ensurePermission(
+            player,
+            PERMISSION_VIEW,
+            ChatColor.RED + "You do not have permission to view wild_economy admin screens."
+        );
+    }
+
+    private boolean ensureApplyPermission(final Player player) {
+        return this.ensurePermission(
+            player,
+            PERMISSION_APPLY,
+            ChatColor.RED + "You do not have permission to publish the generated live catalog."
+        );
+    }
+
+    private boolean ensureOverridePermission(final Player player) {
+        return this.ensurePermission(
+            player,
+            PERMISSION_OVERRIDE,
+            ChatColor.RED + "You do not have permission to edit manual catalog overrides."
+        );
+    }
+
+    private boolean ensurePermission(final Player player, final String permission, final String message) {
+        if (player.hasPermission(permission)) {
+            return true;
+        }
+        player.sendMessage(message);
+        return false;
+    }
+
     private static boolean hasText(final String value) {
         return value != null && !value.isBlank();
     }
@@ -528,5 +658,4 @@ public final class AdminMenuRouter {
         return value == null ? "" : value;
     }
 }
-
 

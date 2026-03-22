@@ -7,11 +7,11 @@ import com.splatage.wild_economy.catalog.admin.AdminCatalogDiffEntry;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogItemKeys;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogPhaseOneService;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogPlanEntry;
-import com.splatage.wild_economy.gui.admin.AdminMenuRouter;
 import com.splatage.wild_economy.catalog.admin.AdminCatalogValidationIssue;
 import com.splatage.wild_economy.catalog.derive.DerivationReason;
 import com.splatage.wild_economy.catalog.model.CatalogCategory;
 import com.splatage.wild_economy.catalog.model.CatalogPolicy;
+import com.splatage.wild_economy.gui.admin.AdminMenuRouter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -20,12 +20,16 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
 public final class ShopAdminCommand implements CommandExecutor {
+
+    private static final String PERMISSION_VIEW = "wild_economy.admin.view";
+    private static final String PERMISSION_RELOAD = "wild_economy.admin.reload";
+    private static final String PERMISSION_APPLY = "wild_economy.admin.apply";
 
     private final WildEconomyPlugin plugin;
     private final AdminCatalogPhaseOneService catalogService;
@@ -46,6 +50,13 @@ public final class ShopAdminCommand implements CommandExecutor {
     ) {
         if (args.length == 0) {
             if (sender instanceof Player player) {
+                if (!this.ensurePermission(
+                    sender,
+                    PERMISSION_VIEW,
+                    ChatColor.RED + "You do not have permission to view wild_economy admin screens."
+                )) {
+                    return true;
+                }
                 this.adminMenuRouter.openRoot(player);
             } else {
                 this.sendUsage(sender);
@@ -55,11 +66,47 @@ public final class ShopAdminCommand implements CommandExecutor {
 
         final String subcommand = args[0].toLowerCase(Locale.ROOT);
         return switch (subcommand) {
-            case "reload" -> this.handleReload(sender);
-            case "gui" -> this.handleGui(sender);
-            case "generatecatalog" -> this.handleCatalogPreview(sender);
+            case "reload" -> {
+                if (!this.ensurePermission(
+                    sender,
+                    PERMISSION_RELOAD,
+                    ChatColor.RED + "You do not have permission to reload wild_economy."
+                )) {
+                    yield true;
+                }
+                yield this.handleReload(sender);
+            }
+            case "gui" -> {
+                if (!this.ensurePermission(
+                    sender,
+                    PERMISSION_VIEW,
+                    ChatColor.RED + "You do not have permission to view wild_economy admin screens."
+                )) {
+                    yield true;
+                }
+                yield this.handleGui(sender);
+            }
+            case "generatecatalog" -> {
+                if (!this.ensurePermission(
+                    sender,
+                    PERMISSION_VIEW,
+                    ChatColor.RED + "You do not have permission to preview the generated catalog."
+                )) {
+                    yield true;
+                }
+                yield this.handleCatalogPreview(sender);
+            }
             case "catalog" -> this.handleCatalog(sender, args);
-            case "item" -> this.handleItemInspect(sender, args);
+            case "item" -> {
+                if (!this.ensurePermission(
+                    sender,
+                    PERMISSION_VIEW,
+                    ChatColor.RED + "You do not have permission to inspect generated catalog items."
+                )) {
+                    yield true;
+                }
+                yield this.handleItemInspect(sender, args);
+            }
             default -> {
                 sender.sendMessage(ChatColor.RED + "Unknown admin subcommand.");
                 this.sendUsage(sender);
@@ -76,10 +123,46 @@ public final class ShopAdminCommand implements CommandExecutor {
 
         final String action = args[1].toLowerCase(Locale.ROOT);
         return switch (action) {
-            case "preview" -> this.handleCatalogPreview(sender);
-            case "validate" -> this.handleCatalogValidate(sender);
-            case "diff" -> this.handleCatalogDiff(sender);
-            case "apply" -> this.handleCatalogApply(sender);
+            case "preview" -> {
+                if (!this.ensurePermission(
+                    sender,
+                    PERMISSION_VIEW,
+                    ChatColor.RED + "You do not have permission to preview the generated catalog."
+                )) {
+                    yield true;
+                }
+                yield this.handleCatalogPreview(sender);
+            }
+            case "validate" -> {
+                if (!this.ensurePermission(
+                    sender,
+                    PERMISSION_VIEW,
+                    ChatColor.RED + "You do not have permission to validate the generated catalog."
+                )) {
+                    yield true;
+                }
+                yield this.handleCatalogValidate(sender);
+            }
+            case "diff" -> {
+                if (!this.ensurePermission(
+                    sender,
+                    PERMISSION_VIEW,
+                    ChatColor.RED + "You do not have permission to diff the generated catalog."
+                )) {
+                    yield true;
+                }
+                yield this.handleCatalogDiff(sender);
+            }
+            case "apply" -> {
+                if (!this.ensurePermission(
+                    sender,
+                    PERMISSION_APPLY,
+                    ChatColor.RED + "You do not have permission to publish the generated live catalog."
+                )) {
+                    yield true;
+                }
+                yield this.handleCatalogApply(sender);
+            }
             default -> {
                 sender.sendMessage(ChatColor.RED + "Unknown catalog action.");
                 sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin catalog <preview|validate|diff|apply>.");
@@ -93,6 +176,15 @@ public final class ShopAdminCommand implements CommandExecutor {
             sender.sendMessage(ChatColor.RED + "Only players can open the admin review GUI.");
             return true;
         }
+
+        if (!this.ensurePermission(
+            sender,
+            PERMISSION_VIEW,
+            ChatColor.RED + "You do not have permission to view wild_economy admin screens."
+        )) {
+            return true;
+        }
+
         this.adminMenuRouter.openRoot(player);
         return true;
     }
@@ -124,7 +216,6 @@ public final class ShopAdminCommand implements CommandExecutor {
         return this.runCatalogAction(sender, "apply", true, false);
     }
 
-
     private boolean handleItemInspect(final CommandSender sender, final String[] args) {
         if (args.length < 2) {
             sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin item <item_key>.");
@@ -134,6 +225,7 @@ public final class ShopAdminCommand implements CommandExecutor {
         try {
             final AdminCatalogBuildResult result = this.catalogService.build(false);
             final String requestedKey = AdminCatalogItemKeys.canonicalize(args[1]);
+
             AdminCatalogDecisionTrace trace = null;
             for (final AdminCatalogDecisionTrace candidate : result.decisionTraces()) {
                 if (requestedKey.equals(AdminCatalogItemKeys.canonicalize(candidate.itemKey()))) {
@@ -167,12 +259,7 @@ public final class ShopAdminCommand implements CommandExecutor {
             sender.sendMessage(ChatColor.GOLD + "Item inspector: " + trace.displayName() + ChatColor.GRAY + " (" + trace.itemKey() + ")");
             sender.sendMessage(this.formatCategoryLine(trace));
             sender.sendMessage(
-                ChatColor.YELLOW
-                    + "Derivation: "
-                    + trace.derivationReason().name()
-                    + ", depth "
-                    + String.valueOf(trace.derivationDepth())
-                    + "."
+                ChatColor.YELLOW + "Derivation: " + trace.derivationReason().name() + ", depth " + trace.derivationDepth() + "."
             );
             sender.sendMessage(ChatColor.AQUA + "Base suggested policy: " + trace.baseSuggestedPolicy().name());
             sender.sendMessage(
@@ -185,6 +272,7 @@ public final class ShopAdminCommand implements CommandExecutor {
                     + trace.ecoEnvelope()
                     + "."
             );
+
             if (planEntry != null) {
                 sender.sendMessage(
                     ChatColor.AQUA
@@ -193,9 +281,9 @@ public final class ShopAdminCommand implements CommandExecutor {
                         + ", policy-profile="
                         + planEntry.policyProfileId()
                         + ", buy-price="
-                        + String.valueOf(planEntry.buyPrice())
+                        + planEntry.buyPrice()
                         + ", sell-price="
-                        + String.valueOf(planEntry.sellPrice())
+                        + planEntry.sellPrice()
                         + "."
                 );
                 sender.sendMessage(
@@ -218,16 +306,20 @@ public final class ShopAdminCommand implements CommandExecutor {
             if (!matchedButLost.isEmpty()) {
                 sender.sendMessage(ChatColor.GRAY + "Matched but lost: " + matchedButLost + ".");
             }
+
             sender.sendMessage(ChatColor.GRAY + "Manual override: " + (trace.manualOverrideApplied() ? "yes" : "no") + ".");
             if (!reviewBuckets.isEmpty()) {
                 sender.sendMessage(ChatColor.GREEN + "Review buckets: " + reviewBuckets + ".");
             }
+
             if (trace.postRuleAdjustment() != null && !trace.postRuleAdjustment().isBlank()) {
                 sender.sendMessage(ChatColor.YELLOW + "Adjustment: " + trace.postRuleAdjustment());
             }
+
             if (trace.note() != null && !trace.note().isBlank()) {
                 sender.sendMessage(ChatColor.GRAY + "Notes: " + trace.note());
             }
+
             sender.sendMessage(
                 ChatColor.GREEN
                     + "Detailed traces are also written to "
@@ -246,12 +338,7 @@ public final class ShopAdminCommand implements CommandExecutor {
         if (trace.classifiedCategory() == trace.finalCategory()) {
             return ChatColor.YELLOW + "Category: " + trace.finalCategory().name() + ".";
         }
-        return ChatColor.YELLOW
-            + "Category: "
-            + trace.classifiedCategory().name()
-            + " -> "
-            + trace.finalCategory().name()
-            + ".";
+        return ChatColor.YELLOW + "Category: " + trace.classifiedCategory().name() + " -> " + trace.finalCategory().name() + ".";
     }
 
     private String buildDecisionSourceLine(
@@ -262,20 +349,13 @@ public final class ShopAdminCommand implements CommandExecutor {
         if (winningRuleId == null || winningRuleId.isBlank()) {
             return "Decision source: none recorded.";
         }
-
         if (trace.matchedRuleIds().isEmpty()) {
             return "Decision source: fallback rule " + winningRuleId + ".";
         }
-
-        return "Decision source: rule "
-            + winningRuleId
-            + ", matched specific rules="
-            + trace.matchedRuleIds()
-            + ".";
+        return "Decision source: rule " + winningRuleId + ", matched specific rules=" + trace.matchedRuleIds() + ".";
     }
 
     private boolean runCatalogAction(
-
         final CommandSender sender,
         final String actionName,
         final boolean apply,
@@ -283,7 +363,6 @@ public final class ShopAdminCommand implements CommandExecutor {
     ) {
         try {
             final AdminCatalogBuildResult result = this.catalogService.build(apply);
-
             this.sendSummary(sender, result, actionName);
             this.sendValidationSummary(sender, result);
             this.sendPolicySummary(sender, result);
@@ -302,6 +381,7 @@ public final class ShopAdminCommand implements CommandExecutor {
             } else {
                 sender.sendMessage(ChatColor.GREEN + "Generated reports written to " + result.generatedDirectory().getPath());
             }
+
             sender.sendMessage(
                 ChatColor.GREEN
                     + "Additional review reports: generated/generated-rule-impacts.yml and generated/generated-review-buckets.yml."
@@ -347,17 +427,13 @@ public final class ShopAdminCommand implements CommandExecutor {
         }
 
         for (final AdminCatalogValidationIssue issue : result.validationIssues().stream().limit(6).toList()) {
-            final ChatColor color = issue.severity() == AdminCatalogValidationIssue.Severity.ERROR
-                ? ChatColor.RED
-                : ChatColor.YELLOW;
+            final ChatColor color =
+                issue.severity() == AdminCatalogValidationIssue.Severity.ERROR ? ChatColor.RED : ChatColor.YELLOW;
             sender.sendMessage(color + "[" + issue.severity().name() + "] " + issue.message());
         }
 
         if (result.validationIssues().size() > 6) {
-            sender.sendMessage(
-                ChatColor.YELLOW
-                    + "Additional validation issues were written to generated/generated-validation.yml."
-            );
+            sender.sendMessage(ChatColor.YELLOW + "Additional validation issues were written to generated/generated-validation.yml.");
         }
     }
 
@@ -367,7 +443,6 @@ public final class ShopAdminCommand implements CommandExecutor {
             counts.put(policy, 0);
         }
         result.proposedEntries().forEach(entry -> counts.compute(entry.policy(), (ignored, value) -> value + 1));
-
         sender.sendMessage(
             ChatColor.AQUA
                 + "Policies: ALWAYS_AVAILABLE="
@@ -392,6 +467,7 @@ public final class ShopAdminCommand implements CommandExecutor {
                 liveMiscCount++;
             }
         }
+
         for (final AdminCatalogDecisionTrace trace : result.decisionTraces()) {
             if (trace.derivationReason() == DerivationReason.NO_RECIPE_AND_NO_ROOT) {
                 noRootPathCount++;
@@ -439,24 +515,13 @@ public final class ShopAdminCommand implements CommandExecutor {
             }
         }
 
-        sender.sendMessage(
-            ChatColor.AQUA
-                + "Diff: added "
-                + added
-                + ", removed "
-                + removed
-                + ", changed "
-                + changed
-                + "."
-        );
-
+        sender.sendMessage(ChatColor.AQUA + "Diff: added " + added + ", removed " + removed + ", changed " + changed + ".");
         if (includeTopItems) {
             for (final AdminCatalogDiffEntry entry : result.diffEntries().stream().limit(5).toList()) {
                 sender.sendMessage(ChatColor.GRAY + "- " + entry.itemKey() + ": " + entry.summary());
             }
         }
     }
-
 
     private List<String> findReviewBuckets(
         final AdminCatalogDecisionTrace trace,
@@ -481,6 +546,17 @@ public final class ShopAdminCommand implements CommandExecutor {
         return buckets;
     }
 
+    private boolean ensurePermission(
+        final CommandSender sender,
+        final String permission,
+        final String deniedMessage
+    ) {
+        if (sender.hasPermission(permission)) {
+            return true;
+        }
+        sender.sendMessage(deniedMessage);
+        return false;
+    }
 
     private void sendUsage(final CommandSender sender) {
         sender.sendMessage(ChatColor.YELLOW + "Use /shopadmin to open the admin review GUI.");
