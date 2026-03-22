@@ -1,0 +1,44 @@
+policies:
+  ALWAYS_AVAILABLE:
+    runtime-policy: UNLIMITED_BUY
+    buy-enabled: true
+    sell-enabled: false
+    stock-backed: false
+    unlimited-buy: true
+    requires-player-stock-to-buy: false
+    default-stock-profile: unlimited_buy_utility
+    default-eco-envelope: world_damage_unlimited_buy
+    description: "Unlimited buy from server; no player-stock requirement."
+
+  EXCHANGE:
+    runtime-policy: PLAYER_STOCKED
+    buy-enabled: true
+    sell-enabled: true
+    stock-backed: true
+    unlimited-buy: false
+    requires-player-stock-to-buy: true
+    default-stock-profile: exchange_default
+    default-eco-envelope: exchange_default
+    description: "Player-stocked buy and sell."
+
+  SELL_ONLY:
+    runtime-policy: PLAYER_STOCKED
+    buy-enabled: false
+    sell-enabled: true
+    stock-backed: false
+    unlimited-buy: false
+    requires-player-stock-to-buy: false
+    default-stock-profile: sell_only_cleanup
+    default-eco-envelope: sell_only_cleanup
+    description: "Players can sell; no public buy path."
+
+  DISABLED:
+    runtime-policy: DISABLED
+    buy-enabled: false
+    sell-enabled: false
+    stock-backed: false
+    unlimited-buy: false
+    requires-player-stock-to-buy: false
+    default-stock-profile: disabled_placeholder
+    default-eco-envelope: disabled_placeholder
+    description: "No buy or sell."
