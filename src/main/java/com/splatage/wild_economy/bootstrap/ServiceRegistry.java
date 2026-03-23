@@ -8,6 +8,7 @@ import com.splatage.wild_economy.command.ShopSellAllSubcommand;
 import com.splatage.wild_economy.command.ShopSellContainerSubcommand;
 import com.splatage.wild_economy.command.ShopSellHandSubcommand;
 import com.splatage.wild_economy.config.ConfigLoader;
+import com.splatage.wild_economy.config.ConfigValidator;
 import com.splatage.wild_economy.config.DatabaseConfig;
 import com.splatage.wild_economy.config.EcoEnvelopesConfig;
 import com.splatage.wild_economy.config.ExchangeItemsConfig;
@@ -162,6 +163,14 @@ public final class ServiceRegistry {
             ),
             "exchangeCatalog"
         );
+
+        final ConfigValidator configValidator = new ConfigValidator(
+            this.exchangeItemsConfig,
+            this.ecoEnvelopesConfig,
+            this.stockProfilesConfig,
+            this.exchangeCatalog
+        );
+        configValidator.validate();
 
         final CanonicalItemRules canonicalItemRules = new CanonicalItemRules();
         this.itemNormalizer = new BukkitItemNormalizer(canonicalItemRules);

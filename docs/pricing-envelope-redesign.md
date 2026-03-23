@@ -1,6 +1,6 @@
 # Pricing envelope redesign
 
-Base revision: `b3a28263ada706483b21236a677f4d55edf6a89d`
+Base revision: `891e2ddf184b446a63e03b63afdd8d1185b001f6`
 
 ## Purpose
 
@@ -8,11 +8,12 @@ This note records the pricing redesign direction agreed for the current runtime 
 
 The old design used ordered fill-ratio bands and disconnected stock-profile defaults.
 
-The current direction now has three concrete runtime slices:
+The current direction now has four concrete runtime slices:
 
 1. replace sell bands with a linear sell envelope
 2. wire reusable named `eco-envelope` and `stock-profile` refs into the live runtime path
 3. seed first-run stock from profile or item-level `initial-stock` values without ever resetting persisted live stock on restart
+4. fail fast on contradictory or dangerous pricing config instead of silently tolerating it
 
 ## Buy model
 
