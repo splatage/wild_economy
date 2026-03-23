@@ -57,8 +57,20 @@ For `PLAYER_STOCKED` items:
 - player-stocked purchases consume stock atomically per buy action
 - the per-click buy limit is capped at 64 items
 - stock is consumed before the purchase is finalized so two buyers cannot both receive the same remaining stock
-- the item detail menu captures the shown unit price and the quoted-buy path honors that quoted price for that purchase
-- a later purchase can refresh to a newer live price
+- buy pricing is quoted once per purchase transaction and honored for that transaction
+
+### Detail-menu quoted price behavior
+
+When a player opens an item detail menu:
+
+- the detail menu captures the shown buy unit price
+- the Buy 1 / 8 / 64 buttons use that captured quoted price
+- that quoted price is honored for a click while the menu quote remains fresh
+- stale quoted detail menus are refreshed before purchase instead of honoring an old quote indefinitely
+- the current quote lifetime is 30 seconds
+- after a successful purchase, the detail menu reopens with a fresh live quote for the next buy
+
+This preserves the "shown price is the price you click" rule without letting an old menu pin a stale price forever.
 
 ### Purchase delivery behavior
 
@@ -76,6 +88,8 @@ Important notes:
 - the current looked-at container support covers chest, barrel, and placed shulker box
 - if only part of the purchase can be delivered across the enabled targets, the undelivered remainder is refunded
 - buy result messages include delivery details so players can see where purchased items went
+
+This keeps purchasing flexible for bulk goods while preserving predictable, explicit behavior.
 
 ## Current sell behavior
 
@@ -126,5 +140,13 @@ For `PLAYER_STOCKED` items:
   - floor-price plateau after the taper range
 - payout is rounded once at the end of the batch quote
 
-The current bundled config shape uses named reusable profiles:
+The current live runtime config shape uses named reusable references from `exchange-items.yml` into `eco-envelopes.yml` and `stock-profiles.yml`.
 
+## Shulker safety rules
+
+To protect player trust and prevent accidental storage loss:
+
+- held shulker boxes are treated as belonging to the player holding them
+- placed world containers are subject to protection / access checks
+- broad sell flows do not sell the shulker container item itself
+- sellcontainer only sells the contents of the supported container target

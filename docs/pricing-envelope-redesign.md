@@ -1,17 +1,18 @@
 # Pricing envelope redesign
 
-Base revision: `5584f78e8e2f22b6df20a07444853e3b46660a1e`
+Base revision: `84d841730f5dfa359904f5cb39f5f7581637d863`
 
 ## Purpose
 
-This note records the pricing redesign direction for the current runtime pricing path.
+This note records the pricing redesign direction agreed for the current runtime pricing work.
 
 The old design used ordered fill-ratio bands to taper sell value as stock increased.
 
-The new design uses named reusable eco envelopes:
+The new design uses one linear sell envelope per item through reusable named `eco-envelope` and `stock-profile` references:
 
-- a buy price multiplier
-- a sell price multiplier
+- a base worth
+- a buy multiplier
+- a sell multiplier
 - a minimum stock anchor
 - a maximum stock anchor
 - a floor price factor
@@ -25,9 +26,16 @@ Buy behavior remains intentionally simple.
 - each purchase action is capped at 64 items
 - the player receives a quoted buy price for that one transaction
 - that quoted price is honored for that transaction
-- a later purchase may be priced fresh
+- later purchases may be priced fresh
 
-This keeps purchase behavior predictable and prevents in-transaction repricing surprises.
+For GUI detail-menu buys, there is now one extra hardening rule:
+
+- detail-menu buy quotes are short-lived
+- the shown quoted price is honored for a click while that detail-menu quote remains fresh
+- stale detail-menu quotes refresh before purchase instead of pinning an old quote indefinitely
+- the current detail-menu quote lifetime is 30 seconds
+
+This preserves the user's visible quote expectation without letting long-open menus hold stale buy prices forever.
 
 ## Sell model
 
@@ -43,9 +51,9 @@ That payout is piecewise:
 2. linear taper through the configured stock range
 3. floor-price plateau after the taper completes
 
-The linear section uses trapezoid / averaged integration.
+The linear section uses trapezoid / averaged integration, which matches the current code style while removing the config complexity of bands.
 
-## Runtime config shape
+## Runtime schema
 
-This is now expressed through reusable references in `exchange-items.yml`:
+`exchange-items.yml` provides per-item refs or overrides:
 
