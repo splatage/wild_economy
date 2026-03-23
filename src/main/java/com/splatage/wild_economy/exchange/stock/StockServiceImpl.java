@@ -27,7 +27,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class StockServiceImpl implements StockService {
-
     private static final int SQLITE_QUEUE_CAPACITY = 4096;
     private static final int MYSQL_QUEUE_CAPACITY = 8192;
     private static final int MAX_BATCH_SIZE = 256;
@@ -46,17 +45,16 @@ public final class StockServiceImpl implements StockService {
     private final LongAdder totalFlushedItems;
     private final LongAdder totalFlushOperations;
     private final LongAdder totalFlushFailures;
-
     private volatile long lastFlushDurationMillis;
     private volatile int lastFlushItemCount;
 
     public StockServiceImpl(
-        final ExchangeStockRepository stockRepository,
-        final ExchangeCatalog exchangeCatalog,
-        final StockStateResolver stockStateResolver,
-        final Logger logger,
-        final DatabaseDialect dialect,
-        final int mysqlMaximumPoolSize
+            final ExchangeStockRepository stockRepository,
+            final ExchangeCatalog exchangeCatalog,
+            final StockStateResolver stockStateResolver,
+            final Logger logger,
+            final DatabaseDialect dialect,
+            final int mysqlMaximumPoolSize
     ) {
         this.stockRepository = Objects.requireNonNull(stockRepository, "stockRepository");
         this.exchangeCatalog = Objects.requireNonNull(exchangeCatalog, "exchangeCatalog");
@@ -71,7 +69,6 @@ public final class StockServiceImpl implements StockService {
         this.totalFlushedItems = new LongAdder();
         this.totalFlushOperations = new LongAdder();
         this.totalFlushFailures = new LongAdder();
-
         this.preloadCache();
         this.startFlushScheduler();
     }
@@ -79,17 +76,12 @@ public final class StockServiceImpl implements StockService {
     @Override
     public StockSnapshot getSnapshot(final ItemKey itemKey) {
         Objects.requireNonNull(itemKey, "itemKey");
-
         final ExchangeCatalogEntry entry = this.exchangeCatalog.get(itemKey)
-            .orElseThrow(() -> new IllegalStateException("Missing catalog entry for " + itemKey.value()));
-
+                .orElseThrow(() -> new IllegalStateException("Missing catalog entry for " + itemKey.value()));
         final long stockCount = Math.max(0L, this.stockCache.getOrDefault(itemKey, 0L));
         final long stockCap = Math.max(0L, entry.stockCap());
-        final double fillRatio = stockCap <= 0L
-            ? 0.0D
-            : Math.min(1.0D, (double) stockCount / (double) stockCap);
+        final double fillRatio = stockCap <= 0L ? 0.0D : Math.min(1.0D, (double) stockCount / (double) stockCap);
         final StockState stockState = this.stockStateResolver.resolve(stockCount, stockCap);
-
         return new StockSnapshot(itemKey, stockCount, stockCap, fillRatio, stockState);
     }
 
@@ -108,7 +100,6 @@ public final class StockServiceImpl implements StockService {
         if (amount <= 0) {
             return;
         }
-
         this.stockCache.merge(itemKey, (long) amount, Long::sum);
         this.dirtyKeys.add(itemKey);
     }
@@ -119,18 +110,15 @@ public final class StockServiceImpl implements StockService {
         if (amount <= 0) {
             return true;
         }
-
         final AtomicBoolean consumed = new AtomicBoolean(false);
         this.stockCache.compute(itemKey, (key, current) -> {
             final long currentValue = current == null ? 0L : current;
             if (currentValue < amount) {
                 return currentValue;
             }
-
             consumed.set(true);
             return currentValue - amount;
         });
-
         if (consumed.get()) {
             this.dirtyKeys.add(itemKey);
         }
@@ -143,7 +131,6 @@ public final class StockServiceImpl implements StockService {
         if (amount <= 0) {
             return 0;
         }
-
         final AtomicInteger consumed = new AtomicInteger(0);
         this.stockCache.compute(itemKey, (key, current) -> {
             final long currentValue = current == null ? 0L : current;
@@ -151,7 +138,6 @@ public final class StockServiceImpl implements StockService {
             consumed.set(actualConsumed);
             return currentValue - actualConsumed;
         });
-
         if (consumed.get() > 0) {
             this.dirtyKeys.add(itemKey);
         }
@@ -171,13 +157,11 @@ public final class StockServiceImpl implements StockService {
         if (!this.flushDispatchInProgress.compareAndSet(false, true)) {
             return;
         }
-
         final List<List<ItemKey>> batches = this.snapshotDirtyBatches();
         if (batches.isEmpty()) {
             this.flushDispatchInProgress.set(false);
             return;
         }
-
         this.pendingBatchCount.set(batches.size());
         for (final List<ItemKey> batch : batches) {
             try {
@@ -185,9 +169,9 @@ public final class StockServiceImpl implements StockService {
             } catch (final RejectedExecutionException exception) {
                 this.totalFlushFailures.increment();
                 this.logger.log(
-                    Level.WARNING,
-                    "Stock persistence queue rejected a flush batch. Dirty stock will remain pending for a later flush.",
-                    exception
+                        Level.WARNING,
+                        "Stock persistence queue rejected a flush batch. Dirty stock will remain pending for a later flush.",
+                        exception
                 );
                 if (this.pendingBatchCount.decrementAndGet() == 0) {
                     this.flushDispatchInProgress.set(false);
@@ -199,14 +183,14 @@ public final class StockServiceImpl implements StockService {
     @Override
     public StockMetricsSnapshot metricsSnapshot() {
         return new StockMetricsSnapshot(
-            this.dirtyKeys.size(),
-            this.persistenceExecutor.getQueue().size(),
-            this.flushDispatchInProgress.get(),
-            this.lastFlushDurationMillis,
-            this.lastFlushItemCount,
-            this.totalFlushedItems.sum(),
-            this.totalFlushOperations.sum(),
-            this.totalFlushFailures.sum()
+                this.dirtyKeys.size(),
+                this.persistenceExecutor.getQueue().size(),
+                this.flushDispatchInProgress.get(),
+                this.lastFlushDurationMillis,
+                this.lastFlushItemCount,
+                this.totalFlushedItems.sum(),
+                this.totalFlushOperations.sum(),
+                this.totalFlushFailures.sum()
         );
     }
 
@@ -239,64 +223,32 @@ public final class StockServiceImpl implements StockService {
 
     private void preloadCache() {
         this.stockCache.putAll(this.stockRepository.loadAllStocks());
-        for (final ExchangeCatalogEntry entry : this.exchangeCatalog.allEntries()) {
-            if (this.stockCache.containsKey(entry.itemKey())) {
-                continue;
-            }
-
-            final long seededStock = this.resolveSeededInitialStock(entry);
-            this.stockCache.put(entry.itemKey(), seededStock);
-            if (seededStock > 0L) {
-                this.dirtyKeys.add(entry.itemKey());
-            }
-        }
-    }
-
-    private long resolveSeededInitialStock(final ExchangeCatalogEntry entry) {
-        final long configuredInitialStock = Math.max(0L, entry.initialStock());
-        if (configuredInitialStock <= 0L) {
-            return 0L;
-        }
-
-        final long stockCap = Math.max(0L, entry.stockCap());
-        if (stockCap <= 0L) {
-            return configuredInitialStock;
-        }
-
-        return Math.min(configuredInitialStock, stockCap);
     }
 
     private ThreadPoolExecutor createExecutor(final DatabaseDialect dialect, final int mysqlMaximumPoolSize) {
-        final int workers = dialect == DatabaseDialect.SQLITE
-            ? 1
-            : Math.max(2, Math.min(4, mysqlMaximumPoolSize));
-        final int queueCapacity = dialect == DatabaseDialect.SQLITE
-            ? SQLITE_QUEUE_CAPACITY
-            : MYSQL_QUEUE_CAPACITY;
-        final String threadPrefix = dialect == DatabaseDialect.SQLITE
-            ? "wild-economy-stock-sqlite"
-            : "wild-economy-stock-mysql";
+        final int workers = dialect == DatabaseDialect.SQLITE ? 1 : Math.max(2, Math.min(4, mysqlMaximumPoolSize));
+        final int queueCapacity = dialect == DatabaseDialect.SQLITE ? SQLITE_QUEUE_CAPACITY : MYSQL_QUEUE_CAPACITY;
+        final String threadPrefix = dialect == DatabaseDialect.SQLITE ? "wild-economy-stock-sqlite" : "wild-economy-stock-mysql";
         final AtomicInteger threadCounter = new AtomicInteger(1);
 
         return new ThreadPoolExecutor(
-            workers,
-            workers,
-            0L,
-            TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<>(queueCapacity),
-            runnable -> {
-                final Thread thread = new Thread(runnable, threadPrefix + "-" + threadCounter.getAndIncrement());
-                thread.setDaemon(true);
-                return thread;
-            }
+                workers,
+                workers,
+                0L,
+                TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(queueCapacity),
+                runnable -> {
+                    final Thread thread = new Thread(runnable, threadPrefix + "-" + threadCounter.getAndIncrement());
+                    thread.setDaemon(true);
+                    return thread;
+                }
         );
     }
 
     private ScheduledExecutorService createFlushScheduler(final DatabaseDialect dialect) {
         final String threadName = dialect == DatabaseDialect.SQLITE
-            ? "wild-economy-stock-flush-sqlite"
-            : "wild-economy-stock-flush-mysql";
-
+                ? "wild-economy-stock-flush-sqlite"
+                : "wild-economy-stock-flush-mysql";
         return Executors.newSingleThreadScheduledExecutor(runnable -> {
             final Thread thread = new Thread(runnable, threadName);
             thread.setDaemon(true);
@@ -306,10 +258,10 @@ public final class StockServiceImpl implements StockService {
 
     private void startFlushScheduler() {
         this.flushScheduler.scheduleAtFixedRate(
-            this::safePeriodicFlush,
-            FLUSH_INTERVAL_MILLIS,
-            FLUSH_INTERVAL_MILLIS,
-            TimeUnit.MILLISECONDS
+                this::safePeriodicFlush,
+                FLUSH_INTERVAL_MILLIS,
+                FLUSH_INTERVAL_MILLIS,
+                TimeUnit.MILLISECONDS
         );
     }
 
@@ -387,13 +339,11 @@ public final class StockServiceImpl implements StockService {
             if (batches.isEmpty()) {
                 return;
             }
-
             for (final List<ItemKey> batch : batches) {
                 final Map<ItemKey, Long> snapshot = this.buildFlushSnapshot(batch);
                 if (snapshot.isEmpty()) {
                     continue;
                 }
-
                 try {
                     final long startedAt = System.nanoTime();
                     this.stockRepository.flushStocks(snapshot);
@@ -411,11 +361,11 @@ public final class StockServiceImpl implements StockService {
     private void logShutdownSummary() {
         final StockMetricsSnapshot metrics = this.metricsSnapshot();
         this.logger.info(
-            "Exchange stock persistence summary: flushedItems=" + metrics.totalFlushedItems()
-                + ", flushOperations=" + metrics.totalFlushOperations()
-                + ", flushFailures=" + metrics.totalFlushFailures()
-                + ", dirtyRemaining=" + metrics.dirtyItemCount()
-                + ", queueDepth=" + metrics.queuedPersistenceTasks()
+                "Exchange stock persistence summary: flushedItems=" + metrics.totalFlushedItems()
+                        + ", flushOperations=" + metrics.totalFlushOperations()
+                        + ", flushFailures=" + metrics.totalFlushFailures()
+                        + ", dirtyRemaining=" + metrics.dirtyItemCount()
+                        + ", queueDepth=" + metrics.queuedPersistenceTasks()
         );
     }
 }
