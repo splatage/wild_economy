@@ -4,6 +4,7 @@ import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
+import com.splatage.wild_economy.exchange.domain.SellPriceBand;
 import java.math.BigDecimal;
 
 public record ExchangeCatalogEntry(
@@ -15,9 +16,11 @@ public record ExchangeCatalogEntry(
         BigDecimal baseWorth,
         BigDecimal buyPrice,
         BigDecimal sellPrice,
+        SellPriceBand sellEnvelope,
         long stockCap,
         long turnoverAmountPerInterval,
         boolean buyEnabled,
         boolean sellEnabled
 ) {
 }
+

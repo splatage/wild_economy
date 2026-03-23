@@ -7,12 +7,14 @@ import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
+import com.splatage.wild_economy.exchange.domain.SellPriceBand;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
 
 public final class CatalogMergeService {
     private static final int MONEY_SCALE = 2;
+    private static final int INTERNAL_SCALE = 8;
     private static final RoundingMode MONEY_ROUNDING = RoundingMode.HALF_UP;
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(MONEY_SCALE, MONEY_ROUNDING);
 
@@ -41,6 +43,12 @@ public final class CatalogMergeService {
                 baseWorth,
                 rootValue,
                 ecoEnvelope
+        );
+        final SellPriceBand sellEnvelope = this.resolveSellEnvelope(
+                overrideEntry,
+                baseEntry,
+                ecoEnvelope,
+                sellPrice
         );
 
         final String displayName = overrideEntry.displayName() != null
@@ -93,6 +101,7 @@ public final class CatalogMergeService {
                 baseWorth,
                 buyPrice,
                 sellPrice,
+                sellEnvelope,
                 stockCap,
                 turnoverAmountPerInterval,
                 buyEnabled,
@@ -157,6 +166,54 @@ public final class CatalogMergeService {
         return ZERO;
     }
 
+    private SellPriceBand resolveSellEnvelope(
+            final ExchangeItemsConfig.RawItemEntry overrideEntry,
+            final ExchangeCatalogEntry baseEntry,
+            final EcoEnvelopesConfig.EcoEnvelopeDefinition ecoEnvelope,
+            final BigDecimal resolvedSellPrice
+    ) {
+        if (ecoEnvelope != null) {
+            return new SellPriceBand(
+                    Math.max(0L, ecoEnvelope.minStock()),
+                    Math.max(ecoEnvelope.minStock(), ecoEnvelope.maxStock()),
+                    this.floorPriceFromFactor(resolvedSellPrice, ecoEnvelope.floorPriceFactor())
+            );
+        }
+        if (baseEntry == null || baseEntry.sellEnvelope() == null) {
+            return null;
+        }
+
+        final SellPriceBand baseEnvelope = baseEntry.sellEnvelope();
+        final BigDecimal baseSellPrice = this.scaleMoney(baseEntry.sellPrice());
+        final BigDecimal floorFactor;
+        if (baseSellPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            floorFactor = BigDecimal.ONE;
+        } else {
+            floorFactor = this.scaleInternal(baseEnvelope.minUnitPrice())
+                    .divide(this.scaleInternal(baseSellPrice), INTERNAL_SCALE, MONEY_ROUNDING);
+        }
+
+        return new SellPriceBand(
+                Math.max(0L, baseEnvelope.minStockInclusive()),
+                Math.max(baseEnvelope.minStockInclusive(), baseEnvelope.maxStockInclusive()),
+                this.floorPriceFromFactor(resolvedSellPrice, floorFactor)
+        );
+    }
+
+    private BigDecimal floorPriceFromFactor(final BigDecimal sellPrice, final BigDecimal factor) {
+        final BigDecimal normalizedSellPrice = this.scaleMoney(sellPrice);
+        final BigDecimal normalizedFactor = this.nonNegative(factor);
+        final BigDecimal floorPrice = normalizedSellPrice.multiply(normalizedFactor);
+        return this.clampFloorPrice(this.scaleMoney(floorPrice), normalizedSellPrice);
+    }
+
+    private BigDecimal clampFloorPrice(final BigDecimal floorPrice, final BigDecimal sellPrice) {
+        if (floorPrice.compareTo(sellPrice) > 0) {
+            return sellPrice;
+        }
+        return floorPrice;
+    }
+
     private long resolveLong(final Long explicitValue, final Long baseValue) {
         if (explicitValue != null) {
             return Math.max(0L, explicitValue);
@@ -178,4 +235,12 @@ public final class CatalogMergeService {
         }
         return value.setScale(MONEY_SCALE, MONEY_ROUNDING);
     }
+
+    private BigDecimal scaleInternal(final BigDecimal value) {
+        if (value == null) {
+            return BigDecimal.ZERO.setScale(INTERNAL_SCALE, MONEY_ROUNDING);
+        }
+        return value.setScale(INTERNAL_SCALE, MONEY_ROUNDING);
+    }
 }
+
