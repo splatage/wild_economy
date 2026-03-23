@@ -61,6 +61,7 @@ public final class GeneratedCatalogImporter {
                 baseValue,
                 0L,
                 0L,
+                0L,
                 List.of(),
                 policyMapping.buyEnabled(),
                 policyMapping.sellEnabled()

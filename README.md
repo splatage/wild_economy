@@ -127,5 +127,5 @@ For `PLAYER_STOCKED` items:
   - floor-price plateau after the taper range
 - payout is rounded once at the end of the batch quote
 
-The active runtime config now supports reusable named refs:
+The active runtime config supports reusable named refs in `exchange-items.yml`:
 

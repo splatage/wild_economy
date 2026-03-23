@@ -68,6 +68,11 @@ public final class CatalogMergeService {
             stockProfile != null ? stockProfile.turnoverAmountPerInterval() : null,
             baseEntry != null ? baseEntry.turnoverAmountPerInterval() : null
         );
+        final long initialStock = this.resolveLong(
+            overrideEntry.initialStock(),
+            stockProfile != null ? stockProfile.initialStock() : null,
+            baseEntry != null ? baseEntry.initialStock() : null
+        );
         final List<SellPriceBand> sellPriceBands = this.resolveSellPriceBands(overrideEntry, baseEntry, sellPrice, ecoEnvelope);
 
         return new ExchangeCatalogEntry(
@@ -81,6 +86,7 @@ public final class CatalogMergeService {
             sellPrice,
             stockCap,
             turnoverAmountPerInterval,
+            initialStock,
             sellPriceBands,
             buyEnabled,
             sellEnabled

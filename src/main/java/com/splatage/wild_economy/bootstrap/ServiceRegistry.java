@@ -177,6 +177,7 @@ public final class ServiceRegistry {
             this.databaseProvider.dialect(),
             this.databaseConfig.mysqlMaximumPoolSize()
         );
+        this.stockService.flushDirtyNow();
         this.pricingService = new PricingServiceImpl(this.exchangeCatalog);
 
         this.transactionLogService = new TransactionLogServiceImpl(

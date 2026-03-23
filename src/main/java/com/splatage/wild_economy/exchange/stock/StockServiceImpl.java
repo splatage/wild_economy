@@ -240,8 +240,30 @@ public final class StockServiceImpl implements StockService {
     private void preloadCache() {
         this.stockCache.putAll(this.stockRepository.loadAllStocks());
         for (final ExchangeCatalogEntry entry : this.exchangeCatalog.allEntries()) {
-            this.stockCache.putIfAbsent(entry.itemKey(), 0L);
+            if (this.stockCache.containsKey(entry.itemKey())) {
+                continue;
+            }
+
+            final long seededStock = this.resolveSeededInitialStock(entry);
+            this.stockCache.put(entry.itemKey(), seededStock);
+            if (seededStock > 0L) {
+                this.dirtyKeys.add(entry.itemKey());
+            }
         }
+    }
+
+    private long resolveSeededInitialStock(final ExchangeCatalogEntry entry) {
+        final long configuredInitialStock = Math.max(0L, entry.initialStock());
+        if (configuredInitialStock <= 0L) {
+            return 0L;
+        }
+
+        final long stockCap = Math.max(0L, entry.stockCap());
+        if (stockCap <= 0L) {
+            return configuredInitialStock;
+        }
+
+        return Math.min(configuredInitialStock, stockCap);
     }
 
     private ThreadPoolExecutor createExecutor(final DatabaseDialect dialect, final int mysqlMaximumPoolSize) {

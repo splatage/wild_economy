@@ -37,6 +37,7 @@ public final class ExchangeItemsConfig {
         String stockProfileKey,
         Long stockCap,
         Long turnoverAmountPerInterval,
+        Long initialStock,
         String ecoEnvelopeKey,
         BigDecimal buyPrice,
         BigDecimal sellPrice,

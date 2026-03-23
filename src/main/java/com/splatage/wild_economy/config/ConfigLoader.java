@@ -179,7 +179,8 @@ public final class ConfigLoader {
                 normalizedKey,
                 new StockProfilesConfig.StockProfileDefinition(
                     Math.max(0L, section.getLong("stock-cap", 0L)),
-                    Math.max(0L, section.getLong("turnover-amount-per-interval", 0L))
+                    Math.max(0L, section.getLong("turnover-amount-per-interval", 0L)),
+                    Math.max(0L, section.getLong("initial-stock", 0L))
                 )
             );
         }
@@ -199,6 +200,7 @@ public final class ConfigLoader {
         final String stockProfileKey = StockProfilesConfig.normalizeKey(section.getString("stock-profile", null));
         final Long stockCap = this.getLongObject(section, "stock-cap");
         final Long turnoverAmountPerInterval = this.getLongObject(section, "turnover-amount-per-interval");
+        final Long initialStock = this.getLongObject(section, "initial-stock");
         final String ecoEnvelopeKey = EcoEnvelopesConfig.normalizeKey(section.getString("eco-envelope", null));
         final BigDecimal buyPrice = this.getBigDecimal(section, "buy-price");
         final BigDecimal sellPrice = this.getBigDecimal(section, "sell-price");
@@ -216,6 +218,7 @@ public final class ConfigLoader {
             stockProfileKey,
             stockCap,
             turnoverAmountPerInterval,
+            initialStock,
             ecoEnvelopeKey,
             buyPrice,
             sellPrice,
@@ -282,6 +285,7 @@ public final class ConfigLoader {
             spec.stockProfileKey(),
             spec.stockCap(),
             spec.turnoverAmountPerInterval(),
+            spec.initialStock(),
             spec.ecoEnvelopeKey(),
             spec.buyPrice(),
             spec.sellPrice(),
@@ -433,6 +437,7 @@ public final class ConfigLoader {
         String stockProfileKey,
         Long stockCap,
         Long turnoverAmountPerInterval,
+        Long initialStock,
         String ecoEnvelopeKey,
         BigDecimal buyPrice,
         BigDecimal sellPrice,

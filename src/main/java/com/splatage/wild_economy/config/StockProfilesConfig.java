@@ -32,7 +32,8 @@ public final class StockProfilesConfig {
 
     public record StockProfileDefinition(
         long stockCap,
-        long turnoverAmountPerInterval
+        long turnoverAmountPerInterval,
+        long initialStock
     ) {
     }
 }

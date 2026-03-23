@@ -2,19 +2,24 @@ stock-profiles:
   exchange_default:
     stock-cap: 3456
     turnover-amount-per-interval: 250
+    initial-stock: 64
 
   ore_precious:
     stock-cap: 1500
     turnover-amount-per-interval: 30
+    initial-stock: 16
 
   sell_only_cleanup:
     stock-cap: 0
     turnover-amount-per-interval: 0
+    initial-stock: 0
 
   unlimited_buy_utility:
     stock-cap: 0
     turnover-amount-per-interval: 0
+    initial-stock: 0
 
   disabled_placeholder:
     stock-cap: 0
     turnover-amount-per-interval: 0
+    initial-stock: 0

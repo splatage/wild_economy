@@ -19,6 +19,7 @@ public record ExchangeCatalogEntry(
     BigDecimal sellPrice,
     long stockCap,
     long turnoverAmountPerInterval,
+    long initialStock,
     List<SellPriceBand> sellPriceBands,
     boolean buyEnabled,
     boolean sellEnabled
