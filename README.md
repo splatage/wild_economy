@@ -7,7 +7,7 @@ A curated, Exchange-first Minecraft economy plugin for The Wild.
 - GUI-driven buying for a clean browse-and-purchase flow
 - Command-driven selling for fast liquidation of bulk goods
 - Player-stocked Exchange as the default mode for useful, standardized materials
-- Unlimited buy-only reserved for selected nuisance or world-damaging materials
+- Unlimited-buy exceptions reserved for selected nuisance or world-damaging materials
 - Disabled items for progression-sensitive or gameplay-shortcutting content
 - Linear stock-sensitive sell pricing through reusable eco envelopes
 - Asynchronous persistence with in-memory runtime stock for responsive gameplay
@@ -24,25 +24,19 @@ The v1 design is intentionally narrow and opinionated:
 - Catalog and browse structures are precomputed in memory
 - Soft stock anchors shape value, not hard sell blockers
 - Buy-side player-stocked stock consumption is atomic per purchase action to prevent overselling
+- Runtime pricing is anchored from `root-values.yml`, derived through the catalog pipeline, and resolved from the internal runtime catalog rather than an external worth file
 
 ## Command surface
 
 ### Player commands
 
-- `/shop`
-  - Opens the shop GUI
-- `/shop sellhand`
-  - Sells the item in the player’s main hand
-- `/shop sellall`
-  - Sells all eligible sellable items in the player inventory
-- `/shop sellcontainer`
-  - Sells the contents of a supported container
-- `/sellhand`
-  - Top-level authoritative shortcut for selling the item in hand
-- `/sellall`
-  - Top-level authoritative shortcut for selling all eligible inventory items
-- `/sellcontainer`
-  - Top-level authoritative command for selling supported container contents
+- `/shop` — Opens the shop GUI
+- `/shop sellhand` — Sells the item in the player’s main hand
+- `/shop sellall` — Sells all eligible sellable items in the player inventory
+- `/shop sellcontainer` — Sells the contents of a supported container
+- `/sellhand` — Top-level authoritative shortcut for selling the item in hand
+- `/sellall` — Top-level authoritative shortcut for selling all eligible inventory items
+- `/sellcontainer` — Top-level authoritative command for selling supported container contents
 
 ### Admin commands
 
@@ -70,7 +64,7 @@ When a player opens an item detail menu:
 - the current quote lifetime is 30 seconds
 - after a successful purchase, the detail menu reopens with a fresh live quote for the next buy
 
-This preserves the "shown price is the price you click" rule without letting an old menu pin a stale price forever.
+This preserves the “shown price is the price you click” rule without letting an old menu pin a stale price forever.
 
 ### Purchase delivery behavior
 
@@ -96,7 +90,7 @@ This keeps purchasing flexible for bulk goods while preserving predictable, expl
 ### `/sellhand`
 
 - Sells the held item if it is canonical, cataloged, and sell-enabled
-- Uses the current stock-sensitive pricing model
+- Uses the current stock-sensitive pricing model where applicable
 - Does not hard-block purely because stock is already high
 
 ### `/sellall`
@@ -140,7 +134,8 @@ For `PLAYER_STOCKED` items:
   - floor-price plateau after the taper range
 - payout is rounded once at the end of the batch quote
 
-The current live runtime config shape uses named reusable references from `exchange-items.yml` into `eco-envelopes.yml` and `stock-profiles.yml`.
+The current canonical pricing path uses named reusable references from `exchange-items.yml` into `eco-envelopes.yml`.
+`stock-profiles.yml` and `initialStock` are not part of the canonical runtime pricing model.
 
 ## Shulker safety rules
 
@@ -150,3 +145,4 @@ To protect player trust and prevent accidental storage loss:
 - placed world containers are subject to protection / access checks
 - broad sell flows do not sell the shulker container item itself
 - sellcontainer only sells the contents of the supported container target
+

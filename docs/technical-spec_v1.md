@@ -1,8 +1,8 @@
 # wild_economy — Repo-Ready Technical Spec (v1)
 
-Revision date: 2026-03-21  
-Repo snapshot: `02c67a3f26db3817f95cbe72b3fb8cae3021b03f`  
-Status: Current intended v1 technical spec aligned to the repo direction and locked admin Phase 1 work.
+Revision date: 2026-03-23  
+Repo snapshot: `016f204299469b899359f9057ad4e0b1cde8d7e5`  
+Status: Current intended v1 technical spec aligned to the repo direction and current pricing QC corrections.
 
 This document is the intended implementation-stage source of truth for `wild_economy` v1.
 
@@ -19,6 +19,8 @@ It reflects the current direction to date:
 - item derivation is recipe-graph based
 - generated catalog output is merged with explicit overrides for runtime use
 - player-stocked items use soft stock-cap anchoring, turnover, stock-sensitive sell taper, and atomic buy-side stock consumption
+- pricing QC has removed `initialStock` from the canonical pricing model
+- pricing QC has removed `stock-profiles.yml` from the canonical pricing path
 - admin/catalog work is now moving toward a staged preview/validate/diff/apply pipeline, but that full admin workflow is not yet complete in code
 
 ---
@@ -128,7 +130,8 @@ Generation uses a recipe graph to:
 
 ### 4.3 Generated outputs
 
-The current generator writes proposal artifacts under a generated output area.  
+The current generator writes proposal artifacts under a generated output area.
+
 At the current repo snapshot, the implemented outputs are:
 
 - `generated/generated-catalog.yml`
@@ -138,7 +141,8 @@ These files are part of the current generator path. The fuller staged publish/di
 
 ### 4.4 Override layer
 
-Explicit item decisions and corrections are currently carried by the runtime override config layer.  
+Explicit item decisions and corrections are currently carried by the runtime override config layer.
+
 That layer is used for:
 
 - exact per-item corrections
@@ -209,10 +213,10 @@ Narrow exception mode.
 
 Used for nuisance or world-damaging materials where the design goal is to reduce ugly harvesting and landscape damage.
 
-Intended behavior:
+Current pricing-path behavior:
 
-- players can buy these items
-- they are not part of the normal stock-backed sell loop
+- players can buy these items regardless of stock
+- they are not part of the stock-sensitive sell taper path
 - supply is server-provided by policy
 
 Likely examples:
@@ -253,7 +257,7 @@ Each catalog entry may define:
 - `stock-cap`
 - turnover amount and interval
 - stock-state thresholds
-- sell-price bands or equivalent taper controls
+- reusable eco-envelope references with resolved taper controls in the runtime catalog
 
 ### Behavior
 
@@ -261,7 +265,7 @@ Each catalog entry may define:
 - player purchases drain live stock quickly
 - background turnover drains live stock slowly over time
 - `stock-cap` acts as a pricing anchor, not a hard sell ceiling
-- at or above the cap, sell value floors at the configured minimum band
+- at or above the cap, sell value floors at the configured minimum price floor
 
 ### Design intent
 
@@ -274,8 +278,16 @@ This acts like a **soft-capped / leaky-bucket stock model**:
 
 ### Important interpretation
 
-Background turnover is **not merely cleanup**.  
+Background turnover is **not merely cleanup**.
+
 It is a deliberate form of **passive server-side consumption / turnover**.
+
+### Canonical pricing-path clarification
+
+The canonical runtime pricing model does **not** use `initialStock`.
+
+The canonical runtime pricing path also does **not** rely on `stock-profiles.yml`.
+Compatibility structures may still exist in the repo while cleanup continues, but they are not the pricing source of truth.
 
 ---
 
@@ -324,13 +336,27 @@ For one sell action of one item key:
 - aggregate the total amount first
 - read the starting stock snapshot once
 - compute payout from the start stock and end stock
-- if the batch stays below cap, use the average of start price and end price
+- if the batch stays below the taper floor range, use the average of start price and end price
 - if the batch crosses the cap, split the payout into:
   - a tapering segment up to the cap
   - a floor-priced segment beyond the cap
 - round once at the end of the batch quote
 
 This keeps pricing understandable while preventing large same-action sells from being overpaid at the initial rate.
+
+### 7.5 Reusable envelope model
+
+The taper shape is driven by reusable eco envelopes.
+
+At the canonical pricing level, the effective sell behavior is determined by:
+
+- root/base worth
+- current live stock
+- `stock-cap`
+- reusable eco envelope parameters
+- resolved floor behavior in the runtime catalog
+
+This keeps the pricing model reusable without requiring per-item legacy price-band config.
 
 ---
 
@@ -485,9 +511,9 @@ Each entry should capture at minimum:
 - base worth / anchor-derived price basis
 - buy price
 - sell price
+- resolved runtime sell envelope / taper settings
 - stock cap
 - turnover settings
-- sell taper settings
 - buy enabled
 - sell enabled
 
@@ -539,45 +565,13 @@ The locked Phase 1 admin/catalog slice is:
 
 1. `policy-rules.yml`
 2. `manual-overrides.yml`
-3. `stock-profiles.yml`
-4. `eco-envelopes.yml`
-5. `/shopadmin catalog preview`
-6. `/shopadmin catalog validate`
-7. `/shopadmin catalog diff`
-8. `/shopadmin catalog apply`
-9. generated summary + diff reports
-10. item decision trace backend
+3. `eco-envelopes.yml`
+4. `/shopadmin catalog preview`
+5. `/shopadmin catalog validate`
+6. `/shopadmin catalog diff`
+7. `/shopadmin catalog apply`
+8. generated summary + diff reports
+9. item decision trace backend
 
-### Not part of Phase 1
+Phase 1 remains intentionally modest. It is about making the generated catalog explainable, reviewable, and safely applicable rather than building a broad admin UI first.
 
-Do not treat the following as current Phase 1 deliverables:
-
-- full GUI rule editor
-- rollback browser UI
-- stock dashboard UI
-- quote simulator UI
-- broad admin dashboards
-
-These belong to later tooling phases, not the initial admin/catalog implementation slice.
-
----
-
-## 12. Runtime expectations
-
-The runtime design priority is:
-
-1. keep gameplay paths synchronous and predictable
-2. keep database persistence off the main interaction path
-3. ensure buy-side stock correctness before deeper optimization work
-4. prefer clean per-item-key batch handling over noisy per-slot work
-5. keep catalog/admin heavy work off player-critical paths
-
-This means:
-
-- pricing math stays on the gameplay path
-- inventory and economy work stay on the gameplay path
-- stock persistence stays asynchronous
-- transaction logging stays asynchronous
-- generation, diffing, validation, and report building should not burden normal player interaction paths
-
-That is the intended v1 balance between correctness, performance, and simplicity.
