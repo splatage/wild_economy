@@ -174,8 +174,7 @@ public final class ConfigLoader {
                     normalizedKey,
                     new StockProfilesConfig.StockProfileDefinition(
                             Math.max(0L, section.getLong("stock-cap", 0L)),
-                            Math.max(0L, section.getLong("turnover-amount-per-interval", 0L)),
-                            Math.max(0L, section.getLong("initial-stock", 0L))
+                            Math.max(0L, section.getLong("turnover-amount-per-interval", 0L))
                     )
             );
         }
