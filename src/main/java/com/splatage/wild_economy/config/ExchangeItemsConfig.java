@@ -4,9 +4,7 @@ import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
-import com.splatage.wild_economy.exchange.domain.SellPriceBand;
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,21 +25,18 @@ public final class ExchangeItemsConfig {
     }
 
     public record RawItemEntry(
-        ItemKey itemKey,
-        String displayName,
-        ItemCategory category,
-        GeneratedItemCategory generatedCategory,
-        ItemPolicyMode policyMode,
-        Boolean buyEnabled,
-        Boolean sellEnabled,
-        String stockProfileKey,
-        Long stockCap,
-        Long turnoverAmountPerInterval,
-        Long initialStock,
-        String ecoEnvelopeKey,
-        BigDecimal buyPrice,
-        BigDecimal sellPrice,
-        List<SellPriceBand> sellPriceBands
+            ItemKey itemKey,
+            String displayName,
+            ItemCategory category,
+            GeneratedItemCategory generatedCategory,
+            ItemPolicyMode policyMode,
+            Boolean buyEnabled,
+            Boolean sellEnabled,
+            Long stockCap,
+            Long turnoverAmountPerInterval,
+            String ecoEnvelopeKey,
+            BigDecimal buyPrice,
+            BigDecimal sellPrice
     ) {
     }
 }
