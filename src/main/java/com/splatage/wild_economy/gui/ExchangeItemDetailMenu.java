@@ -7,6 +7,8 @@ import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.service.ExchangeItemView;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
 import com.splatage.wild_economy.platform.PlatformExecutor;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Objects;
 import org.bukkit.Material;
@@ -17,6 +19,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public final class ExchangeItemDetailMenu {
+
+    private static final int MONEY_SCALE = 2;
 
     private final ExchangeService exchangeService;
     private final PlatformExecutor platformExecutor;
@@ -41,21 +45,23 @@ public final class ExchangeItemDetailMenu {
         final boolean viaSubcategory
     ) {
         final ExchangeItemView view = this.exchangeService.getItemView(itemKey);
+        final BigDecimal quotedUnitPrice = this.normalizedMoney(view.buyPrice());
         final ShopMenuHolder holder = ShopMenuHolder.detail(
             category,
             generatedCategory,
             page,
             itemKey,
-            viaSubcategory
+            viaSubcategory,
+            quotedUnitPrice
         );
         final Inventory inventory = holder.createInventory(27, "Buy - " + view.displayName());
 
         inventory.setItem(11, this.detailItem(view, amount));
-        inventory.setItem(13, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 1"));
-        inventory.setItem(14, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 8"));
-        inventory.setItem(15, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 64"));
-        inventory.setItem(18, this.button(Material.ARROW, "Back"));
-        inventory.setItem(22, this.button(Material.BARRIER, "Close"));
+        inventory.setItem(13, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 1", this.quoteLore(quotedUnitPrice, 1)));
+        inventory.setItem(14, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 8", this.quoteLore(quotedUnitPrice, 8)));
+        inventory.setItem(15, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 64", this.quoteLore(quotedUnitPrice, 64)));
+        inventory.setItem(18, this.button(Material.ARROW, "Back", List.of("Return to the previous menu")));
+        inventory.setItem(22, this.button(Material.BARRIER, "Close", List.of("Close the shop")));
 
         player.openInventory(inventory);
     }
@@ -91,7 +97,12 @@ public final class ExchangeItemDetailMenu {
 
         if (amount > 0) {
             this.platformExecutor.runOnPlayer(player, () -> {
-                final BuyResult result = this.exchangeService.buy(player.getUniqueId(), itemKey, amount);
+                final BuyResult result = this.exchangeService.buyQuoted(
+                    player.getUniqueId(),
+                    itemKey,
+                    amount,
+                    holder.quotedUnitPrice()
+                );
                 player.sendMessage(result.message());
 
                 if (result.success()) {
@@ -120,9 +131,10 @@ public final class ExchangeItemDetailMenu {
         if (meta != null) {
             meta.setDisplayName(view.displayName());
             meta.setLore(List.of(
-                "Unit price: " + view.buyPrice(),
+                "Unit price: " + this.normalizedMoney(view.buyPrice()),
                 "Stock: " + view.stockCount(),
-                "State: " + view.stockState().name()
+                "State: " + view.stockState().name(),
+                "This menu view locks the shown buy price for its buttons."
             ));
             stack.setItemMeta(meta);
         }
@@ -130,20 +142,38 @@ public final class ExchangeItemDetailMenu {
         return stack;
     }
 
-    private ItemStack button(final Material material, final String name) {
+    private List<String> quoteLore(final BigDecimal quotedUnitPrice, final int amount) {
+        return List.of(
+            "Quoted total: " + this.totalPrice(quotedUnitPrice, amount),
+            "This quoted price is honored for this click."
+        );
+    }
+
+    private ItemStack button(final Material material, final String name, final List<String> lore) {
         final ItemStack stack = new ItemStack(material);
         final ItemMeta meta = stack.getItemMeta();
 
         if (meta != null) {
             meta.setDisplayName(name);
+            meta.setLore(lore);
             stack.setItemMeta(meta);
         }
 
         return stack;
     }
 
+    private BigDecimal totalPrice(final BigDecimal unitPrice, final int amount) {
+        return unitPrice.multiply(BigDecimal.valueOf(amount)).setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal normalizedMoney(final BigDecimal value) {
+        if (value == null) {
+            return BigDecimal.ZERO.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+        }
+        return value.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+    }
+
     private Material resolveMaterial(final ItemKey itemKey) {
         return Material.matchMaterial(itemKey.value().replace("minecraft:", "").toUpperCase());
     }
 }
-

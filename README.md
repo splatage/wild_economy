@@ -58,6 +58,7 @@ For `PLAYER_STOCKED` items:
 - the per-click buy limit is capped at 64 items
 - stock is consumed before the purchase is finalized so two buyers cannot both receive the same remaining stock
 - buy pricing is quoted once per purchase transaction and honored for that transaction
+- the detail GUI captures the displayed unit price when the menu opens and honors that shown quote for its Buy 1 / 8 / 64 buttons
 
 ### Purchase delivery behavior
 

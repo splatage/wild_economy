@@ -3,6 +3,7 @@ package com.splatage.wild_economy.gui;
 import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
+import java.math.BigDecimal;
 import java.util.Objects;
 import org.bukkit.Bukkit;
 import org.bukkit.inventory.Inventory;
@@ -23,6 +24,7 @@ public final class ShopMenuHolder implements InventoryHolder {
     private final int currentPage;
     private final ItemKey currentItemKey;
     private final boolean viaSubcategory;
+    private final BigDecimal quotedUnitPrice;
     private Inventory inventory;
 
     private ShopMenuHolder(
@@ -31,7 +33,8 @@ public final class ShopMenuHolder implements InventoryHolder {
         final GeneratedItemCategory currentGeneratedCategory,
         final int currentPage,
         final ItemKey currentItemKey,
-        final boolean viaSubcategory
+        final boolean viaSubcategory,
+        final BigDecimal quotedUnitPrice
     ) {
         this.viewType = Objects.requireNonNull(viewType, "viewType");
         this.currentCategory = currentCategory;
@@ -39,10 +42,11 @@ public final class ShopMenuHolder implements InventoryHolder {
         this.currentPage = currentPage;
         this.currentItemKey = currentItemKey;
         this.viaSubcategory = viaSubcategory;
+        this.quotedUnitPrice = quotedUnitPrice;
     }
 
     public static ShopMenuHolder root() {
-        return new ShopMenuHolder(ViewType.ROOT, null, null, 0, null, false);
+        return new ShopMenuHolder(ViewType.ROOT, null, null, 0, null, false, null);
     }
 
     public static ShopMenuHolder subcategory(final ItemCategory category) {
@@ -52,7 +56,8 @@ public final class ShopMenuHolder implements InventoryHolder {
             null,
             0,
             null,
-            false
+            false,
+            null
         );
     }
 
@@ -68,7 +73,8 @@ public final class ShopMenuHolder implements InventoryHolder {
             generatedCategory,
             page,
             null,
-            viaSubcategory
+            viaSubcategory,
+            null
         );
     }
 
@@ -79,13 +85,25 @@ public final class ShopMenuHolder implements InventoryHolder {
         final ItemKey itemKey,
         final boolean viaSubcategory
     ) {
+        return detail(category, generatedCategory, page, itemKey, viaSubcategory, null);
+    }
+
+    public static ShopMenuHolder detail(
+        final ItemCategory category,
+        final GeneratedItemCategory generatedCategory,
+        final int page,
+        final ItemKey itemKey,
+        final boolean viaSubcategory,
+        final BigDecimal quotedUnitPrice
+    ) {
         return new ShopMenuHolder(
             ViewType.DETAIL,
             category,
             generatedCategory,
             page,
             Objects.requireNonNull(itemKey, "itemKey"),
-            viaSubcategory
+            viaSubcategory,
+            quotedUnitPrice
         );
     }
 
@@ -126,5 +144,8 @@ public final class ShopMenuHolder implements InventoryHolder {
     public boolean viaSubcategory() {
         return this.viaSubcategory;
     }
-}
 
+    public BigDecimal quotedUnitPrice() {
+        return this.quotedUnitPrice;
+    }
+}

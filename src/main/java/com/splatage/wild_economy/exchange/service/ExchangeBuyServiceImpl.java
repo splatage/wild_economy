@@ -99,6 +99,25 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
 
     @Override
     public BuyResult buy(final UUID playerId, final ItemKey itemKey, final int amount) {
+        return this.buyInternal(playerId, itemKey, amount, null);
+    }
+
+    @Override
+    public BuyResult buyQuoted(
+        final UUID playerId,
+        final ItemKey itemKey,
+        final int amount,
+        final BigDecimal quotedUnitPrice
+    ) {
+        return this.buyInternal(playerId, itemKey, amount, quotedUnitPrice);
+    }
+
+    private BuyResult buyInternal(
+        final UUID playerId,
+        final ItemKey itemKey,
+        final int amount,
+        final BigDecimal quotedUnitPrice
+    ) {
         final Player player = Bukkit.getPlayer(playerId);
         if (player == null) {
             return new BuyResult(false, itemKey, 0, null, null, RejectionReason.INTERNAL_ERROR, "Player is not online");
@@ -142,7 +161,18 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             return new BuyResult(false, itemKey, 0, null, null, RejectionReason.OUT_OF_STOCK, "Not enough stock available");
         }
 
-        final BuyQuote quote = this.pricingService.quoteBuy(itemKey, amount, snapshot);
+        final BuyQuote quote = this.resolveBuyQuote(itemKey, amount, snapshot, quotedUnitPrice);
+        if (quote == null) {
+            return new BuyResult(
+                false,
+                itemKey,
+                0,
+                null,
+                null,
+                RejectionReason.INTERNAL_ERROR,
+                "Invalid quoted buy price"
+            );
+        }
         final BigDecimal balance = this.economyGateway.getBalance(playerId);
         if (balance.compareTo(quote.totalPrice()) < 0) {
             return new BuyResult(
@@ -323,6 +353,42 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         }
 
         return new BuyResult(true, itemKey, amountBought, quote.unitPrice(), actualTotalPrice, null, message);
+    }
+
+    private BuyQuote resolveBuyQuote(
+        final ItemKey itemKey,
+        final int amount,
+        final StockSnapshot stockSnapshot,
+        final BigDecimal quotedUnitPrice
+    ) {
+        if (quotedUnitPrice == null) {
+            return this.pricingService.quoteBuy(itemKey, amount, stockSnapshot);
+        }
+
+        final BigDecimal normalizedQuotedUnitPrice = this.normalizedQuotedUnitPrice(quotedUnitPrice);
+        if (normalizedQuotedUnitPrice == null) {
+            return null;
+        }
+
+        return new BuyQuote(
+            itemKey,
+            amount,
+            normalizedQuotedUnitPrice,
+            normalizedQuotedUnitPrice.multiply(BigDecimal.valueOf(amount)).setScale(2, RoundingMode.HALF_UP)
+        );
+    }
+
+    private BigDecimal normalizedQuotedUnitPrice(final BigDecimal quotedUnitPrice) {
+        if (quotedUnitPrice == null) {
+            return null;
+        }
+
+        final BigDecimal normalized = quotedUnitPrice.setScale(2, RoundingMode.HALF_UP);
+        if (normalized.compareTo(BigDecimal.ZERO) < 0) {
+            return null;
+        }
+
+        return normalized;
     }
 
     private boolean hasAnyEnabledDeliveryTarget() {

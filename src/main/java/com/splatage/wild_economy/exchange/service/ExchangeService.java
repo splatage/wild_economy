@@ -7,6 +7,7 @@ import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.SellAllResult;
 import com.splatage.wild_economy.exchange.domain.SellContainerResult;
 import com.splatage.wild_economy.exchange.domain.SellHandResult;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,6 +20,8 @@ public interface ExchangeService {
     SellContainerResult sellContainer(UUID playerId);
 
     BuyResult buy(UUID playerId, ItemKey itemKey, int amount);
+
+    BuyResult buyQuoted(UUID playerId, ItemKey itemKey, int amount, BigDecimal quotedUnitPrice);
 
     List<ExchangeCatalogView> browseCategory(
         ItemCategory category,
