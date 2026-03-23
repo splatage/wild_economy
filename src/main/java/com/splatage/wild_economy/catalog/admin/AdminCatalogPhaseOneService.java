@@ -236,9 +236,13 @@ public final class AdminCatalogPhaseOneService {
                 );
             }
 
-            final BigDecimal anchorValue = this.resolveAnchorValue(derivation);
-            final BigDecimal buyPrice = this.computeBuyPrice(anchorValue, ecoEnvelope);
-            final BigDecimal sellPrice = this.computeSellPrice(anchorValue, ecoEnvelope);
+            final BigDecimal baseWorth = this.resolveAnchorValue(derivation);
+            final long ecoMinStock = this.resolveEcoMinStock(stockProfile);
+            final long ecoMaxStock = this.resolveEcoMaxStock(stockProfile, ecoMinStock);
+            final BigDecimal buyPriceAtMinStock = this.computeBuyPriceAtMinStock(baseWorth, ecoEnvelope);
+            final BigDecimal buyPriceAtMaxStock = this.computeBuyPriceAtMaxStock(baseWorth, ecoEnvelope);
+            final BigDecimal sellPriceAtMinStock = this.computeSellPriceAtMinStock(baseWorth, ecoEnvelope);
+            final BigDecimal sellPriceAtMaxStock = this.computeSellPriceAtMaxStock(baseWorth, ecoEnvelope);
 
             final String runtimePolicy = policyProfile == null ? this.toRuntimePolicy(policy) : policyProfile.runtimePolicy();
             final boolean buyEnabled = policyProfile != null && policyProfile.buyEnabled();
@@ -261,9 +265,13 @@ public final class AdminCatalogPhaseOneService {
                 requiresPlayerStockToBuy,
                 stockProfile == null ? 0 : stockProfile.stockCap(),
                 stockProfile == null ? 0 : stockProfile.turnoverAmountPerInterval(),
-                anchorValue,
-                buyPrice,
-                sellPrice,
+                baseWorth,
+                ecoMinStock,
+                ecoMaxStock,
+                buyPriceAtMinStock,
+                buyPriceAtMaxStock,
+                sellPriceAtMinStock,
+                sellPriceAtMaxStock,
                 stockProfileName,
                 ecoEnvelopeName,
                 derivation.reason().name(),
@@ -272,6 +280,7 @@ public final class AdminCatalogPhaseOneService {
                 policy == CatalogPolicy.DISABLED ? "disabled" : null,
                 this.joinNotes(note, facts)
             );
+
             proposedEntries.add(planEntry);
 
             decisionTraces.add(
@@ -357,7 +366,7 @@ public final class AdminCatalogPhaseOneService {
         File snapshotDirectory = null;
         if (apply) {
             snapshotDirectory = this.snapshotCurrentState(dataFolder);
-            this.writeLiveCatalog(liveCatalogFile, liveEntries, ecoEnvelopes);
+            this.writeLiveCatalog(liveCatalogFile, liveEntries);
         }
 
         return new AdminCatalogBuildResult(
@@ -498,31 +507,15 @@ public final class AdminCatalogPhaseOneService {
             if (envelopeSection == null) {
                 continue;
             }
-            final List<AdminCatalogSellBand> sellBands = new ArrayList<>();
-            for (final Map<?, ?> rawBand : envelopeSection.getMapList("sell-bands")) {
-                final ConfigurationSection bandSection = this.asSection(rawBand);
-                if (bandSection == null) {
-                    continue;
-                }
-                sellBands.add(
-                    new AdminCatalogSellBand(
-                        bandSection.getDouble("min-fill", 0.0D),
-                        bandSection.getDouble("max-fill", 1.01D),
-                        bandSection.getDouble("multiplier", 1.0D)
-                    )
-                );
-            }
-            if (sellBands.isEmpty()) {
-                sellBands.add(new AdminCatalogSellBand(0.0D, 1.01D, 1.0D));
-            }
 
             envelopes.put(
                 name,
                 new AdminCatalogEcoEnvelope(
                     name,
-                    envelopeSection.getDouble("base-buy-multiplier", 1.0D),
-                    envelopeSection.getDouble("base-sell-multiplier", 0.67D),
-                    sellBands
+                    envelopeSection.getDouble("buy-price-at-min-stock-multiplier", 1.0D),
+                    envelopeSection.getDouble("buy-price-at-max-stock-multiplier", 1.0D),
+                    envelopeSection.getDouble("sell-price-at-min-stock-multiplier", 1.0D),
+                    envelopeSection.getDouble("sell-price-at-max-stock-multiplier", 1.0D)
                 )
             );
         }
@@ -594,6 +587,7 @@ public final class AdminCatalogPhaseOneService {
             if (section == null) {
                 continue;
             }
+            final ConfigurationSection eco = section.getConfigurationSection("eco");
             final String normalizedItemKey = AdminCatalogItemKeys.canonicalize(itemKey);
             snapshot.put(
                 normalizedItemKey,
@@ -604,8 +598,18 @@ public final class AdminCatalogPhaseOneService {
                     section.getBoolean("buy-enabled", false),
                     section.getBoolean("sell-enabled", false),
                     section.getInt("stock-cap", 0),
-                    BigDecimal.valueOf(section.getDouble("buy-price", 0.0D)).setScale(2, RoundingMode.HALF_UP),
-                    BigDecimal.valueOf(section.getDouble("sell-price", 0.0D)).setScale(2, RoundingMode.HALF_UP)
+                    section.getInt("turnover-amount-per-interval", 0),
+                    BigDecimal.valueOf(section.getDouble("base-worth", 0.0D)).setScale(2, RoundingMode.HALF_UP),
+                    eco == null ? 0 : eco.getLong("min-stock", 0L),
+                    eco == null ? 0 : eco.getLong("max-stock", 0L),
+                    eco == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                        : BigDecimal.valueOf(eco.getDouble("buy-price-at-min-stock", 0.0D)).setScale(2, RoundingMode.HALF_UP),
+                    eco == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                        : BigDecimal.valueOf(eco.getDouble("buy-price-at-max-stock", 0.0D)).setScale(2, RoundingMode.HALF_UP),
+                    eco == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                        : BigDecimal.valueOf(eco.getDouble("sell-price-at-min-stock", 0.0D)).setScale(2, RoundingMode.HALF_UP),
+                    eco == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                        : BigDecimal.valueOf(eco.getDouble("sell-price-at-max-stock", 0.0D)).setScale(2, RoundingMode.HALF_UP)
                 )
             );
         }
@@ -650,28 +654,7 @@ public final class AdminCatalogPhaseOneService {
         final YamlConfiguration yaml = new YamlConfiguration();
         for (final AdminCatalogPlanEntry entry : entries) {
             final String base = "items." + entry.itemKey();
-            yaml.set(base + ".display-name", entry.displayName());
-            yaml.set(base + ".category", entry.category().name());
-            yaml.set(base + ".admin-policy", entry.policy().name());
-            yaml.set(base + ".policy-profile", entry.policyProfileId());
-            yaml.set(base + ".runtime-policy", entry.runtimePolicy());
-            yaml.set(base + ".stock-profile", entry.stockProfile());
-            yaml.set(base + ".eco-envelope", entry.ecoEnvelope());
-            yaml.set(base + ".buy-enabled", entry.buyEnabled());
-            yaml.set(base + ".sell-enabled", entry.sellEnabled());
-            yaml.set(base + ".stock-backed", entry.stockBacked());
-            yaml.set(base + ".unlimited-buy", entry.unlimitedBuy());
-            yaml.set(base + ".requires-player-stock-to-buy", entry.requiresPlayerStockToBuy());
-            yaml.set(base + ".stock-cap", entry.stockCap());
-            yaml.set(base + ".turnover-amount-per-interval", entry.turnoverAmountPerInterval());
-            yaml.set(base + ".anchor-value", decimal(entry.anchorValue()));
-            yaml.set(base + ".buy-price", decimal(entry.buyPrice()));
-            yaml.set(base + ".sell-price", decimal(entry.sellPrice()));
-            yaml.set(base + ".derivation-reason", entry.derivationReason());
-            yaml.set(base + ".derivation-depth", entry.derivationDepth());
-            yaml.set(base + ".include-reason", entry.includeReason());
-            yaml.set(base + ".exclude-reason", entry.excludeReason());
-            yaml.set(base + ".notes", entry.notes());
+            this.writeRuntimeCatalogEntry(yaml, base, entry);
         }
         yaml.save(file);
     }
@@ -699,17 +682,9 @@ public final class AdminCatalogPhaseOneService {
             yaml.set("counts.policy." + policy.name(), policyCounts.get(policy));
         }
 
-        int unlimitedBuyCount = 0;
-        int stockBackedCount = 0;
         int buyEnabledCount = 0;
         int sellEnabledCount = 0;
         for (final AdminCatalogPlanEntry entry : proposedEntries) {
-            if (entry.unlimitedBuy()) {
-                unlimitedBuyCount++;
-            }
-            if (entry.stockBacked()) {
-                stockBackedCount++;
-            }
             if (entry.buyEnabled()) {
                 buyEnabledCount++;
             }
@@ -717,8 +692,6 @@ public final class AdminCatalogPhaseOneService {
                 sellEnabledCount++;
             }
         }
-        yaml.set("counts.effective-behavior.unlimited-buy", unlimitedBuyCount);
-        yaml.set("counts.effective-behavior.stock-backed", stockBackedCount);
         yaml.set("counts.effective-behavior.buy-enabled", buyEnabledCount);
         yaml.set("counts.effective-behavior.sell-enabled", sellEnabledCount);
 
@@ -1104,41 +1077,35 @@ public final class AdminCatalogPhaseOneService {
 
     private void writeLiveCatalog(
         final File file,
-        final List<AdminCatalogPlanEntry> liveEntries,
-        final Map<String, AdminCatalogEcoEnvelope> ecoEnvelopes
+        final List<AdminCatalogPlanEntry> liveEntries
     ) throws IOException {
         final YamlConfiguration yaml = new YamlConfiguration();
         for (final AdminCatalogPlanEntry entry : liveEntries) {
             final String base = "items." + entry.itemKey();
-            yaml.set(base + ".display-name", entry.displayName());
-            yaml.set(base + ".category", entry.category().name());
-            yaml.set(base + ".admin-policy", entry.policy().name());
-            yaml.set(base + ".policy-profile", entry.policyProfileId());
-            yaml.set(base + ".policy", entry.runtimePolicy());
-            yaml.set(base + ".buy-enabled", entry.buyEnabled());
-            yaml.set(base + ".sell-enabled", entry.sellEnabled());
-            yaml.set(base + ".stock-backed", entry.stockBacked());
-            yaml.set(base + ".unlimited-buy", entry.unlimitedBuy());
-            yaml.set(base + ".requires-player-stock-to-buy", entry.requiresPlayerStockToBuy());
-            yaml.set(base + ".stock-cap", entry.stockCap());
-            yaml.set(base + ".turnover-amount-per-interval", entry.turnoverAmountPerInterval());
-            yaml.set(base + ".buy-price", decimal(entry.buyPrice()));
-            yaml.set(base + ".sell-price", decimal(entry.sellPrice()));
-
-            final AdminCatalogEcoEnvelope ecoEnvelope = ecoEnvelopes.get(entry.ecoEnvelope());
-            final List<AdminCatalogSellBand> sellBands = ecoEnvelope == null
-                ? List.of(new AdminCatalogSellBand(0.0D, 1.01D, 1.0D))
-                : ecoEnvelope.sellBands();
-
-            int bandIndex = 0;
-            for (final AdminCatalogSellBand band : sellBands) {
-                final String bandBase = base + ".sell-price-bands." + bandIndex++;
-                yaml.set(bandBase + ".min-fill", band.minFill());
-                yaml.set(bandBase + ".max-fill", band.maxFill());
-                yaml.set(bandBase + ".multiplier", band.multiplier());
-            }
+            this.writeRuntimeCatalogEntry(yaml, base, entry);
         }
         yaml.save(file);
+    }
+
+    private void writeRuntimeCatalogEntry(
+        final YamlConfiguration yaml,
+        final String base,
+        final AdminCatalogPlanEntry entry
+    ) {
+        yaml.set(base + ".display-name", entry.displayName());
+        yaml.set(base + ".category", entry.category().name());
+        yaml.set(base + ".policy", entry.runtimePolicy());
+        yaml.set(base + ".buy-enabled", entry.buyEnabled());
+        yaml.set(base + ".sell-enabled", entry.sellEnabled());
+        yaml.set(base + ".stock-cap", entry.stockCap());
+        yaml.set(base + ".turnover-amount-per-interval", entry.turnoverAmountPerInterval());
+        yaml.set(base + ".base-worth", decimal(entry.baseWorth()));
+        yaml.set(base + ".eco.min-stock", entry.ecoMinStockInclusive());
+        yaml.set(base + ".eco.max-stock", entry.ecoMaxStockInclusive());
+        yaml.set(base + ".eco.buy-price-at-min-stock", decimal(entry.buyPriceAtMinStock()));
+        yaml.set(base + ".eco.buy-price-at-max-stock", decimal(entry.buyPriceAtMaxStock()));
+        yaml.set(base + ".eco.sell-price-at-min-stock", decimal(entry.sellPriceAtMinStock()));
+        yaml.set(base + ".eco.sell-price-at-max-stock", decimal(entry.sellPriceAtMaxStock()));
     }
 
     private File snapshotCurrentState(final File dataFolder) throws IOException {
@@ -1180,18 +1147,41 @@ public final class AdminCatalogPhaseOneService {
         return null;
     }
 
-    private BigDecimal computeBuyPrice(final BigDecimal anchorValue, final AdminCatalogEcoEnvelope ecoEnvelope) {
-        if (anchorValue == null || ecoEnvelope == null) {
-            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    private long resolveEcoMinStock(final AdminCatalogStockProfile stockProfile) {
+        if (stockProfile == null) {
+            return 0L;
         }
-        return anchorValue.multiply(BigDecimal.valueOf(ecoEnvelope.baseBuyMultiplier())).setScale(2, RoundingMode.HALF_UP);
+        return Math.max(0L, stockProfile.lowStockThreshold());
     }
 
-    private BigDecimal computeSellPrice(final BigDecimal anchorValue, final AdminCatalogEcoEnvelope ecoEnvelope) {
-        if (anchorValue == null || ecoEnvelope == null) {
+    private long resolveEcoMaxStock(final AdminCatalogStockProfile stockProfile, final long minStock) {
+        if (stockProfile == null) {
+            return minStock;
+        }
+        return Math.max(minStock, stockProfile.overflowThreshold());
+    }
+
+    private BigDecimal computeBuyPriceAtMinStock(final BigDecimal baseWorth, final AdminCatalogEcoEnvelope ecoEnvelope) {
+        return this.computeResolvedPrice(baseWorth, ecoEnvelope == null ? 0.0D : ecoEnvelope.buyPriceAtMinStockMultiplier());
+    }
+
+    private BigDecimal computeBuyPriceAtMaxStock(final BigDecimal baseWorth, final AdminCatalogEcoEnvelope ecoEnvelope) {
+        return this.computeResolvedPrice(baseWorth, ecoEnvelope == null ? 0.0D : ecoEnvelope.buyPriceAtMaxStockMultiplier());
+    }
+
+    private BigDecimal computeSellPriceAtMinStock(final BigDecimal baseWorth, final AdminCatalogEcoEnvelope ecoEnvelope) {
+        return this.computeResolvedPrice(baseWorth, ecoEnvelope == null ? 0.0D : ecoEnvelope.sellPriceAtMinStockMultiplier());
+    }
+
+    private BigDecimal computeSellPriceAtMaxStock(final BigDecimal baseWorth, final AdminCatalogEcoEnvelope ecoEnvelope) {
+        return this.computeResolvedPrice(baseWorth, ecoEnvelope == null ? 0.0D : ecoEnvelope.sellPriceAtMaxStockMultiplier());
+    }
+
+    private BigDecimal computeResolvedPrice(final BigDecimal baseWorth, final double multiplier) {
+        if (baseWorth == null) {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
-        return anchorValue.multiply(BigDecimal.valueOf(ecoEnvelope.baseSellMultiplier())).setScale(2, RoundingMode.HALF_UP);
+        return baseWorth.multiply(BigDecimal.valueOf(multiplier)).setScale(2, RoundingMode.HALF_UP);
     }
 
     private String toRuntimePolicy(final CatalogPolicy policy) {
@@ -1624,8 +1614,14 @@ public final class AdminCatalogPhaseOneService {
         boolean buyEnabled,
         boolean sellEnabled,
         int stockCap,
-        BigDecimal buyPrice,
-        BigDecimal sellPrice
+        int turnoverAmountPerInterval,
+        BigDecimal baseWorth,
+        long ecoMinStock,
+        long ecoMaxStock,
+        BigDecimal buyPriceAtMinStock,
+        BigDecimal buyPriceAtMaxStock,
+        BigDecimal sellPriceAtMinStock,
+        BigDecimal sellPriceAtMaxStock
     ) {
         boolean matches(final AdminCatalogPlanEntry entry) {
             return this.category.equals(entry.category().name())
@@ -1633,8 +1629,14 @@ public final class AdminCatalogPhaseOneService {
                 && this.buyEnabled == entry.buyEnabled()
                 && this.sellEnabled == entry.sellEnabled()
                 && this.stockCap == entry.stockCap()
-                && this.buyPrice.compareTo(entry.buyPrice()) == 0
-                && this.sellPrice.compareTo(entry.sellPrice()) == 0;
+                && this.turnoverAmountPerInterval == entry.turnoverAmountPerInterval()
+                && this.baseWorth.compareTo(entry.baseWorth()) == 0
+                && this.ecoMinStock == entry.ecoMinStockInclusive()
+                && this.ecoMaxStock == entry.ecoMaxStockInclusive()
+                && this.buyPriceAtMinStock.compareTo(entry.buyPriceAtMinStock()) == 0
+                && this.buyPriceAtMaxStock.compareTo(entry.buyPriceAtMaxStock()) == 0
+                && this.sellPriceAtMinStock.compareTo(entry.sellPriceAtMinStock()) == 0
+                && this.sellPriceAtMaxStock.compareTo(entry.sellPriceAtMaxStock()) == 0;
         }
 
         String describeChange(final AdminCatalogPlanEntry entry) {
@@ -1654,11 +1656,29 @@ public final class AdminCatalogPhaseOneService {
             if (this.stockCap != entry.stockCap()) {
                 changes.add("stock-cap " + this.stockCap + " -> " + entry.stockCap());
             }
-            if (this.buyPrice.compareTo(entry.buyPrice()) != 0) {
-                changes.add("buy-price " + this.buyPrice + " -> " + entry.buyPrice());
+            if (this.turnoverAmountPerInterval != entry.turnoverAmountPerInterval()) {
+                changes.add("turnover-amount-per-interval " + this.turnoverAmountPerInterval + " -> " + entry.turnoverAmountPerInterval());
             }
-            if (this.sellPrice.compareTo(entry.sellPrice()) != 0) {
-                changes.add("sell-price " + this.sellPrice + " -> " + entry.sellPrice());
+            if (this.baseWorth.compareTo(entry.baseWorth()) != 0) {
+                changes.add("base-worth " + this.baseWorth + " -> " + entry.baseWorth());
+            }
+            if (this.ecoMinStock != entry.ecoMinStockInclusive()) {
+                changes.add("eco.min-stock " + this.ecoMinStock + " -> " + entry.ecoMinStockInclusive());
+            }
+            if (this.ecoMaxStock != entry.ecoMaxStockInclusive()) {
+                changes.add("eco.max-stock " + this.ecoMaxStock + " -> " + entry.ecoMaxStockInclusive());
+            }
+            if (this.buyPriceAtMinStock.compareTo(entry.buyPriceAtMinStock()) != 0) {
+                changes.add("eco.buy-price-at-min-stock " + this.buyPriceAtMinStock + " -> " + entry.buyPriceAtMinStock());
+            }
+            if (this.buyPriceAtMaxStock.compareTo(entry.buyPriceAtMaxStock()) != 0) {
+                changes.add("eco.buy-price-at-max-stock " + this.buyPriceAtMaxStock + " -> " + entry.buyPriceAtMaxStock());
+            }
+            if (this.sellPriceAtMinStock.compareTo(entry.sellPriceAtMinStock()) != 0) {
+                changes.add("eco.sell-price-at-min-stock " + this.sellPriceAtMinStock + " -> " + entry.sellPriceAtMinStock());
+            }
+            if (this.sellPriceAtMaxStock.compareTo(entry.sellPriceAtMaxStock()) != 0) {
+                changes.add("eco.sell-price-at-max-stock " + this.sellPriceAtMaxStock + " -> " + entry.sellPriceAtMaxStock());
             }
             return String.join("; ", changes);
         }

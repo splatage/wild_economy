@@ -10,7 +10,6 @@ import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
-import com.splatage.wild_economy.exchange.domain.SellPriceBand;
 import com.splatage.wild_economy.exchange.domain.SellQuote;
 import com.splatage.wild_economy.exchange.domain.StockSnapshot;
 import com.splatage.wild_economy.exchange.domain.StockState;
@@ -23,12 +22,15 @@ final class PricingServiceImplTest {
     private static final ItemKey WHEAT = new ItemKey("minecraft:wheat");
 
     @Test
-    void quoteSell_spansPlateauLinearAndFloorSegments() {
+    void quoteSell_spansLowPlateauLinearAndHighPlateauSegments() {
         final PricingServiceImpl pricingService = new PricingServiceImpl(
                 this.catalogWith(this.entry(
                         new BigDecimal("12.00"),
+                        new BigDecimal("12.00"),
                         new BigDecimal("10.00"),
-                        new SellPriceBand(5L, 15L, new BigDecimal("2.00"))
+                        new BigDecimal("2.00"),
+                        5L,
+                        15L
                 ))
         );
 
@@ -42,12 +44,15 @@ final class PricingServiceImplTest {
     }
 
     @Test
-    void quoteSell_withoutEnvelopeUsesFlatSellPrice() {
+    void quoteSell_withFlatResolvedEcoUsesFlatSellPrice() {
         final PricingServiceImpl pricingService = new PricingServiceImpl(
                 this.catalogWith(this.entry(
                         new BigDecimal("12.00"),
+                        new BigDecimal("12.00"),
                         new BigDecimal("8.00"),
-                        null
+                        new BigDecimal("8.00"),
+                        0L,
+                        1000L
                 ))
         );
 
@@ -61,21 +66,24 @@ final class PricingServiceImplTest {
     }
 
     @Test
-    void quoteSell_clampsConfiguredFloorPriceToSellPrice() {
+    void quoteSell_atOrAboveMaxStockUsesHighStockSellPrice() {
         final PricingServiceImpl pricingService = new PricingServiceImpl(
                 this.catalogWith(this.entry(
                         new BigDecimal("12.00"),
+                        new BigDecimal("12.00"),
                         new BigDecimal("10.00"),
-                        new SellPriceBand(0L, 10L, new BigDecimal("12.00"))
+                        new BigDecimal("2.00"),
+                        0L,
+                        10L
                 ))
         );
 
-        final StockSnapshot snapshot = new StockSnapshot(WHEAT, 0L, 100L, 0.0D, StockState.OUT_OF_STOCK);
-        final SellQuote quote = pricingService.quoteSell(WHEAT, 20, snapshot);
+        final StockSnapshot snapshot = new StockSnapshot(WHEAT, 20L, 100L, 0.20D, StockState.HEALTHY);
+        final SellQuote quote = pricingService.quoteSell(WHEAT, 5, snapshot);
 
-        assertEquals(new BigDecimal("10.00"), quote.baseUnitPrice());
-        assertEquals(new BigDecimal("10.00"), quote.effectiveUnitPrice());
-        assertEquals(new BigDecimal("200.00"), quote.totalPrice());
+        assertEquals(new BigDecimal("2.00"), quote.baseUnitPrice());
+        assertEquals(new BigDecimal("2.00"), quote.effectiveUnitPrice());
+        assertEquals(new BigDecimal("10.00"), quote.totalPrice());
         assertFalse(quote.tapered());
     }
 
@@ -84,9 +92,12 @@ final class PricingServiceImplTest {
     }
 
     private ExchangeCatalogEntry entry(
-            final BigDecimal buyPrice,
-            final BigDecimal sellPrice,
-            final SellPriceBand sellEnvelope
+            final BigDecimal buyPriceLowStock,
+            final BigDecimal buyPriceHighStock,
+            final BigDecimal sellPriceLowStock,
+            final BigDecimal sellPriceHighStock,
+            final long minStockInclusive,
+            final long maxStockInclusive
     ) {
         return new ExchangeCatalogEntry(
                 WHEAT,
@@ -95,14 +106,18 @@ final class PricingServiceImplTest {
                 GeneratedItemCategory.FARMING,
                 ItemPolicyMode.PLAYER_STOCKED,
                 new BigDecimal("8.00"),
-                buyPrice,
-                sellPrice,
-                sellEnvelope,
                 3456L,
                 250L,
                 true,
-                true
+                true,
+                new ExchangeCatalogEntry.ResolvedEcoEntry(
+                        minStockInclusive,
+                        maxStockInclusive,
+                        buyPriceLowStock,
+                        buyPriceHighStock,
+                        sellPriceLowStock,
+                        sellPriceHighStock
+                )
         );
     }
 }
-

@@ -7,19 +7,28 @@ import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
 import java.io.File;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
-import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 public final class ConfigLoader {
+
+    private static final String[] LEGACY_RUNTIME_ITEM_FIELDS = {
+            "eco-envelope",
+            "buy-price",
+            "sell-price",
+            "sell-price-bands",
+            "stock-profile",
+            "policy-profile",
+            "admin-policy",
+            "runtime-policy",
+            "stock-backed",
+            "unlimited-buy",
+            "requires-player-stock-to-buy"
+    };
 
     private final WildEconomyPlugin plugin;
 
@@ -59,15 +68,13 @@ public final class ConfigLoader {
 
     public ExchangeItemsConfig loadExchangeItemsConfig() {
         final FileConfiguration config = this.loadYaml("exchange-items.yml");
-        final ConfigurationSection itemsSection = config.getConfigurationSection("items");
-        if (itemsSection == null) {
-            throw new IllegalStateException("exchange-items.yml is missing the 'items' section");
-        }
+        final ConfigurationSection itemsSection = this.requireSection(
+                config,
+                "items",
+                "exchange-items.yml is missing the 'items' section"
+        );
 
-        final Map<ItemKey, ExchangeItemsConfig.RawItemEntry> exactEntries = new LinkedHashMap<>();
-        final List<WildcardItemRule> wildcardRules = new ArrayList<>();
-        int order = 0;
-
+        final Map<ItemKey, ExchangeItemsConfig.RawItemEntry> entries = new LinkedHashMap<>();
         for (final String rawItemKey : itemsSection.getKeys(false)) {
             final ConfigurationSection section = itemsSection.getConfigurationSection(rawItemKey);
             if (section == null) {
@@ -75,48 +82,26 @@ public final class ConfigLoader {
             }
 
             final String normalizedItemKey = this.normalizeItemKey(rawItemKey);
-            final RawItemSpec spec = this.parseRawItemSpec(section);
-
-            if (this.isWildcardPattern(normalizedItemKey)) {
-                wildcardRules.add(new WildcardItemRule(
-                        normalizedItemKey,
-                        this.compileGlob(normalizedItemKey),
-                        this.wildcardSpecificity(normalizedItemKey),
-                        order++,
-                        spec
-                ));
-                continue;
+            if (normalizedItemKey.indexOf('*') >= 0) {
+                throw new IllegalStateException(
+                        "exchange-items.yml contains wildcard runtime key '" + rawItemKey
+                                + "'. Published runtime catalogs must contain only concrete item keys."
+                );
             }
+
+            this.rejectLegacyRuntimeFields(normalizedItemKey, section);
 
             final ItemKey itemKey = new ItemKey(normalizedItemKey);
-            exactEntries.put(itemKey, this.toRawItemEntry(itemKey, spec));
-            order++;
-        }
-
-        final Map<ItemKey, ExchangeItemsConfig.RawItemEntry> expandedEntries = new LinkedHashMap<>();
-        wildcardRules.sort(
-                Comparator.comparingInt(WildcardItemRule::specificity)
-                        .thenComparingInt(WildcardItemRule::order)
-        );
-
-        for (final WildcardItemRule rule : wildcardRules) {
-            for (final Material material : Material.values()) {
-                if (!this.isIncludedMaterial(material)) {
-                    continue;
-                }
-
-                final String normalizedItemKey = this.normalizeItemKey(material);
-                if (!rule.matches(normalizedItemKey)) {
-                    continue;
-                }
-
-                final ItemKey itemKey = new ItemKey(normalizedItemKey);
-                expandedEntries.put(itemKey, this.toRawItemEntry(itemKey, rule.spec()));
+            if (entries.containsKey(itemKey)) {
+                throw new IllegalStateException(
+                        "exchange-items.yml defines duplicate runtime item '" + normalizedItemKey + "'"
+                );
             }
+
+            entries.put(itemKey, this.parseRuntimeItemSpec(itemKey, section));
         }
 
-        expandedEntries.putAll(exactEntries);
-        return new ExchangeItemsConfig(expandedEntries);
+        return new ExchangeItemsConfig(entries);
     }
 
     public EcoEnvelopesConfig loadEcoEnvelopesConfig() {
@@ -182,22 +167,27 @@ public final class ConfigLoader {
         return new StockProfilesConfig(stockProfiles);
     }
 
-    private RawItemSpec parseRawItemSpec(final ConfigurationSection section) {
-        final String displayName = section.contains("display-name") ? section.getString("display-name") : null;
-        final ItemCategory category = this.parseTopLevelCategory(section.getString("category", null));
+    private ExchangeItemsConfig.RawItemEntry parseRuntimeItemSpec(
+            final ItemKey itemKey,
+            final ConfigurationSection section
+    ) {
+        final String displayName = this.getOptionalString(section, "display-name");
+        final ItemCategory category = this.requireTopLevelCategory(itemKey, section, "category");
         final GeneratedItemCategory generatedCategory = this.parseGeneratedCategory(section.getString("generated-category", null));
-        final ItemPolicyMode policyMode = section.contains("policy")
-                ? ItemPolicyMode.valueOf(section.getString("policy", "DISABLED").toUpperCase(Locale.ROOT))
-                : null;
-        final Boolean buyEnabled = this.getBooleanObject(section, "buy-enabled");
-        final Boolean sellEnabled = this.getBooleanObject(section, "sell-enabled");
-        final Long stockCap = this.getLongObject(section, "stock-cap");
-        final Long turnoverAmountPerInterval = this.getLongObject(section, "turnover-amount-per-interval");
-        final String ecoEnvelopeKey = EcoEnvelopesConfig.normalizeKey(section.getString("eco-envelope", null));
-        final BigDecimal buyPrice = this.getBigDecimal(section, "buy-price");
-        final BigDecimal sellPrice = this.getBigDecimal(section, "sell-price");
+        final ItemPolicyMode policyMode = this.requirePolicyMode(itemKey, section, "policy");
+        final boolean buyEnabled = this.requireBoolean(itemKey, section, "buy-enabled");
+        final boolean sellEnabled = this.requireBoolean(itemKey, section, "sell-enabled");
+        final long stockCap = this.requireNonNegativeLong(itemKey, section, "stock-cap");
+        final long turnoverAmountPerInterval = this.requireNonNegativeLong(itemKey, section, "turnover-amount-per-interval");
+        final BigDecimal baseWorth = this.requireNonNegativeBigDecimal(itemKey, section, "base-worth");
+        final ConfigurationSection ecoSection = this.requireSection(
+                section,
+                "eco",
+                "exchange-items.yml item '" + itemKey.value() + "' is missing the required 'eco' section"
+        );
 
-        return new RawItemSpec(
+        return new ExchangeItemsConfig.RawItemEntry(
+                itemKey,
                 displayName,
                 category,
                 generatedCategory,
@@ -206,10 +196,81 @@ public final class ConfigLoader {
                 sellEnabled,
                 stockCap,
                 turnoverAmountPerInterval,
-                ecoEnvelopeKey,
-                buyPrice,
-                sellPrice
+                baseWorth,
+                this.parseResolvedEco(itemKey, ecoSection)
         );
+    }
+
+    private ExchangeItemsConfig.ResolvedEcoEntry parseResolvedEco(
+            final ItemKey itemKey,
+            final ConfigurationSection ecoSection
+    ) {
+        final long minStockInclusive = this.requireNonNegativeLong(itemKey, ecoSection, "min-stock");
+        final long maxStockInclusive = this.requireNonNegativeLong(itemKey, ecoSection, "max-stock");
+        if (maxStockInclusive < minStockInclusive) {
+            throw new IllegalStateException(
+                    "exchange-items.yml item '" + itemKey.value()
+                            + "' has eco.max-stock < eco.min-stock"
+            );
+        }
+
+        final BigDecimal buyPriceAtMinStock = this.requireNonNegativeBigDecimal(itemKey, ecoSection, "buy-price-at-min-stock");
+        final BigDecimal buyPriceAtMaxStock = this.requireNonNegativeBigDecimal(itemKey, ecoSection, "buy-price-at-max-stock");
+        final BigDecimal sellPriceAtMinStock = this.requireNonNegativeBigDecimal(itemKey, ecoSection, "sell-price-at-min-stock");
+        final BigDecimal sellPriceAtMaxStock = this.requireNonNegativeBigDecimal(itemKey, ecoSection, "sell-price-at-max-stock");
+
+        return new ExchangeItemsConfig.ResolvedEcoEntry(
+                minStockInclusive,
+                maxStockInclusive,
+                buyPriceAtMinStock,
+                buyPriceAtMaxStock,
+                sellPriceAtMinStock,
+                sellPriceAtMaxStock
+        );
+    }
+
+    private void rejectLegacyRuntimeFields(final String normalizedItemKey, final ConfigurationSection section) {
+        for (final String legacyField : LEGACY_RUNTIME_ITEM_FIELDS) {
+            if (section.contains(legacyField)) {
+                throw new IllegalStateException(
+                        "exchange-items.yml item '" + normalizedItemKey + "' uses legacy runtime field '"
+                                + legacyField
+                                + "'. The published runtime catalog must contain resolved eco data under 'eco' instead."
+                );
+            }
+        }
+    }
+
+    private ItemCategory requireTopLevelCategory(
+            final ItemKey itemKey,
+            final ConfigurationSection section,
+            final String path
+    ) {
+        final ItemCategory category = this.parseTopLevelCategory(this.requireString(itemKey, section, path));
+        if (category == null) {
+            throw new IllegalStateException(
+                    "exchange-items.yml item '" + itemKey.value()
+                            + "' has invalid category '" + section.getString(path) + "'"
+            );
+        }
+        return category;
+    }
+
+    private ItemPolicyMode requirePolicyMode(
+            final ItemKey itemKey,
+            final ConfigurationSection section,
+            final String path
+    ) {
+        final String rawValue = this.requireString(itemKey, section, path);
+        try {
+            return ItemPolicyMode.valueOf(rawValue.trim().toUpperCase(Locale.ROOT));
+        } catch (final IllegalArgumentException ex) {
+            throw new IllegalStateException(
+                    "exchange-items.yml item '" + itemKey.value()
+                            + "' has invalid policy '" + rawValue + "'",
+                    ex
+            );
+        }
     }
 
     private ItemCategory parseTopLevelCategory(final String rawCategory) {
@@ -256,24 +317,130 @@ public final class ConfigLoader {
         };
     }
 
-    private ExchangeItemsConfig.RawItemEntry toRawItemEntry(
+    private String getOptionalString(final ConfigurationSection section, final String path) {
+        if (!section.contains(path)) {
+            return null;
+        }
+        final String value = section.getString(path);
+        if (value == null) {
+            return null;
+        }
+        final String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String requireString(
             final ItemKey itemKey,
-            final RawItemSpec spec
+            final ConfigurationSection section,
+            final String path
     ) {
-        return new ExchangeItemsConfig.RawItemEntry(
-                itemKey,
-                spec.displayName(),
-                spec.category(),
-                spec.generatedCategory(),
-                spec.policyMode(),
-                spec.buyEnabled(),
-                spec.sellEnabled(),
-                spec.stockCap(),
-                spec.turnoverAmountPerInterval(),
-                spec.ecoEnvelopeKey(),
-                spec.buyPrice(),
-                spec.sellPrice()
-        );
+        final String value = this.getOptionalString(section, path);
+        if (value == null) {
+            throw new IllegalStateException(
+                    "exchange-items.yml item '" + itemKey.value()
+                            + "' is missing required string field '" + path + "'"
+            );
+        }
+        return value;
+    }
+
+    private boolean requireBoolean(
+            final ItemKey itemKey,
+            final ConfigurationSection section,
+            final String path
+    ) {
+        if (!section.contains(path)) {
+            throw new IllegalStateException(
+                    "exchange-items.yml item '" + itemKey.value()
+                            + "' is missing required boolean field '" + path + "'"
+            );
+        }
+
+        final Object value = section.get(path);
+        if (!(value instanceof Boolean bool)) {
+            throw new IllegalStateException(
+                    "exchange-items.yml item '" + itemKey.value()
+                            + "' has non-boolean field '" + path + "'"
+            );
+        }
+        return bool;
+    }
+
+    private long requireNonNegativeLong(
+            final ItemKey itemKey,
+            final ConfigurationSection section,
+            final String path
+    ) {
+        if (!section.contains(path)) {
+            throw new IllegalStateException(
+                    "exchange-items.yml item '" + itemKey.value()
+                            + "' is missing required numeric field '" + path + "'"
+            );
+        }
+
+        final Object value = section.get(path);
+        final long parsed;
+        if (value instanceof Number number) {
+            parsed = number.longValue();
+        } else {
+            try {
+                parsed = Long.parseLong(String.valueOf(value).trim());
+            } catch (final NumberFormatException ex) {
+                throw new IllegalStateException(
+                        "exchange-items.yml item '" + itemKey.value()
+                                + "' has invalid long field '" + path + "'",
+                        ex
+                );
+            }
+        }
+
+        if (parsed < 0L) {
+            throw new IllegalStateException(
+                    "exchange-items.yml item '" + itemKey.value()
+                            + "' has negative field '" + path + "'"
+            );
+        }
+        return parsed;
+    }
+
+    private BigDecimal requireNonNegativeBigDecimal(
+            final ItemKey itemKey,
+            final ConfigurationSection section,
+            final String path
+    ) {
+        if (!section.contains(path)) {
+            throw new IllegalStateException(
+                    "exchange-items.yml item '" + itemKey.value()
+                            + "' is missing required decimal field '" + path + "'"
+            );
+        }
+
+        final BigDecimal value = this.asBigDecimal(section.get(path));
+        if (value == null) {
+            throw new IllegalStateException(
+                    "exchange-items.yml item '" + itemKey.value()
+                            + "' has null decimal field '" + path + "'"
+            );
+        }
+        if (value.signum() < 0) {
+            throw new IllegalStateException(
+                    "exchange-items.yml item '" + itemKey.value()
+                            + "' has negative decimal field '" + path + "'"
+            );
+        }
+        return value;
+    }
+
+    private ConfigurationSection requireSection(
+            final ConfigurationSection parent,
+            final String path,
+            final String message
+    ) {
+        final ConfigurationSection section = parent.getConfigurationSection(path);
+        if (section == null) {
+            throw new IllegalStateException(message);
+        }
+        return section;
     }
 
     private BigDecimal getBigDecimal(final ConfigurationSection section, final String path) {
@@ -288,20 +455,6 @@ public final class ConfigLoader {
         return value != null ? value : fallback;
     }
 
-    private Boolean getBooleanObject(final ConfigurationSection section, final String path) {
-        if (!section.contains(path)) {
-            return null;
-        }
-        return section.getBoolean(path);
-    }
-
-    private Long getLongObject(final ConfigurationSection section, final String path) {
-        if (!section.contains(path)) {
-            return null;
-        }
-        return section.getLong(path);
-    }
-
     private BigDecimal asBigDecimal(final Object value) {
         if (value == null) {
             return null;
@@ -309,10 +462,7 @@ public final class ConfigLoader {
         if (value instanceof BigDecimal bigDecimal) {
             return bigDecimal;
         }
-        if (value instanceof Number number) {
-            return BigDecimal.valueOf(number.doubleValue());
-        }
-        return new BigDecimal(String.valueOf(value));
+        return new BigDecimal(String.valueOf(value).trim());
     }
 
     private FileConfiguration loadYaml(final String resourceName) {
@@ -326,84 +476,11 @@ public final class ConfigLoader {
         return YamlConfiguration.loadConfiguration(file);
     }
 
-    private boolean isWildcardPattern(final String itemKey) {
-        return itemKey.indexOf('*') >= 0;
-    }
-
-    private int wildcardSpecificity(final String itemKey) {
-        int specificity = 0;
-        for (int i = 0; i < itemKey.length(); i++) {
-            if (itemKey.charAt(i) != '*') {
-                specificity++;
-            }
-        }
-        return specificity;
-    }
-
-    private Pattern compileGlob(final String glob) {
-        final StringBuilder regex = new StringBuilder(glob.length() * 2);
-        regex.append('^');
-        for (int i = 0; i < glob.length(); i++) {
-            final char ch = glob.charAt(i);
-            if (ch == '*') {
-                regex.append(".*");
-                continue;
-            }
-            if ("\\.^$|?+()[]{}".indexOf(ch) >= 0) {
-                regex.append('\\');
-            }
-            regex.append(ch);
-        }
-        regex.append('$');
-        return Pattern.compile(regex.toString());
-    }
-
-    private boolean isIncludedMaterial(final Material material) {
-        if (material == Material.AIR) {
-            return false;
-        }
-        if (!material.isItem()) {
-            return false;
-        }
-        return !material.isLegacy();
-    }
-
     private String normalizeItemKey(final String rawItemKey) {
         String key = rawItemKey.trim().toLowerCase(Locale.ROOT).replace('-', '_');
         if (!key.contains(":")) {
             key = "minecraft:" + key;
         }
         return key;
-    }
-
-    private String normalizeItemKey(final Material material) {
-        return "minecraft:" + material.name().toLowerCase(Locale.ROOT);
-    }
-
-    private record RawItemSpec(
-            String displayName,
-            ItemCategory category,
-            GeneratedItemCategory generatedCategory,
-            ItemPolicyMode policyMode,
-            Boolean buyEnabled,
-            Boolean sellEnabled,
-            Long stockCap,
-            Long turnoverAmountPerInterval,
-            String ecoEnvelopeKey,
-            BigDecimal buyPrice,
-            BigDecimal sellPrice
-    ) {
-    }
-
-    private record WildcardItemRule(
-            String pattern,
-            Pattern regex,
-            int specificity,
-            int order,
-            RawItemSpec spec
-    ) {
-        private boolean matches(final String itemKey) {
-            return this.regex.matcher(itemKey).matches();
-        }
     }
 }

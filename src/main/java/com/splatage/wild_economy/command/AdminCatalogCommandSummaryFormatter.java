@@ -86,10 +86,24 @@ public final class AdminCatalogCommandSummaryFormatter {
                     + planEntry.runtimePolicy()
                     + ", policy-profile="
                     + planEntry.policyProfileId()
-                    + ", buy-price="
-                    + planEntry.buyPrice()
-                    + ", sell-price="
-                    + planEntry.sellPrice()
+                    + ", base-worth="
+                    + planEntry.baseWorth()
+                    + "."
+            );
+            lines.add(
+                ChatColor.AQUA
+                    + "Eco: min-stock="
+                    + planEntry.ecoMinStockInclusive()
+                    + ", max-stock="
+                    + planEntry.ecoMaxStockInclusive()
+                    + ", buy[min/max]="
+                    + planEntry.buyPriceAtMinStock()
+                    + "/"
+                    + planEntry.buyPriceAtMaxStock()
+                    + ", sell[min/max]="
+                    + planEntry.sellPriceAtMinStock()
+                    + "/"
+                    + planEntry.sellPriceAtMaxStock()
                     + "."
             );
             lines.add(

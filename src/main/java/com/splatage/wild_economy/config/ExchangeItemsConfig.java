@@ -30,13 +30,22 @@ public final class ExchangeItemsConfig {
             ItemCategory category,
             GeneratedItemCategory generatedCategory,
             ItemPolicyMode policyMode,
-            Boolean buyEnabled,
-            Boolean sellEnabled,
-            Long stockCap,
-            Long turnoverAmountPerInterval,
-            String ecoEnvelopeKey,
-            BigDecimal buyPrice,
-            BigDecimal sellPrice
+            boolean buyEnabled,
+            boolean sellEnabled,
+            long stockCap,
+            long turnoverAmountPerInterval,
+            BigDecimal baseWorth,
+            ResolvedEcoEntry eco
+    ) {
+    }
+
+    public record ResolvedEcoEntry(
+            long minStockInclusive,
+            long maxStockInclusive,
+            BigDecimal buyPriceLowStock,
+            BigDecimal buyPriceHighStock,
+            BigDecimal sellPriceLowStock,
+            BigDecimal sellPriceHighStock
     ) {
     }
 }

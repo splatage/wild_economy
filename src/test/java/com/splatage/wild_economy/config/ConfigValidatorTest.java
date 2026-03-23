@@ -10,7 +10,6 @@ import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
-import com.splatage.wild_economy.exchange.domain.SellPriceBand;
 import java.math.BigDecimal;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -20,7 +19,7 @@ final class ConfigValidatorTest {
     private static final ItemKey WHEAT = new ItemKey("minecraft:wheat");
 
     @Test
-    void validate_acceptsResolvedLinearEnvelopeSetup() {
+    void validate_acceptsResolvedEcoSetup() {
         final ExchangeItemsConfig exchangeItemsConfig = new ExchangeItemsConfig(Map.of(
                 WHEAT,
                 new ExchangeItemsConfig.RawItemEntry(
@@ -29,40 +28,33 @@ final class ConfigValidatorTest {
                         ItemCategory.FARMING_AND_FOOD,
                         GeneratedItemCategory.FARMING,
                         ItemPolicyMode.PLAYER_STOCKED,
-                        Boolean.TRUE,
-                        Boolean.TRUE,
+                        true,
+                        true,
                         3456L,
                         250L,
-                        "default_linear",
-                        null,
-                        null
+                        new BigDecimal("8.00"),
+                        new ExchangeItemsConfig.ResolvedEcoEntry(
+                                64L,
+                                3456L,
+                                new BigDecimal("12.00"),
+                                new BigDecimal("10.00"),
+                                new BigDecimal("8.00"),
+                                new BigDecimal("1.60")
+                        )
                 )
-        ));
-
-        final EcoEnvelopesConfig ecoEnvelopesConfig = new EcoEnvelopesConfig(Map.of(
-                "default_linear",
-                new EcoEnvelopesConfig.EcoEnvelopeDefinition(
-                        new BigDecimal("1.50"),
-                        new BigDecimal("1.00"),
-                        64L,
-                        3456L,
-                        new BigDecimal("0.20")
-                )
-        ));
-
-        final StockProfilesConfig stockProfilesConfig = new StockProfilesConfig(Map.of(
-                "default_bulk",
-                new StockProfilesConfig.StockProfileDefinition(3456L, 250L)
         ));
 
         final ExchangeCatalog exchangeCatalog = new ExchangeCatalog(Map.of(
                 WHEAT,
                 this.entry(
+                        64L,
+                        3456L,
                         new BigDecimal("12.00"),
+                        new BigDecimal("10.00"),
                         new BigDecimal("8.00"),
+                        new BigDecimal("1.60"),
                         3456L,
                         250L,
-                        new SellPriceBand(64L, 3456L, new BigDecimal("1.60")),
                         true,
                         true
                 )
@@ -70,14 +62,12 @@ final class ConfigValidatorTest {
 
         assertDoesNotThrow(() -> new ConfigValidator(
                 exchangeItemsConfig,
-                ecoEnvelopesConfig,
-                stockProfilesConfig,
                 exchangeCatalog
         ).validate());
     }
 
     @Test
-    void validate_rejectsMissingNamedEcoEnvelopeReference() {
+    void validate_rejectsPublishedRuntimeArbitrage() {
         final ExchangeItemsConfig exchangeItemsConfig = new ExchangeItemsConfig(Map.of(
                 WHEAT,
                 new ExchangeItemsConfig.RawItemEntry(
@@ -86,24 +76,33 @@ final class ConfigValidatorTest {
                         ItemCategory.FARMING_AND_FOOD,
                         GeneratedItemCategory.FARMING,
                         ItemPolicyMode.PLAYER_STOCKED,
-                        Boolean.TRUE,
-                        Boolean.TRUE,
+                        true,
+                        true,
                         3456L,
                         250L,
-                        "missing_envelope",
-                        new BigDecimal("12.00"),
-                        new BigDecimal("8.00")
+                        new BigDecimal("8.00"),
+                        new ExchangeItemsConfig.ResolvedEcoEntry(
+                                64L,
+                                3456L,
+                                new BigDecimal("12.00"),
+                                new BigDecimal("10.00"),
+                                new BigDecimal("8.00"),
+                                new BigDecimal("11.00")
+                        )
                 )
         ));
 
         final ExchangeCatalog exchangeCatalog = new ExchangeCatalog(Map.of(
                 WHEAT,
                 this.entry(
+                        64L,
+                        3456L,
                         new BigDecimal("12.00"),
+                        new BigDecimal("10.00"),
                         new BigDecimal("8.00"),
+                        new BigDecimal("1.60"),
                         3456L,
                         250L,
-                        new SellPriceBand(64L, 3456L, new BigDecimal("1.60")),
                         true,
                         true
                 )
@@ -113,13 +112,11 @@ final class ConfigValidatorTest {
                 IllegalStateException.class,
                 () -> new ConfigValidator(
                         exchangeItemsConfig,
-                        new EcoEnvelopesConfig(Map.of()),
-                        new StockProfilesConfig(Map.of()),
                         exchangeCatalog
                 ).validate()
         );
 
-        assertTrue(exception.getMessage().contains("missing_envelope"));
+        assertTrue(exception.getMessage().contains("arbitrage risk"));
     }
 
     @Test
@@ -127,11 +124,14 @@ final class ConfigValidatorTest {
         final ExchangeCatalog exchangeCatalog = new ExchangeCatalog(Map.of(
                 WHEAT,
                 this.entry(
+                        64L,
+                        3456L,
                         new BigDecimal("5.00"),
+                        new BigDecimal("5.00"),
+                        new BigDecimal("6.00"),
                         new BigDecimal("6.00"),
                         3456L,
                         250L,
-                        null,
                         true,
                         true
                 )
@@ -141,8 +141,6 @@ final class ConfigValidatorTest {
                 IllegalStateException.class,
                 () -> new ConfigValidator(
                         new ExchangeItemsConfig(Map.of()),
-                        new EcoEnvelopesConfig(Map.of()),
-                        new StockProfilesConfig(Map.of()),
                         exchangeCatalog
                 ).validate()
         );
@@ -151,11 +149,14 @@ final class ConfigValidatorTest {
     }
 
     private ExchangeCatalogEntry entry(
-            final BigDecimal buyPrice,
-            final BigDecimal sellPrice,
+            final long minStockInclusive,
+            final long maxStockInclusive,
+            final BigDecimal buyPriceLowStock,
+            final BigDecimal buyPriceHighStock,
+            final BigDecimal sellPriceLowStock,
+            final BigDecimal sellPriceHighStock,
             final long stockCap,
             final long turnoverAmountPerInterval,
-            final SellPriceBand sellEnvelope,
             final boolean buyEnabled,
             final boolean sellEnabled
     ) {
@@ -166,14 +167,18 @@ final class ConfigValidatorTest {
                 GeneratedItemCategory.FARMING,
                 ItemPolicyMode.PLAYER_STOCKED,
                 new BigDecimal("8.00"),
-                buyPrice,
-                sellPrice,
-                sellEnvelope,
                 stockCap,
                 turnoverAmountPerInterval,
                 buyEnabled,
-                sellEnabled
+                sellEnabled,
+                new ExchangeCatalogEntry.ResolvedEcoEntry(
+                        minStockInclusive,
+                        maxStockInclusive,
+                        buyPriceLowStock,
+                        buyPriceHighStock,
+                        sellPriceLowStock,
+                        sellPriceHighStock
+                )
         );
     }
 }
-

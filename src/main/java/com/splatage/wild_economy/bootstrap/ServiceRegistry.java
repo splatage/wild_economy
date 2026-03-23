@@ -10,17 +10,12 @@ import com.splatage.wild_economy.command.ShopSellHandSubcommand;
 import com.splatage.wild_economy.config.ConfigLoader;
 import com.splatage.wild_economy.config.ConfigValidator;
 import com.splatage.wild_economy.config.DatabaseConfig;
-import com.splatage.wild_economy.config.EcoEnvelopesConfig;
 import com.splatage.wild_economy.config.ExchangeItemsConfig;
 import com.splatage.wild_economy.config.GlobalConfig;
-import com.splatage.wild_economy.config.StockProfilesConfig;
 import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.VaultEconomyGateway;
 import com.splatage.wild_economy.exchange.catalog.CatalogLoader;
-import com.splatage.wild_economy.exchange.catalog.CatalogMergeService;
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalog;
-import com.splatage.wild_economy.exchange.catalog.GeneratedCatalogImporter;
-import com.splatage.wild_economy.exchange.catalog.RootValueImporter;
 import com.splatage.wild_economy.exchange.item.BukkitItemNormalizer;
 import com.splatage.wild_economy.exchange.item.CanonicalItemRules;
 import com.splatage.wild_economy.exchange.item.ItemNormalizer;
@@ -72,7 +67,6 @@ import com.splatage.wild_economy.persistence.DatabaseProvider;
 import com.splatage.wild_economy.persistence.MigrationManager;
 import com.splatage.wild_economy.platform.PaperFoliaPlatformExecutor;
 import com.splatage.wild_economy.platform.PlatformExecutor;
-import java.io.File;
 import java.util.Objects;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.PluginCommand;
@@ -87,8 +81,6 @@ public final class ServiceRegistry {
     private GlobalConfig globalConfig;
     private DatabaseConfig databaseConfig;
     private ExchangeItemsConfig exchangeItemsConfig;
-    private EcoEnvelopesConfig ecoEnvelopesConfig;
-    private StockProfilesConfig stockProfilesConfig;
     private DatabaseProvider databaseProvider;
     private ExchangeCatalog exchangeCatalog;
     private ItemNormalizer itemNormalizer;
@@ -120,8 +112,6 @@ public final class ServiceRegistry {
         this.globalConfig = configLoader.loadGlobalConfig();
         this.databaseConfig = configLoader.loadDatabaseConfig();
         this.exchangeItemsConfig = configLoader.loadExchangeItemsConfig();
-        this.ecoEnvelopesConfig = configLoader.loadEcoEnvelopesConfig();
-        this.stockProfilesConfig = configLoader.loadStockProfilesConfig();
 
         this.databaseProvider = new DatabaseProvider(this.databaseConfig);
 
@@ -143,32 +133,15 @@ public final class ServiceRegistry {
             case MYSQL -> new MysqlExchangeTransactionRepository(this.databaseProvider);
         };
 
-        final File rootValuesFile = new File(this.plugin.getDataFolder(), "root-values.yml");
-        final File generatedCatalogFile = new File(new File(this.plugin.getDataFolder(), "generated"), "generated-catalog.yml");
-        if (!generatedCatalogFile.exists()) {
-            this.plugin.getLogger().warning("generated/generated-catalog.yml not found. Runtime catalog will fall back to exchange-items.yml overrides only.");
-        }
-
-        final GeneratedCatalogImporter generatedCatalogImporter = new GeneratedCatalogImporter();
-        final RootValueImporter rootValueImporter = new RootValueImporter();
-        final CatalogMergeService catalogMergeService = new CatalogMergeService();
-        final CatalogLoader catalogLoader = new CatalogLoader(generatedCatalogImporter, rootValueImporter, catalogMergeService);
+        final CatalogLoader catalogLoader = new CatalogLoader();
         this.exchangeCatalog = Objects.requireNonNull(
-            catalogLoader.load(
-                this.exchangeItemsConfig,
-                rootValuesFile,
-                generatedCatalogFile,
-                this.ecoEnvelopesConfig,
-                this.stockProfilesConfig
-            ),
-            "exchangeCatalog"
+                catalogLoader.load(this.exchangeItemsConfig),
+                "exchangeCatalog"
         );
 
         final ConfigValidator configValidator = new ConfigValidator(
-            this.exchangeItemsConfig,
-            this.ecoEnvelopesConfig,
-            this.stockProfilesConfig,
-            this.exchangeCatalog
+                this.exchangeItemsConfig,
+                this.exchangeCatalog
         );
         configValidator.validate();
 
@@ -179,43 +152,43 @@ public final class ServiceRegistry {
 
         final StockStateResolver stockStateResolver = new StockStateResolver();
         this.stockService = new StockServiceImpl(
-            this.exchangeStockRepository,
-            this.exchangeCatalog,
-            stockStateResolver,
-            this.plugin.getLogger(),
-            this.databaseProvider.dialect(),
-            this.databaseConfig.mysqlMaximumPoolSize()
+                this.exchangeStockRepository,
+                this.exchangeCatalog,
+                stockStateResolver,
+                this.plugin.getLogger(),
+                this.databaseProvider.dialect(),
+                this.databaseConfig.mysqlMaximumPoolSize()
         );
         this.stockService.flushDirtyNow();
         this.pricingService = new PricingServiceImpl(this.exchangeCatalog);
 
         this.transactionLogService = new TransactionLogServiceImpl(
-            this.exchangeTransactionRepository,
-            this.plugin.getLogger(),
-            this.databaseProvider.dialect(),
-            this.databaseConfig.mysqlMaximumPoolSize()
+                this.exchangeTransactionRepository,
+                this.plugin.getLogger(),
+                this.databaseProvider.dialect(),
+                this.databaseConfig.mysqlMaximumPoolSize()
         );
 
         this.stockTurnoverService = new StockTurnoverServiceImpl(this.exchangeCatalog, this.stockService, this.transactionLogService);
         this.exchangeBrowseService = new ExchangeBrowseServiceImpl(this.exchangeCatalog, this.stockService);
 
         final ExchangeBuyService rawBuyService = new ExchangeBuyServiceImpl(
-            this.exchangeCatalog,
-            this.itemValidationService,
-            this.stockService,
-            this.pricingService,
-            this.economyGateway,
-            this.transactionLogService,
-            this.globalConfig
+                this.exchangeCatalog,
+                this.itemValidationService,
+                this.stockService,
+                this.pricingService,
+                this.economyGateway,
+                this.transactionLogService,
+                this.globalConfig
         );
 
         final ExchangeSellServiceImpl rawSellService = new ExchangeSellServiceImpl(
-            this.exchangeCatalog,
-            this.itemValidationService,
-            this.stockService,
-            this.pricingService,
-            this.economyGateway,
-            this.transactionLogService
+                this.exchangeCatalog,
+                this.itemValidationService,
+                this.stockService,
+                this.pricingService,
+                this.economyGateway,
+                this.transactionLogService
         );
 
         this.exchangeBuyService = new FoliaSafeExchangeBuyService(rawBuyService);
@@ -241,13 +214,13 @@ public final class ServiceRegistry {
         final AdminItemInspectorMenu adminItemInspectorMenu = new AdminItemInspectorMenu();
         final AdminOverrideEditMenu adminOverrideEditMenu = new AdminOverrideEditMenu();
         this.adminMenuRouter = new AdminMenuRouter(
-            this.plugin,
-            this.platformExecutor,
-            adminRootMenu,
-            adminReviewBucketMenu,
-            adminRuleImpactMenu,
-            adminItemInspectorMenu,
-            adminOverrideEditMenu
+                this.plugin,
+                this.platformExecutor,
+                adminRootMenu,
+                adminReviewBucketMenu,
+                adminRuleImpactMenu,
+                adminItemInspectorMenu,
+                adminOverrideEditMenu
         );
         adminRootMenu.setAdminMenuRouter(this.adminMenuRouter);
         adminReviewBucketMenu.setAdminMenuRouter(this.adminMenuRouter);
@@ -255,11 +228,11 @@ public final class ServiceRegistry {
         adminItemInspectorMenu.setAdminMenuRouter(this.adminMenuRouter);
         adminOverrideEditMenu.setAdminMenuRouter(this.adminMenuRouter);
         this.adminMenuListener = new AdminMenuListener(
-            adminRootMenu,
-            adminReviewBucketMenu,
-            adminRuleImpactMenu,
-            adminItemInspectorMenu,
-            adminOverrideEditMenu
+                adminRootMenu,
+                adminReviewBucketMenu,
+                adminRuleImpactMenu,
+                adminItemInspectorMenu,
+                adminOverrideEditMenu
         );
         this.plugin.getServer().getPluginManager().registerEvents(this.adminMenuListener, this.plugin);
     }
@@ -298,9 +271,9 @@ public final class ServiceRegistry {
 
     public void registerTasks() {
         this.platformExecutor.runGlobalRepeating(
-            new com.splatage.wild_economy.scheduler.StockTurnoverTask(this.stockTurnoverService),
-            this.globalConfig.turnoverIntervalTicks(),
-            this.globalConfig.turnoverIntervalTicks()
+                new com.splatage.wild_economy.scheduler.StockTurnoverTask(this.stockTurnoverService),
+                this.globalConfig.turnoverIntervalTicks(),
+                this.globalConfig.turnoverIntervalTicks()
         );
     }
 

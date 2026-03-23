@@ -12,26 +12,19 @@ import java.util.Objects;
 public final class ConfigValidator {
 
     private final ExchangeItemsConfig exchangeItemsConfig;
-    private final EcoEnvelopesConfig ecoEnvelopesConfig;
-    private final StockProfilesConfig stockProfilesConfig;
     private final ExchangeCatalog exchangeCatalog;
 
     public ConfigValidator(
             final ExchangeItemsConfig exchangeItemsConfig,
-            final EcoEnvelopesConfig ecoEnvelopesConfig,
-            final StockProfilesConfig stockProfilesConfig,
             final ExchangeCatalog exchangeCatalog
     ) {
         this.exchangeItemsConfig = Objects.requireNonNull(exchangeItemsConfig, "exchangeItemsConfig");
-        this.ecoEnvelopesConfig = Objects.requireNonNull(ecoEnvelopesConfig, "ecoEnvelopesConfig");
-        this.stockProfilesConfig = Objects.requireNonNull(stockProfilesConfig, "stockProfilesConfig");
         this.exchangeCatalog = Objects.requireNonNull(exchangeCatalog, "exchangeCatalog");
     }
 
     public void validate() {
         final List<String> errors = new ArrayList<>();
-        this.validateEcoEnvelopes(errors);
-        this.validateExchangeItemOverrides(errors);
+        this.validatePublishedRuntimeExchangeItems(errors);
         this.validateMergedCatalog(errors);
 
         if (!errors.isEmpty()) {
@@ -39,45 +32,60 @@ public final class ConfigValidator {
         }
     }
 
-    private void validateEcoEnvelopes(final List<String> errors) {
-        for (final Map.Entry<String, EcoEnvelopesConfig.EcoEnvelopeDefinition> entry : this.ecoEnvelopesConfig.ecoEnvelopes().entrySet()) {
-            final String key = entry.getKey();
-            final EcoEnvelopesConfig.EcoEnvelopeDefinition definition = entry.getValue();
-            final String prefix = "eco-envelopes." + key;
-
-            this.requireNonNegative(errors, prefix + ".buy-price-multiplier", definition.buyPriceMultiplier());
-            this.requireNonNegative(errors, prefix + ".sell-price-multiplier", definition.sellPriceMultiplier());
-            this.requireNonNegative(errors, prefix + ".floor-price-factor", definition.floorPriceFactor());
-
-            if (definition.floorPriceFactor() != null && definition.floorPriceFactor().compareTo(BigDecimal.ONE) > 0) {
-                errors.add(prefix + ".floor-price-factor must be <= 1.00");
-            }
-            if (definition.minStock() < 0L) {
-                errors.add(prefix + ".min-stock must be >= 0");
-            }
-            if (definition.maxStock() < definition.minStock()) {
-                errors.add(prefix + ".max-stock must be >= min-stock");
-            }
-        }
-    }
-
-    private void validateExchangeItemOverrides(final List<String> errors) {
+    private void validatePublishedRuntimeExchangeItems(final List<String> errors) {
         for (final Map.Entry<ItemKey, ExchangeItemsConfig.RawItemEntry> entry : this.exchangeItemsConfig.items().entrySet()) {
             final ItemKey itemKey = entry.getKey();
             final ExchangeItemsConfig.RawItemEntry rawItem = entry.getValue();
             final String prefix = "exchange-items.items." + itemKey.value();
 
-            if (rawItem.ecoEnvelopeKey() != null && this.ecoEnvelopesConfig.get(rawItem.ecoEnvelopeKey()).isEmpty()) {
-                errors.add(prefix + ".eco-envelope references missing key '" + rawItem.ecoEnvelopeKey() + "'");
+            if (rawItem.stockCap() < 0L) {
+                errors.add(prefix + ".stock-cap must be >= 0");
+            }
+            if (rawItem.turnoverAmountPerInterval() < 0L) {
+                errors.add(prefix + ".turnover-amount-per-interval must be >= 0");
             }
 
-            this.requireNonNegative(errors, prefix + ".buy-price", rawItem.buyPrice());
-            this.requireNonNegative(errors, prefix + ".sell-price", rawItem.sellPrice());
+            this.requireNonNegative(errors, prefix + ".base-worth", rawItem.baseWorth());
 
-            if (rawItem.buyPrice() != null
-                    && rawItem.sellPrice() != null
-                    && rawItem.sellPrice().compareTo(rawItem.buyPrice()) > 0) {
-                errors.add(prefix + " has sell-price greater than buy-price");
+            final ExchangeItemsConfig.ResolvedEcoEntry eco = rawItem.eco();
+            if (eco == null) {
+                errors.add(prefix + ".eco is required");
+                continue;
+            }
+
+            if (eco.minStockInclusive() < 0L) {
+                errors.add(prefix + ".eco.min-stock must be >= 0");
+            }
+            if (eco.maxStockInclusive() < eco.minStockInclusive()) {
+                errors.add(prefix + ".eco.max-stock must be >= eco.min-stock");
+            }
+
+            this.requireNonNegative(errors, prefix + ".eco.buy-price-at-min-stock", eco.buyPriceLowStock());
+            this.requireNonNegative(errors, prefix + ".eco.buy-price-at-max-stock", eco.buyPriceHighStock());
+            this.requireNonNegative(errors, prefix + ".eco.sell-price-at-min-stock", eco.sellPriceLowStock());
+            this.requireNonNegative(errors, prefix + ".eco.sell-price-at-max-stock", eco.sellPriceHighStock());
+
+            if (rawItem.buyEnabled()) {
+                this.requirePresent(errors, prefix + ".eco.buy-price-at-min-stock", eco.buyPriceLowStock());
+                this.requirePresent(errors, prefix + ".eco.buy-price-at-max-stock", eco.buyPriceHighStock());
+            }
+            if (rawItem.sellEnabled()) {
+                this.requirePresent(errors, prefix + ".eco.sell-price-at-min-stock", eco.sellPriceLowStock());
+                this.requirePresent(errors, prefix + ".eco.sell-price-at-max-stock", eco.sellPriceHighStock());
+            }
+
+            if (rawItem.buyEnabled()
+                    && rawItem.sellEnabled()
+                    && eco.buyPriceLowStock() != null
+                    && eco.buyPriceHighStock() != null
+                    && eco.sellPriceLowStock() != null
+                    && eco.sellPriceHighStock() != null) {
+                if (eco.sellPriceLowStock().compareTo(eco.buyPriceLowStock()) > 0) {
+                    errors.add(prefix + " has arbitrage risk at low stock: sell price exceeds buy price");
+                }
+                if (eco.sellPriceHighStock().compareTo(eco.buyPriceHighStock()) > 0) {
+                    errors.add(prefix + " has arbitrage risk at high stock: sell price exceeds buy price");
+                }
             }
         }
     }
@@ -86,20 +94,48 @@ public final class ConfigValidator {
         for (final ExchangeCatalogEntry entry : this.exchangeCatalog.allEntries()) {
             final String prefix = "catalog." + entry.itemKey().value();
 
-            this.requireNonNegative(errors, prefix + ".buyPrice", entry.buyPrice());
-            this.requireNonNegative(errors, prefix + ".sellPrice", entry.sellPrice());
-
             if (entry.stockCap() < 0L) {
                 errors.add(prefix + ".stockCap must be >= 0");
             }
             if (entry.turnoverAmountPerInterval() < 0L) {
                 errors.add(prefix + ".turnoverAmountPerInterval must be >= 0");
             }
+
+            this.requireNonNegative(errors, prefix + ".baseWorth", entry.baseWorth());
+
+            if (entry.eco() == null) {
+                errors.add(prefix + ".eco must be present in the merged runtime catalog");
+                continue;
+            }
+
+            if (entry.eco().minStockInclusive() < 0L) {
+                errors.add(prefix + ".eco.minStockInclusive must be >= 0");
+            }
+            if (entry.eco().maxStockInclusive() < entry.eco().minStockInclusive()) {
+                errors.add(prefix + ".eco.maxStockInclusive must be >= eco.minStockInclusive");
+            }
+
+            this.requireNonNegative(errors, prefix + ".eco.buyPriceLowStock", entry.eco().buyPriceLowStock());
+            this.requireNonNegative(errors, prefix + ".eco.buyPriceHighStock", entry.eco().buyPriceHighStock());
+            this.requireNonNegative(errors, prefix + ".eco.sellPriceLowStock", entry.eco().sellPriceLowStock());
+            this.requireNonNegative(errors, prefix + ".eco.sellPriceHighStock", entry.eco().sellPriceHighStock());
+
             if (entry.buyEnabled()
                     && entry.sellEnabled()
-                    && entry.sellPrice().compareTo(entry.buyPrice()) > 0) {
-                errors.add(prefix + " has arbitrage risk: sellPrice is greater than buyPrice while both sides are enabled");
+                    && entry.eco().sellPriceLowStock().compareTo(entry.eco().buyPriceLowStock()) > 0) {
+                errors.add(prefix + " has arbitrage risk at low stock: sell price exceeds buy price");
             }
+            if (entry.buyEnabled()
+                    && entry.sellEnabled()
+                    && entry.eco().sellPriceHighStock().compareTo(entry.eco().buyPriceHighStock()) > 0) {
+                errors.add(prefix + " has arbitrage risk at high stock: sell price exceeds buy price");
+            }
+        }
+    }
+
+    private void requirePresent(final List<String> errors, final String path, final Object value) {
+        if (value == null) {
+            errors.add(path + " is required");
         }
     }
 
@@ -117,4 +153,3 @@ public final class ConfigValidator {
         return builder.toString();
     }
 }
-

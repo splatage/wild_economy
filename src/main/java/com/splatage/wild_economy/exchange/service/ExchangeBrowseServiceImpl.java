@@ -9,6 +9,8 @@ import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
 import com.splatage.wild_economy.exchange.domain.StockSnapshot;
 import com.splatage.wild_economy.exchange.domain.StockState;
 import com.splatage.wild_economy.exchange.stock.StockService;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -57,7 +59,7 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
             pageEntries.add(new ExchangeCatalogView(
                 entry.itemKey(),
                 entry.displayName(),
-                entry.buyPrice(),
+                this.resolveCurrentBuyPrice(entry, snapshot),
                 snapshot.stockCount(),
                 snapshot.stockState()
             ));
@@ -110,7 +112,7 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
         return new ExchangeItemView(
             itemKey,
             entry.displayName(),
-            entry.buyPrice(),
+            this.resolveCurrentBuyPrice(entry, snapshot),
             snapshot.stockCount(),
             snapshot.stockCap(),
             snapshot.stockState(),
@@ -151,5 +153,54 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
             return true;
         }
         return snapshot.stockState() != StockState.OUT_OF_STOCK;
+    }
+    private BigDecimal resolveCurrentBuyPrice(
+        final ExchangeCatalogEntry entry,
+        final StockSnapshot snapshot
+    ) {
+        if (entry.policyMode() != ItemPolicyMode.PLAYER_STOCKED) {
+            return this.money(entry.eco().buyPriceLowStock());
+        }
+
+        return this.resolveEnvelopeUnitPrice(
+            this.money(entry.eco().buyPriceLowStock()),
+            this.money(entry.eco().buyPriceHighStock()),
+            entry.eco().minStockInclusive(),
+            entry.eco().maxStockInclusive(),
+            snapshot.stockCount()
+        );
+    }
+
+    private BigDecimal resolveEnvelopeUnitPrice(
+        final BigDecimal lowStockPrice,
+        final BigDecimal highStockPrice,
+        final long minStock,
+        final long maxStock,
+        final long stock
+    ) {
+        if (stock <= minStock) {
+            return lowStockPrice;
+        }
+        if (stock >= maxStock) {
+            return highStockPrice;
+        }
+        if (maxStock <= minStock) {
+            return lowStockPrice;
+        }
+
+        final BigDecimal range = BigDecimal.valueOf(maxStock - minStock);
+        final BigDecimal offset = BigDecimal.valueOf(stock - minStock);
+        final BigDecimal fraction = offset.divide(range, 8, RoundingMode.HALF_UP);
+        final BigDecimal spread = highStockPrice.subtract(lowStockPrice);
+
+        return lowStockPrice
+            .add(spread.multiply(fraction))
+            .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal money(final BigDecimal value) {
+        return value == null
+            ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+            : value.setScale(2, RoundingMode.HALF_UP);
     }
 }

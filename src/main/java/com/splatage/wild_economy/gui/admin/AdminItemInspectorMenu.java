@@ -107,8 +107,16 @@ public final class AdminItemInspectorMenu {
         lore.add("Category: " + trace.finalCategory().name());
         lore.add("Final policy: " + trace.finalPolicy().name());
         if (planEntry != null) {
-            lore.add("Buy: " + planEntry.buyEnabled() + " @ " + String.valueOf(planEntry.buyPrice()));
-            lore.add("Sell: " + planEntry.sellEnabled() + " @ " + String.valueOf(planEntry.sellPrice()));
+            lore.add("Buy: " + planEntry.buyEnabled()
+                + " @ min/max "
+                + String.valueOf(planEntry.buyPriceAtMinStock())
+                + " / "
+                + String.valueOf(planEntry.buyPriceAtMaxStock()));
+            lore.add("Sell: " + planEntry.sellEnabled()
+                + " @ min/max "
+                + String.valueOf(planEntry.sellPriceAtMinStock())
+                + " / "
+                + String.valueOf(planEntry.sellPriceAtMaxStock()));
         }
         return this.item(material == null ? Material.BARRIER : material, trace.displayName(), lore);
     }
@@ -144,9 +152,15 @@ public final class AdminItemInspectorMenu {
             lore.add("Requires player stock to buy: " + planEntry.requiresPlayerStockToBuy());
             lore.add("Stock profile: " + planEntry.stockProfile());
             lore.add("Eco envelope: " + planEntry.ecoEnvelope());
-            lore.add("Anchor: " + String.valueOf(planEntry.anchorValue()));
-            lore.add("Buy price: " + String.valueOf(planEntry.buyPrice()));
-            lore.add("Sell price: " + String.valueOf(planEntry.sellPrice()));
+            lore.add("Base worth: " + String.valueOf(planEntry.baseWorth()));
+            lore.add("Stock cap: " + planEntry.stockCap());
+            lore.add("Turnover/interval: " + planEntry.turnoverAmountPerInterval());
+            lore.add("Eco min stock: " + planEntry.ecoMinStockInclusive());
+            lore.add("Eco max stock: " + planEntry.ecoMaxStockInclusive());
+            lore.add("Buy price @ min stock: " + String.valueOf(planEntry.buyPriceAtMinStock()));
+            lore.add("Buy price @ max stock: " + String.valueOf(planEntry.buyPriceAtMaxStock()));
+            lore.add("Sell price @ min stock: " + String.valueOf(planEntry.sellPriceAtMinStock()));
+            lore.add("Sell price @ max stock: " + String.valueOf(planEntry.sellPriceAtMaxStock()));
         }
         return this.item(Material.WRITABLE_BOOK, "Runtime", lore);
     }
@@ -285,4 +299,3 @@ public final class AdminItemInspectorMenu {
         return Material.matchMaterial(AdminCatalogItemKeys.canonicalize(itemKey).replace("minecraft:", "").toUpperCase(Locale.ROOT));
     }
 }
-

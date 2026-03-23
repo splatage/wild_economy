@@ -18,9 +18,13 @@ public record AdminCatalogPlanEntry(
     boolean requiresPlayerStockToBuy,
     int stockCap,
     int turnoverAmountPerInterval,
-    BigDecimal anchorValue,
-    BigDecimal buyPrice,
-    BigDecimal sellPrice,
+    BigDecimal baseWorth,
+    long ecoMinStockInclusive,
+    long ecoMaxStockInclusive,
+    BigDecimal buyPriceAtMinStock,
+    BigDecimal buyPriceAtMaxStock,
+    BigDecimal sellPriceAtMinStock,
+    BigDecimal sellPriceAtMaxStock,
     String stockProfile,
     String ecoEnvelope,
     String derivationReason,
@@ -29,4 +33,3 @@ public record AdminCatalogPlanEntry(
     String excludeReason,
     String notes
 ) { }
-
