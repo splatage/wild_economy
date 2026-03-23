@@ -5,9 +5,16 @@ items:
     policy: PLAYER_STOCKED
     buy-enabled: true
     sell-enabled: true
-    stock-profile: exchange_default
-    eco-envelope: exchange_default
-    base-worth: 8.0
+    stock-cap: 3456
+    turnover-amount-per-interval: 250
+    base-worth: 8.00
+    eco:
+      min-stock: 64
+      max-stock: 3456
+      buy-price-at-min-stock: 12.00
+      buy-price-at-max-stock: 12.00
+      sell-price-at-min-stock: 8.00
+      sell-price-at-max-stock: 1.60
 
   minecraft:cactus:
     display-name: Cactus
@@ -15,9 +22,16 @@ items:
     policy: PLAYER_STOCKED
     buy-enabled: true
     sell-enabled: true
-    stock-profile: high_volume_bulk
-    eco-envelope: high_volume_bulk
-    base-worth: 6.0
+    stock-cap: 3456
+    turnover-amount-per-interval: 400
+    base-worth: 6.00
+    eco:
+      min-stock: 64
+      max-stock: 3456
+      buy-price-at-min-stock: 9.60
+      buy-price-at-max-stock: 9.60
+      sell-price-at-min-stock: 6.00
+      sell-price-at-max-stock: 0.90
 
   minecraft:sand:
     display-name: Sand
@@ -25,9 +39,16 @@ items:
     policy: UNLIMITED_BUY
     buy-enabled: true
     sell-enabled: false
-    stock-profile: unlimited_buy_utility
-    eco-envelope: world_damage_unlimited_buy
-    base-worth: 20.0
+    stock-cap: 0
+    turnover-amount-per-interval: 0
+    base-worth: 20.00
+    eco:
+      min-stock: 0
+      max-stock: 1
+      buy-price-at-min-stock: 24.00
+      buy-price-at-max-stock: 24.00
+      sell-price-at-min-stock: 0.00
+      sell-price-at-max-stock: 0.00
 
   minecraft:diamond:
     display-name: Diamond
@@ -35,6 +56,13 @@ items:
     policy: DISABLED
     buy-enabled: false
     sell-enabled: false
-    stock-profile: disabled_placeholder
-    eco-envelope: disabled_placeholder
-    base-worth: 100.0
+    stock-cap: 0
+    turnover-amount-per-interval: 0
+    base-worth: 100.00
+    eco:
+      min-stock: 0
+      max-stock: 1
+      buy-price-at-min-stock: 0.00
+      buy-price-at-max-stock: 0.00
+      sell-price-at-min-stock: 0.00
+      sell-price-at-max-stock: 0.00

@@ -1,42 +1,36 @@
 eco-envelopes:
   exchange_default:
-    buy-price-multiplier: 1.50
-    sell-price-multiplier: 1.00
-    min-stock: 64
-    max-stock: 3456
-    floor-price-factor: 0.20
+    buy-price-at-min-stock-multiplier: 1.50
+    buy-price-at-max-stock-multiplier: 1.50
+    sell-price-at-min-stock-multiplier: 1.00
+    sell-price-at-max-stock-multiplier: 0.20
 
   high_volume_bulk:
-    buy-price-multiplier: 1.60
-    sell-price-multiplier: 1.00
-    min-stock: 64
-    max-stock: 3456
-    floor-price-factor: 0.15
+    buy-price-at-min-stock-multiplier: 1.60
+    buy-price-at-max-stock-multiplier: 1.60
+    sell-price-at-min-stock-multiplier: 1.00
+    sell-price-at-max-stock-multiplier: 0.15
 
   ore_precious:
-    buy-price-multiplier: 1.35
-    sell-price-multiplier: 0.90
-    min-stock: 16
-    max-stock: 1500
-    floor-price-factor: 0.25
+    buy-price-at-min-stock-multiplier: 1.35
+    buy-price-at-max-stock-multiplier: 1.35
+    sell-price-at-min-stock-multiplier: 0.90
+    sell-price-at-max-stock-multiplier: 0.225
 
   sell_only_cleanup:
-    buy-price-multiplier: 0.00
-    sell-price-multiplier: 0.45
-    min-stock: 0
-    max-stock: 1
-    floor-price-factor: 1.00
+    buy-price-at-min-stock-multiplier: 0.00
+    buy-price-at-max-stock-multiplier: 0.00
+    sell-price-at-min-stock-multiplier: 0.45
+    sell-price-at-max-stock-multiplier: 0.45
 
   world_damage_unlimited_buy:
-    buy-price-multiplier: 1.20
-    sell-price-multiplier: 0.00
-    min-stock: 0
-    max-stock: 1
-    floor-price-factor: 0.00
+    buy-price-at-min-stock-multiplier: 1.20
+    buy-price-at-max-stock-multiplier: 1.20
+    sell-price-at-min-stock-multiplier: 0.00
+    sell-price-at-max-stock-multiplier: 0.00
 
   disabled_placeholder:
-    buy-price-multiplier: 0.00
-    sell-price-multiplier: 0.00
-    min-stock: 0
-    max-stock: 1
-    floor-price-factor: 0.00
+    buy-price-at-min-stock-multiplier: 0.00
+    buy-price-at-max-stock-multiplier: 0.00
+    sell-price-at-min-stock-multiplier: 0.00
+    sell-price-at-max-stock-multiplier: 0.00

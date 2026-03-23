@@ -2,29 +2,35 @@ stock-profiles:
   exchange_default:
     stock-cap: 3456
     turnover-amount-per-interval: 250
-    initial-stock: 64
+    low-stock-threshold: 64
+    overflow-threshold: 3456
 
   high_volume_bulk:
     stock-cap: 3456
     turnover-amount-per-interval: 400
-    initial-stock: 64
+    low-stock-threshold: 64
+    overflow-threshold: 3456
 
   ore_precious:
     stock-cap: 1500
     turnover-amount-per-interval: 30
-    initial-stock: 16
+    low-stock-threshold: 16
+    overflow-threshold: 1500
 
   sell_only_cleanup:
     stock-cap: 0
     turnover-amount-per-interval: 0
-    initial-stock: 0
+    low-stock-threshold: 0
+    overflow-threshold: 1
 
   unlimited_buy_utility:
     stock-cap: 0
     turnover-amount-per-interval: 0
-    initial-stock: 0
+    low-stock-threshold: 0
+    overflow-threshold: 1
 
   disabled_placeholder:
     stock-cap: 0
     turnover-amount-per-interval: 0
-    initial-stock: 0
+    low-stock-threshold: 0
+    overflow-threshold: 1
