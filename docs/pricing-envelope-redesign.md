@@ -1,18 +1,22 @@
 # Pricing envelope redesign
 
-Base revision: `b3a28263ada706483b21236a677f4d55edf6a89d`
+Base revision: `5584f78e8e2f22b6df20a07444853e3b46660a1e`
 
 ## Purpose
 
-This note records the pricing redesign direction agreed for the current runtime pricing audit.
+This note records the pricing redesign direction for the current runtime pricing path.
 
-The old design used ordered fill-ratio bands and disconnected stock-profile defaults.
+The old design used ordered fill-ratio bands to taper sell value as stock increased.
 
-The current direction now has three concrete runtime slices:
+The new design uses named reusable eco envelopes:
 
-1. replace sell bands with a linear sell envelope
-2. wire reusable named `eco-envelope` and `stock-profile` refs into the live runtime path
-3. seed first-run stock from profile or item-level `initial-stock` values without ever resetting persisted live stock on restart
+- a buy price multiplier
+- a sell price multiplier
+- a minimum stock anchor
+- a maximum stock anchor
+- a floor price factor
+
+This is easier to explain, easier to hand-edit, and less error-prone than ordered overlapping bands.
 
 ## Buy model
 
@@ -20,8 +24,7 @@ Buy behavior remains intentionally simple.
 
 - each purchase action is capped at 64 items
 - the player receives a quoted buy price for that one transaction
-- that quoted price must be honored for that transaction
-- in the item detail GUI, the displayed unit price is captured when the menu opens and reused for the Buy 1 / 8 / 64 click path
+- that quoted price is honored for that transaction
 - a later purchase may be priced fresh
 
 This keeps purchase behavior predictable and prevents in-transaction repricing surprises.
@@ -40,11 +43,9 @@ That payout is piecewise:
 2. linear taper through the configured stock range
 3. floor-price plateau after the taper completes
 
-The linear section uses trapezoid / averaged integration, which matches the current code style while removing the config complexity of bands.
+The linear section uses trapezoid / averaged integration.
 
-## Runtime schema
+## Runtime config shape
 
-### `exchange-items.yml`
-
-Named refs stay the normal runtime path:
+This is now expressed through reusable references in `exchange-items.yml`:
 

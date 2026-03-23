@@ -9,7 +9,7 @@ A curated, Exchange-first Minecraft economy plugin for The Wild.
 - Player-stocked Exchange as the default mode for useful, standardized materials
 - Unlimited buy-only reserved for selected nuisance or world-damaging materials
 - Disabled items for progression-sensitive or gameplay-shortcutting content
-- Linear stock-sensitive sell pricing with soft stock anchors
+- Linear stock-sensitive sell pricing through reusable eco envelopes
 - Asynchronous persistence with in-memory runtime stock for responsive gameplay
 
 ## v1 direction
@@ -57,8 +57,8 @@ For `PLAYER_STOCKED` items:
 - player-stocked purchases consume stock atomically per buy action
 - the per-click buy limit is capped at 64 items
 - stock is consumed before the purchase is finalized so two buyers cannot both receive the same remaining stock
-- buy pricing is quoted once per purchase transaction and honored for that transaction
-- the detail GUI captures the displayed unit price when the menu opens and honors that shown quote for its Buy 1 / 8 / 64 buttons
+- the item detail menu captures the shown unit price and the quoted-buy path honors that quoted price for that purchase
+- a later purchase can refresh to a newer live price
 
 ### Purchase delivery behavior
 
@@ -76,8 +76,6 @@ Important notes:
 - the current looked-at container support covers chest, barrel, and placed shulker box
 - if only part of the purchase can be delivered across the enabled targets, the undelivered remainder is refunded
 - buy result messages include delivery details so players can see where purchased items went
-
-This keeps purchasing flexible for bulk goods while preserving predictable, explicit behavior.
 
 ## Current sell behavior
 
@@ -128,5 +126,5 @@ For `PLAYER_STOCKED` items:
   - floor-price plateau after the taper range
 - payout is rounded once at the end of the batch quote
 
-The active runtime config supports reusable named refs in `exchange-items.yml`:
+The current bundled config shape uses named reusable profiles:
 

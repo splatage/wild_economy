@@ -1,17 +1,24 @@
 eco-envelopes:
   exchange_default:
-    buy-price-multiplier: 1.20
-    sell-price-multiplier: 0.80
+    buy-price-multiplier: 1.50
+    sell-price-multiplier: 1.00
     min-stock: 64
     max-stock: 3456
     floor-price-factor: 0.20
 
-  ore_precious_tight:
+  high_volume_bulk:
+    buy-price-multiplier: 1.60
+    sell-price-multiplier: 1.00
+    min-stock: 64
+    max-stock: 3456
+    floor-price-factor: 0.15
+
+  ore_precious:
     buy-price-multiplier: 1.35
-    sell-price-multiplier: 0.65
+    sell-price-multiplier: 0.90
     min-stock: 16
     max-stock: 1500
-    floor-price-factor: 0.35
+    floor-price-factor: 0.25
 
   sell_only_cleanup:
     buy-price-multiplier: 0.00
