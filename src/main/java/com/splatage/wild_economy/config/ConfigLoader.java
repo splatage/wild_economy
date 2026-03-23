@@ -30,6 +30,7 @@ public final class ConfigLoader {
 
     public GlobalConfig loadGlobalConfig() {
         final FileConfiguration config = this.plugin.getConfig();
+
         return new GlobalConfig(
             config.getLong("turnover.interval-ticks", 72000L),
             config.getInt("gui.page-size", 45),
@@ -45,6 +46,7 @@ public final class ConfigLoader {
 
     public DatabaseConfig loadDatabaseConfig() {
         final FileConfiguration config = this.loadYaml("database.yml");
+
         return new DatabaseConfig(
             config.getString("backend", "sqlite"),
             config.getString("sqlite.file", "plugins/wild_economy/data.db"),
@@ -60,6 +62,7 @@ public final class ConfigLoader {
 
     public ExchangeItemsConfig loadExchangeItemsConfig() {
         final FileConfiguration config = this.loadYaml("exchange-items.yml");
+
         final ConfigurationSection itemsSection = config.getConfigurationSection("items");
         if (itemsSection == null) {
             throw new IllegalStateException("exchange-items.yml is missing the 'items' section");
@@ -128,14 +131,15 @@ public final class ConfigLoader {
         final ItemPolicyMode policyMode = ItemPolicyMode.valueOf(
             section.getString("policy", "DISABLED").toUpperCase(Locale.ROOT)
         );
-
         final boolean buyEnabled = section.getBoolean("buy-enabled", false);
         final boolean sellEnabled = section.getBoolean("sell-enabled", false);
         final long stockCap = section.getLong("stock-cap", 0L);
         final long turnoverAmountPerInterval = section.getLong("turnover-amount-per-interval", 0L);
         final BigDecimal buyPrice = this.getBigDecimal(section, "buy-price");
         final BigDecimal sellPrice = this.getBigDecimal(section, "sell-price");
-        final List<SellPriceBand> sellPriceBands = this.parseSellPriceBands(section.getMapList("sell-price-bands"));
+        final List<SellPriceBand> sellPriceBands = this.parseSellPriceEnvelope(
+            section.getConfigurationSection("sell-price-envelope")
+        );
 
         return new RawItemSpec(
             displayName,
@@ -156,6 +160,7 @@ public final class ConfigLoader {
         if (rawCategory == null || rawCategory.isBlank()) {
             return null;
         }
+
         final String normalized = rawCategory.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
         return switch (normalized) {
             case "FARMING", "FOOD", "FARMING_AND_FOOD" -> ItemCategory.FARMING_AND_FOOD;
@@ -173,6 +178,7 @@ public final class ConfigLoader {
         if (rawCategory == null || rawCategory.isBlank()) {
             return null;
         }
+
         final String normalized = rawCategory.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
         return switch (normalized) {
             case "FARMING" -> GeneratedItemCategory.FARMING;
@@ -214,21 +220,27 @@ public final class ConfigLoader {
         );
     }
 
-    private List<SellPriceBand> parseSellPriceBands(final List<Map<?, ?>> rawBands) {
-        final List<SellPriceBand> bands = new ArrayList<>();
-        for (final Map<?, ?> rawBand : rawBands) {
-            final double minFill = this.asDouble(rawBand.get("min-fill"), 0.0D);
-            final double maxFill = this.asDouble(rawBand.get("max-fill"), 1.0D);
-            final BigDecimal multiplier = this.asBigDecimal(rawBand.get("multiplier"));
-            bands.add(new SellPriceBand(minFill, maxFill, multiplier));
+    private List<SellPriceBand> parseSellPriceEnvelope(final ConfigurationSection section) {
+        if (section == null) {
+            return List.of();
         }
-        return List.copyOf(bands);
+
+        final long minStock = Math.max(0L, section.getLong("min-stock", 0L));
+        final long maxStock = Math.max(minStock, section.getLong("max-stock", minStock));
+        final BigDecimal minUnitPrice = this.getBigDecimal(section, "min-unit-price");
+
+        if (minUnitPrice == null) {
+            return List.of();
+        }
+
+        return List.of(new SellPriceBand(minStock, maxStock, minUnitPrice));
     }
 
     private BigDecimal getBigDecimal(final ConfigurationSection section, final String path) {
         if (!section.contains(path)) {
             return null;
         }
+
         return this.asBigDecimal(section.get(path));
     }
 
@@ -236,12 +248,15 @@ public final class ConfigLoader {
         if (value == null) {
             return null;
         }
+
         if (value instanceof BigDecimal bigDecimal) {
             return bigDecimal;
         }
+
         if (value instanceof Number number) {
             return BigDecimal.valueOf(number.doubleValue());
         }
+
         return new BigDecimal(String.valueOf(value));
     }
 
@@ -249,9 +264,11 @@ public final class ConfigLoader {
         if (value == null) {
             return fallback;
         }
+
         if (value instanceof Number number) {
             return number.doubleValue();
         }
+
         return Double.parseDouble(String.valueOf(value));
     }
 
@@ -266,6 +283,7 @@ public final class ConfigLoader {
                     + ". Run /shopadmin reload to regenerate bundled defaults, then review the file before continuing."
             );
         }
+
         return YamlConfiguration.loadConfiguration(file);
     }
 
@@ -286,17 +304,21 @@ public final class ConfigLoader {
     private Pattern compileGlob(final String glob) {
         final StringBuilder regex = new StringBuilder(glob.length() * 2);
         regex.append('^');
+
         for (int i = 0; i < glob.length(); i++) {
             final char ch = glob.charAt(i);
             if (ch == '*') {
                 regex.append(".*");
                 continue;
             }
+
             if ("\\.^$|?+()[]{}".indexOf(ch) >= 0) {
                 regex.append('\\');
             }
+
             regex.append(ch);
         }
+
         regex.append('$');
         return Pattern.compile(regex.toString());
     }
@@ -305,9 +327,11 @@ public final class ConfigLoader {
         if (material == Material.AIR) {
             return false;
         }
+
         if (!material.isItem()) {
             return false;
         }
+
         return !material.isLegacy();
     }
 

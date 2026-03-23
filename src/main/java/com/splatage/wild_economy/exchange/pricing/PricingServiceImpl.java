@@ -71,36 +71,45 @@ public final class PricingServiceImpl implements PricingService {
         final StockSnapshot stockSnapshot,
         final BigDecimal baseUnitPrice
     ) {
+        final SellPriceBand envelope = this.resolveSellEnvelope(entry.sellPriceBands());
+        if (envelope == null) {
+            return baseUnitPrice.multiply(BigDecimal.valueOf(amount)).setScale(MONEY_SCALE, MONEY_ROUNDING);
+        }
+
         final long startStock = Math.max(0L, stockSnapshot.stockCount());
-        final long stockCap = Math.max(0L, stockSnapshot.stockCap());
+        final long minStock = Math.max(0L, envelope.minStockInclusive());
+        final long maxStock = Math.max(minStock, envelope.maxStockInclusive());
+        final BigDecimal minUnitPrice = this.clampedFloorPrice(envelope.minUnitPrice(), baseUnitPrice);
 
-        if (stockCap <= 0L) {
-            final BigDecimal startUnitPrice = this.resolveSellUnitPrice(entry, baseUnitPrice, 0.0D);
-            return startUnitPrice.multiply(BigDecimal.valueOf(amount)).setScale(MONEY_SCALE, MONEY_ROUNDING);
+        long remaining = amount;
+        long currentStock = startStock;
+        BigDecimal total = ZERO_MONEY;
+
+        if (remaining > 0 && currentStock < minStock) {
+            final long plateauAmount = Math.min(remaining, minStock - currentStock);
+            total = total.add(
+                baseUnitPrice.multiply(BigDecimal.valueOf(plateauAmount)).setScale(MONEY_SCALE, MONEY_ROUNDING)
+            );
+            currentStock += plateauAmount;
+            remaining -= plateauAmount;
         }
 
-        final long endStock = startStock + amount;
-        final BigDecimal startUnitPrice = this.resolveSellUnitPrice(entry, baseUnitPrice, this.fillRatio(startStock, stockCap));
-        final BigDecimal floorUnitPrice = this.resolveSellUnitPrice(entry, baseUnitPrice, 1.0D);
-
-        if (startStock >= stockCap) {
-            return floorUnitPrice.multiply(BigDecimal.valueOf(amount)).setScale(MONEY_SCALE, MONEY_ROUNDING);
+        if (remaining > 0 && currentStock < maxStock) {
+            final long linearAmount = Math.min(remaining, maxStock - currentStock);
+            final BigDecimal startUnitPrice = this.resolveEnvelopeUnitPrice(baseUnitPrice, minUnitPrice, minStock, maxStock, currentStock);
+            final BigDecimal endUnitPrice = this.resolveEnvelopeUnitPrice(baseUnitPrice, minUnitPrice, minStock, maxStock, currentStock + linearAmount);
+            total = total.add(this.averageUnitPriceTotal(startUnitPrice, endUnitPrice, linearAmount));
+            currentStock += linearAmount;
+            remaining -= linearAmount;
         }
 
-        if (endStock <= stockCap) {
-            final BigDecimal endUnitPrice = this.resolveSellUnitPrice(entry, baseUnitPrice, this.fillRatio(endStock, stockCap));
-            return this.averageUnitPriceTotal(startUnitPrice, endUnitPrice, amount);
+        if (remaining > 0) {
+            total = total.add(
+                minUnitPrice.multiply(BigDecimal.valueOf(remaining)).setScale(MONEY_SCALE, MONEY_ROUNDING)
+            );
         }
 
-        final long beforeCapAmount = Math.max(0L, stockCap - startStock);
-        final long afterCapAmount = Math.max(0L, amount - beforeCapAmount);
-
-        final BigDecimal beforeCapTotal = this.averageUnitPriceTotal(startUnitPrice, floorUnitPrice, beforeCapAmount);
-        final BigDecimal afterCapTotal = floorUnitPrice
-            .multiply(BigDecimal.valueOf(afterCapAmount))
-            .setScale(MONEY_SCALE, MONEY_ROUNDING);
-
-        return beforeCapTotal.add(afterCapTotal).setScale(MONEY_SCALE, MONEY_ROUNDING);
+        return total.setScale(MONEY_SCALE, MONEY_ROUNDING);
     }
 
     private BigDecimal averageUnitPriceTotal(
@@ -119,46 +128,52 @@ public final class PricingServiceImpl implements PricingService {
             .setScale(MONEY_SCALE, MONEY_ROUNDING);
     }
 
-    private BigDecimal resolveSellUnitPrice(
-        final ExchangeCatalogEntry entry,
-        final BigDecimal baseUnitPrice,
-        final double fillRatio
+    private BigDecimal resolveEnvelopeUnitPrice(
+        final BigDecimal maxUnitPrice,
+        final BigDecimal minUnitPrice,
+        final long minStock,
+        final long maxStock,
+        final long stock
     ) {
-        final BigDecimal multiplier = this.resolveSellMultiplier(entry.sellPriceBands(), fillRatio);
-        return baseUnitPrice.multiply(multiplier);
+        if (stock <= minStock) {
+            return maxUnitPrice;
+        }
+
+        if (stock >= maxStock) {
+            return minUnitPrice;
+        }
+
+        if (maxStock <= minStock) {
+            return minUnitPrice;
+        }
+
+        final BigDecimal range = BigDecimal.valueOf(maxStock - minStock);
+        final BigDecimal offset = BigDecimal.valueOf(stock - minStock);
+        final BigDecimal fraction = offset.divide(range, INTERNAL_SCALE, MONEY_ROUNDING);
+        final BigDecimal spread = maxUnitPrice.subtract(minUnitPrice);
+
+        return maxUnitPrice
+            .subtract(spread.multiply(fraction))
+            .setScale(MONEY_SCALE, MONEY_ROUNDING);
     }
 
-    private BigDecimal resolveSellMultiplier(final List<SellPriceBand> bands, final double fillRatio) {
+    private SellPriceBand resolveSellEnvelope(final List<SellPriceBand> bands) {
         if (bands == null || bands.isEmpty()) {
-            return BigDecimal.ONE;
+            return null;
         }
 
-        for (final SellPriceBand band : bands) {
-            if (fillRatio >= band.minFillRatioInclusive() && fillRatio < band.maxFillRatioExclusive()) {
-                return this.nonNullMultiplier(band.multiplier());
-            }
-        }
-
-        final SellPriceBand lastBand = bands.get(bands.size() - 1);
-        if (fillRatio >= lastBand.minFillRatioInclusive()) {
-            return this.nonNullMultiplier(lastBand.multiplier());
-        }
-
-        return BigDecimal.ONE;
+        return bands.get(0);
     }
 
-    private double fillRatio(final long stockCount, final long stockCap) {
-        if (stockCap <= 0L) {
-            return 0.0D;
+    private BigDecimal clampedFloorPrice(final BigDecimal configuredFloorPrice, final BigDecimal baseUnitPrice) {
+        final BigDecimal normalizedFloor = this.nonNullPrice(configuredFloorPrice);
+        if (normalizedFloor.compareTo(baseUnitPrice) > 0) {
+            return baseUnitPrice;
         }
-        return Math.min(1.0D, (double) Math.max(0L, stockCount) / (double) stockCap);
+        return normalizedFloor;
     }
 
     private BigDecimal nonNullPrice(final BigDecimal price) {
         return price == null ? ZERO_MONEY : price.setScale(MONEY_SCALE, MONEY_ROUNDING);
-    }
-
-    private BigDecimal nonNullMultiplier(final BigDecimal multiplier) {
-        return multiplier == null ? BigDecimal.ONE : multiplier;
     }
 }
