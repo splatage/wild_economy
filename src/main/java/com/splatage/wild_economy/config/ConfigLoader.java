@@ -5,7 +5,6 @@ import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
-import com.splatage.wild_economy.exchange.domain.SellPriceBand;
 import java.io.File;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -30,39 +29,36 @@ public final class ConfigLoader {
 
     public GlobalConfig loadGlobalConfig() {
         final FileConfiguration config = this.plugin.getConfig();
-
         return new GlobalConfig(
-            config.getLong("turnover.interval-ticks", 72000L),
-            config.getInt("gui.page-size", 45),
-            config.getString("commands.base-command", "shop"),
-            config.getString("commands.admin-command", "shopadmin"),
-            config.getBoolean("logging.debug", false),
-            config.getBoolean("buy-delivery.use-held-shulker", false),
-            config.getBoolean("buy-delivery.use-looked-at-container", false),
-            config.getBoolean("buy-delivery.use-player-inventory", true),
-            config.getBoolean("buy-delivery.drop-at-feet", false)
+                config.getLong("turnover.interval-ticks", 72000L),
+                config.getInt("gui.page-size", 45),
+                config.getString("commands.base-command", "shop"),
+                config.getString("commands.admin-command", "shopadmin"),
+                config.getBoolean("logging.debug", false),
+                config.getBoolean("buy-delivery.use-held-shulker", false),
+                config.getBoolean("buy-delivery.use-looked-at-container", false),
+                config.getBoolean("buy-delivery.use-player-inventory", true),
+                config.getBoolean("buy-delivery.drop-at-feet", false)
         );
     }
 
     public DatabaseConfig loadDatabaseConfig() {
         final FileConfiguration config = this.loadYaml("database.yml");
-
         return new DatabaseConfig(
-            config.getString("backend", "sqlite"),
-            config.getString("sqlite.file", "plugins/wild_economy/data.db"),
-            config.getString("mysql.host", "127.0.0.1"),
-            config.getInt("mysql.port", 3306),
-            config.getString("mysql.database", "wild_economy"),
-            config.getString("mysql.username", "root"),
-            config.getString("mysql.password", "change-me"),
-            config.getBoolean("mysql.ssl", false),
-            config.getInt("mysql.maximum-pool-size", 10)
+                config.getString("backend", "sqlite"),
+                config.getString("sqlite.file", "plugins/wild_economy/data.db"),
+                config.getString("mysql.host", "127.0.0.1"),
+                config.getInt("mysql.port", 3306),
+                config.getString("mysql.database", "wild_economy"),
+                config.getString("mysql.username", "root"),
+                config.getString("mysql.password", "change-me"),
+                config.getBoolean("mysql.ssl", false),
+                config.getInt("mysql.maximum-pool-size", 10)
         );
     }
 
     public ExchangeItemsConfig loadExchangeItemsConfig() {
         final FileConfiguration config = this.loadYaml("exchange-items.yml");
-
         final ConfigurationSection itemsSection = config.getConfigurationSection("items");
         if (itemsSection == null) {
             throw new IllegalStateException("exchange-items.yml is missing the 'items' section");
@@ -70,8 +66,8 @@ public final class ConfigLoader {
 
         final Map<ItemKey, ExchangeItemsConfig.RawItemEntry> exactEntries = new LinkedHashMap<>();
         final List<WildcardItemRule> wildcardRules = new ArrayList<>();
-
         int order = 0;
+
         for (final String rawItemKey : itemsSection.getKeys(false)) {
             final ConfigurationSection section = itemsSection.getConfigurationSection(rawItemKey);
             if (section == null) {
@@ -83,11 +79,11 @@ public final class ConfigLoader {
 
             if (this.isWildcardPattern(normalizedItemKey)) {
                 wildcardRules.add(new WildcardItemRule(
-                    normalizedItemKey,
-                    this.compileGlob(normalizedItemKey),
-                    this.wildcardSpecificity(normalizedItemKey),
-                    order++,
-                    spec
+                        normalizedItemKey,
+                        this.compileGlob(normalizedItemKey),
+                        this.wildcardSpecificity(normalizedItemKey),
+                        order++,
+                        spec
                 ));
                 continue;
             }
@@ -98,10 +94,9 @@ public final class ConfigLoader {
         }
 
         final Map<ItemKey, ExchangeItemsConfig.RawItemEntry> expandedEntries = new LinkedHashMap<>();
-
         wildcardRules.sort(
-            Comparator.comparingInt(WildcardItemRule::specificity)
-                .thenComparingInt(WildcardItemRule::order)
+                Comparator.comparingInt(WildcardItemRule::specificity)
+                        .thenComparingInt(WildcardItemRule::order)
         );
 
         for (final WildcardItemRule rule : wildcardRules) {
@@ -146,14 +141,14 @@ public final class ConfigLoader {
             final BigDecimal floorPriceFactor = this.getBigDecimal(section, "floor-price-factor", BigDecimal.ONE);
 
             envelopes.put(
-                normalizedKey,
-                new EcoEnvelopesConfig.EcoEnvelopeDefinition(
-                    buyPriceMultiplier,
-                    sellPriceMultiplier,
-                    minStock,
-                    maxStock,
-                    floorPriceFactor
-                )
+                    normalizedKey,
+                    new EcoEnvelopesConfig.EcoEnvelopeDefinition(
+                            buyPriceMultiplier,
+                            sellPriceMultiplier,
+                            minStock,
+                            maxStock,
+                            floorPriceFactor
+                    )
             );
         }
 
@@ -176,12 +171,12 @@ public final class ConfigLoader {
 
             final String normalizedKey = StockProfilesConfig.normalizeKey(rawKey);
             stockProfiles.put(
-                normalizedKey,
-                new StockProfilesConfig.StockProfileDefinition(
-                    Math.max(0L, section.getLong("stock-cap", 0L)),
-                    Math.max(0L, section.getLong("turnover-amount-per-interval", 0L)),
-                    Math.max(0L, section.getLong("initial-stock", 0L))
-                )
+                    normalizedKey,
+                    new StockProfilesConfig.StockProfileDefinition(
+                            Math.max(0L, section.getLong("stock-cap", 0L)),
+                            Math.max(0L, section.getLong("turnover-amount-per-interval", 0L)),
+                            Math.max(0L, section.getLong("initial-stock", 0L))
+                    )
             );
         }
 
@@ -193,36 +188,28 @@ public final class ConfigLoader {
         final ItemCategory category = this.parseTopLevelCategory(section.getString("category", null));
         final GeneratedItemCategory generatedCategory = this.parseGeneratedCategory(section.getString("generated-category", null));
         final ItemPolicyMode policyMode = section.contains("policy")
-            ? ItemPolicyMode.valueOf(section.getString("policy", "DISABLED").toUpperCase(Locale.ROOT))
-            : null;
+                ? ItemPolicyMode.valueOf(section.getString("policy", "DISABLED").toUpperCase(Locale.ROOT))
+                : null;
         final Boolean buyEnabled = this.getBooleanObject(section, "buy-enabled");
         final Boolean sellEnabled = this.getBooleanObject(section, "sell-enabled");
-        final String stockProfileKey = StockProfilesConfig.normalizeKey(section.getString("stock-profile", null));
         final Long stockCap = this.getLongObject(section, "stock-cap");
         final Long turnoverAmountPerInterval = this.getLongObject(section, "turnover-amount-per-interval");
-        final Long initialStock = this.getLongObject(section, "initial-stock");
         final String ecoEnvelopeKey = EcoEnvelopesConfig.normalizeKey(section.getString("eco-envelope", null));
         final BigDecimal buyPrice = this.getBigDecimal(section, "buy-price");
         final BigDecimal sellPrice = this.getBigDecimal(section, "sell-price");
-        final List<SellPriceBand> sellPriceBands = this.parseSellPriceEnvelope(
-            section.getConfigurationSection("sell-price-envelope")
-        );
 
         return new RawItemSpec(
-            displayName,
-            category,
-            generatedCategory,
-            policyMode,
-            buyEnabled,
-            sellEnabled,
-            stockProfileKey,
-            stockCap,
-            turnoverAmountPerInterval,
-            initialStock,
-            ecoEnvelopeKey,
-            buyPrice,
-            sellPrice,
-            sellPriceBands
+                displayName,
+                category,
+                generatedCategory,
+                policyMode,
+                buyEnabled,
+                sellEnabled,
+                stockCap,
+                turnoverAmountPerInterval,
+                ecoEnvelopeKey,
+                buyPrice,
+                sellPrice
         );
     }
 
@@ -271,49 +258,29 @@ public final class ConfigLoader {
     }
 
     private ExchangeItemsConfig.RawItemEntry toRawItemEntry(
-        final ItemKey itemKey,
-        final RawItemSpec spec
+            final ItemKey itemKey,
+            final RawItemSpec spec
     ) {
         return new ExchangeItemsConfig.RawItemEntry(
-            itemKey,
-            spec.displayName(),
-            spec.category(),
-            spec.generatedCategory(),
-            spec.policyMode(),
-            spec.buyEnabled(),
-            spec.sellEnabled(),
-            spec.stockProfileKey(),
-            spec.stockCap(),
-            spec.turnoverAmountPerInterval(),
-            spec.initialStock(),
-            spec.ecoEnvelopeKey(),
-            spec.buyPrice(),
-            spec.sellPrice(),
-            spec.sellPriceBands()
+                itemKey,
+                spec.displayName(),
+                spec.category(),
+                spec.generatedCategory(),
+                spec.policyMode(),
+                spec.buyEnabled(),
+                spec.sellEnabled(),
+                spec.stockCap(),
+                spec.turnoverAmountPerInterval(),
+                spec.ecoEnvelopeKey(),
+                spec.buyPrice(),
+                spec.sellPrice()
         );
-    }
-
-    private List<SellPriceBand> parseSellPriceEnvelope(final ConfigurationSection section) {
-        if (section == null) {
-            return null;
-        }
-
-        final long minStock = Math.max(0L, section.getLong("min-stock", 0L));
-        final long maxStock = Math.max(minStock, section.getLong("max-stock", minStock));
-        final BigDecimal minUnitPrice = this.getBigDecimal(section, "min-unit-price");
-
-        if (minUnitPrice == null) {
-            return null;
-        }
-
-        return List.of(new SellPriceBand(minStock, maxStock, minUnitPrice));
     }
 
     private BigDecimal getBigDecimal(final ConfigurationSection section, final String path) {
         if (!section.contains(path)) {
             return null;
         }
-
         return this.asBigDecimal(section.get(path));
     }
 
@@ -340,15 +307,12 @@ public final class ConfigLoader {
         if (value == null) {
             return null;
         }
-
         if (value instanceof BigDecimal bigDecimal) {
             return bigDecimal;
         }
-
         if (value instanceof Number number) {
             return BigDecimal.valueOf(number.doubleValue());
         }
-
         return new BigDecimal(String.valueOf(value));
     }
 
@@ -356,14 +320,10 @@ public final class ConfigLoader {
         final File file = new File(this.plugin.getDataFolder(), resourceName);
         if (!file.isFile()) {
             throw new IllegalStateException(
-                "Required config file '"
-                    + resourceName
-                    + "' is missing at "
-                    + file.getAbsolutePath()
-                    + ". Run /shopadmin reload to regenerate bundled defaults, then review the file before continuing."
+                    "Required config file '" + resourceName + "' is missing at " + file.getAbsolutePath() + ".\n"
+                            + "Run /shopadmin reload to regenerate bundled defaults, then review the file before continuing."
             );
         }
-
         return YamlConfiguration.loadConfiguration(file);
     }
 
@@ -384,21 +344,17 @@ public final class ConfigLoader {
     private Pattern compileGlob(final String glob) {
         final StringBuilder regex = new StringBuilder(glob.length() * 2);
         regex.append('^');
-
         for (int i = 0; i < glob.length(); i++) {
             final char ch = glob.charAt(i);
             if (ch == '*') {
                 regex.append(".*");
                 continue;
             }
-
             if ("\\.^$|?+()[]{}".indexOf(ch) >= 0) {
                 regex.append('\\');
             }
-
             regex.append(ch);
         }
-
         regex.append('$');
         return Pattern.compile(regex.toString());
     }
@@ -407,11 +363,9 @@ public final class ConfigLoader {
         if (material == Material.AIR) {
             return false;
         }
-
         if (!material.isItem()) {
             return false;
         }
-
         return !material.isLegacy();
     }
 
@@ -428,29 +382,26 @@ public final class ConfigLoader {
     }
 
     private record RawItemSpec(
-        String displayName,
-        ItemCategory category,
-        GeneratedItemCategory generatedCategory,
-        ItemPolicyMode policyMode,
-        Boolean buyEnabled,
-        Boolean sellEnabled,
-        String stockProfileKey,
-        Long stockCap,
-        Long turnoverAmountPerInterval,
-        Long initialStock,
-        String ecoEnvelopeKey,
-        BigDecimal buyPrice,
-        BigDecimal sellPrice,
-        List<SellPriceBand> sellPriceBands
+            String displayName,
+            ItemCategory category,
+            GeneratedItemCategory generatedCategory,
+            ItemPolicyMode policyMode,
+            Boolean buyEnabled,
+            Boolean sellEnabled,
+            Long stockCap,
+            Long turnoverAmountPerInterval,
+            String ecoEnvelopeKey,
+            BigDecimal buyPrice,
+            BigDecimal sellPrice
     ) {
     }
 
     private record WildcardItemRule(
-        String pattern,
-        Pattern regex,
-        int specificity,
-        int order,
-        RawItemSpec spec
+            String pattern,
+            Pattern regex,
+            int specificity,
+            int order,
+            RawItemSpec spec
     ) {
         private boolean matches(final String itemKey) {
             return this.regex.matcher(itemKey).matches();
