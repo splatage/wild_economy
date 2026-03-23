@@ -25,11 +25,18 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.46.1.3")
     implementation("com.mysql:mysql-connector-j:9.0.0")
     implementation("com.zaxxer:HikariCP:5.1.0")
+
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
 }
 
-tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     options.release.set(21)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.processResources {
