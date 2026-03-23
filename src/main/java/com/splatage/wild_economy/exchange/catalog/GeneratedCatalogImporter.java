@@ -7,7 +7,6 @@ import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
 import java.io.File;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.bukkit.configuration.ConfigurationSection;
@@ -38,33 +37,34 @@ public final class GeneratedCatalogImporter {
 
             final ItemKey itemKey = new ItemKey(this.normalizeItemKey(rawItemKey));
             final GeneratedItemCategory generatedCategory = this.mapGeneratedCategory(
-                section.getString("category", "MISC")
+                    section.getString("category", "MISC")
             );
             final ItemCategory topLevelCategory = this.mapTopLevelCategory(generatedCategory);
 
             final BigDecimal derivedValue = this.getBigDecimal(section, "derived-value");
             final BigDecimal rootValue = this.getBigDecimal(section, "root-value");
             final BigDecimal baseValue = derivedValue != null
-                ? derivedValue
-                : rootValue != null ? rootValue : BigDecimal.ZERO;
+                    ? derivedValue
+                    : rootValue != null
+                            ? rootValue
+                            : BigDecimal.ZERO;
 
             final GeneratedPolicyMapping policyMapping = this.mapPolicy(section.getString("policy", "DISABLED"));
 
             entries.put(itemKey, new ExchangeCatalogEntry(
-                itemKey,
-                this.prettyDisplayName(itemKey.value()),
-                topLevelCategory,
-                generatedCategory,
-                policyMapping.policyMode(),
-                baseValue,
-                baseValue,
-                baseValue,
-                0L,
-                0L,
-                0L,
-                List.of(),
-                policyMapping.buyEnabled(),
-                policyMapping.sellEnabled()
+                    itemKey,
+                    this.prettyDisplayName(itemKey.value()),
+                    topLevelCategory,
+                    generatedCategory,
+                    policyMapping.policyMode(),
+                    baseValue,
+                    baseValue,
+                    baseValue,
+                    null,
+                    0L,
+                    0L,
+                    policyMapping.buyEnabled(),
+                    policyMapping.sellEnabled()
             ));
         }
 
@@ -168,9 +168,9 @@ public final class GeneratedCatalogImporter {
     }
 
     private record GeneratedPolicyMapping(
-        ItemPolicyMode policyMode,
-        boolean buyEnabled,
-        boolean sellEnabled
+            ItemPolicyMode policyMode,
+            boolean buyEnabled,
+            boolean sellEnabled
     ) {
     }
 }

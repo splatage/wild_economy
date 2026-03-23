@@ -15,7 +15,6 @@ import com.splatage.wild_economy.exchange.domain.SellQuote;
 import com.splatage.wild_economy.exchange.domain.StockSnapshot;
 import com.splatage.wild_economy.exchange.domain.StockState;
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -26,11 +25,11 @@ final class PricingServiceImplTest {
     @Test
     void quoteSell_spansPlateauLinearAndFloorSegments() {
         final PricingServiceImpl pricingService = new PricingServiceImpl(
-            this.catalogWith(this.entry(
-                new BigDecimal("12.00"),
-                new BigDecimal("10.00"),
-                List.of(new SellPriceBand(5L, 15L, new BigDecimal("2.00")))
-            ))
+                this.catalogWith(this.entry(
+                        new BigDecimal("12.00"),
+                        new BigDecimal("10.00"),
+                        new SellPriceBand(5L, 15L, new BigDecimal("2.00"))
+                ))
         );
 
         final StockSnapshot snapshot = new StockSnapshot(WHEAT, 3L, 100L, 0.03D, StockState.LOW);
@@ -45,11 +44,11 @@ final class PricingServiceImplTest {
     @Test
     void quoteSell_withoutEnvelopeUsesFlatSellPrice() {
         final PricingServiceImpl pricingService = new PricingServiceImpl(
-            this.catalogWith(this.entry(
-                new BigDecimal("12.00"),
-                new BigDecimal("8.00"),
-                List.of()
-            ))
+                this.catalogWith(this.entry(
+                        new BigDecimal("12.00"),
+                        new BigDecimal("8.00"),
+                        null
+                ))
         );
 
         final StockSnapshot snapshot = new StockSnapshot(WHEAT, 500L, 1000L, 0.50D, StockState.HEALTHY);
@@ -64,11 +63,11 @@ final class PricingServiceImplTest {
     @Test
     void quoteSell_clampsConfiguredFloorPriceToSellPrice() {
         final PricingServiceImpl pricingService = new PricingServiceImpl(
-            this.catalogWith(this.entry(
-                new BigDecimal("12.00"),
-                new BigDecimal("10.00"),
-                List.of(new SellPriceBand(0L, 10L, new BigDecimal("12.00")))
-            ))
+                this.catalogWith(this.entry(
+                        new BigDecimal("12.00"),
+                        new BigDecimal("10.00"),
+                        new SellPriceBand(0L, 10L, new BigDecimal("12.00"))
+                ))
         );
 
         final StockSnapshot snapshot = new StockSnapshot(WHEAT, 0L, 100L, 0.0D, StockState.OUT_OF_STOCK);
@@ -85,25 +84,25 @@ final class PricingServiceImplTest {
     }
 
     private ExchangeCatalogEntry entry(
-        final BigDecimal buyPrice,
-        final BigDecimal sellPrice,
-        final List<SellPriceBand> sellPriceBands
+            final BigDecimal buyPrice,
+            final BigDecimal sellPrice,
+            final SellPriceBand sellEnvelope
     ) {
         return new ExchangeCatalogEntry(
-            WHEAT,
-            "Wheat",
-            ItemCategory.FARMING_AND_FOOD,
-            GeneratedItemCategory.FARMING,
-            ItemPolicyMode.PLAYER_STOCKED,
-            new BigDecimal("8.00"),
-            buyPrice,
-            sellPrice,
-            3456L,
-            250L,
-            64L,
-            sellPriceBands,
-            true,
-            true
+                WHEAT,
+                "Wheat",
+                ItemCategory.FARMING_AND_FOOD,
+                GeneratedItemCategory.FARMING,
+                ItemPolicyMode.PLAYER_STOCKED,
+                new BigDecimal("8.00"),
+                buyPrice,
+                sellPrice,
+                sellEnvelope,
+                3456L,
+                250L,
+                true,
+                true
         );
     }
 }
+
