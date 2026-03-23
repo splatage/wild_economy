@@ -1,58 +1,35 @@
 eco-envelopes:
   exchange_default:
-    base-buy-multiplier: 1.00
-    base-sell-multiplier: 0.67
-    sell-bands:
-      - min-fill: 0.00
-        max-fill: 0.25
-        multiplier: 1.00
-      - min-fill: 0.25
-        max-fill: 0.50
-        multiplier: 0.85
-      - min-fill: 0.50
-        max-fill: 0.75
-        multiplier: 0.65
-      - min-fill: 0.75
-        max-fill: 0.90
-        multiplier: 0.40
-      - min-fill: 0.90
-        max-fill: 1.01
-        multiplier: 0.20
+    buy-price-multiplier: 1.20
+    sell-price-multiplier: 0.80
+    min-stock: 64
+    max-stock: 3456
+    floor-price-factor: 0.20
 
   ore_precious_tight:
-    base-buy-multiplier: 1.00
-    base-sell-multiplier: 0.55
-    sell-bands:
-      - min-fill: 0.00
-        max-fill: 0.20
-        multiplier: 1.00
-      - min-fill: 0.20
-        max-fill: 0.50
-        multiplier: 0.70
-      - min-fill: 0.50
-        max-fill: 1.01
-        multiplier: 0.35
+    buy-price-multiplier: 1.35
+    sell-price-multiplier: 0.65
+    min-stock: 16
+    max-stock: 1500
+    floor-price-factor: 0.35
 
   sell_only_cleanup:
-    base-buy-multiplier: 0.00
-    base-sell-multiplier: 0.45
-    sell-bands:
-      - min-fill: 0.00
-        max-fill: 1.01
-        multiplier: 1.00
+    buy-price-multiplier: 0.00
+    sell-price-multiplier: 0.45
+    min-stock: 0
+    max-stock: 1
+    floor-price-factor: 1.00
 
   world_damage_unlimited_buy:
-    base-buy-multiplier: 1.20
-    base-sell-multiplier: 0.00
-    sell-bands:
-      - min-fill: 0.00
-        max-fill: 1.01
-        multiplier: 0.00
+    buy-price-multiplier: 1.20
+    sell-price-multiplier: 0.00
+    min-stock: 0
+    max-stock: 1
+    floor-price-factor: 0.00
 
   disabled_placeholder:
-    base-buy-multiplier: 0.00
-    base-sell-multiplier: 0.00
-    sell-bands:
-      - min-fill: 0.00
-        max-fill: 1.01
-        multiplier: 0.00
+    buy-price-multiplier: 0.00
+    sell-price-multiplier: 0.00
+    min-stock: 0
+    max-stock: 1
+    floor-price-factor: 0.00

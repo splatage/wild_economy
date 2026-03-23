@@ -124,17 +124,82 @@ public final class ConfigLoader {
         return new ExchangeItemsConfig(expandedEntries);
     }
 
+    public EcoEnvelopesConfig loadEcoEnvelopesConfig() {
+        final FileConfiguration config = this.loadYaml("eco-envelopes.yml");
+        final ConfigurationSection envelopesSection = config.getConfigurationSection("eco-envelopes");
+        if (envelopesSection == null) {
+            throw new IllegalStateException("eco-envelopes.yml is missing the 'eco-envelopes' section");
+        }
+
+        final Map<String, EcoEnvelopesConfig.EcoEnvelopeDefinition> envelopes = new LinkedHashMap<>();
+        for (final String rawKey : envelopesSection.getKeys(false)) {
+            final ConfigurationSection section = envelopesSection.getConfigurationSection(rawKey);
+            if (section == null) {
+                continue;
+            }
+
+            final String normalizedKey = EcoEnvelopesConfig.normalizeKey(rawKey);
+            final BigDecimal buyPriceMultiplier = this.getBigDecimal(section, "buy-price-multiplier", BigDecimal.ONE);
+            final BigDecimal sellPriceMultiplier = this.getBigDecimal(section, "sell-price-multiplier", BigDecimal.ONE);
+            final long minStock = Math.max(0L, section.getLong("min-stock", 0L));
+            final long maxStock = Math.max(minStock, section.getLong("max-stock", minStock));
+            final BigDecimal floorPriceFactor = this.getBigDecimal(section, "floor-price-factor", BigDecimal.ONE);
+
+            envelopes.put(
+                normalizedKey,
+                new EcoEnvelopesConfig.EcoEnvelopeDefinition(
+                    buyPriceMultiplier,
+                    sellPriceMultiplier,
+                    minStock,
+                    maxStock,
+                    floorPriceFactor
+                )
+            );
+        }
+
+        return new EcoEnvelopesConfig(envelopes);
+    }
+
+    public StockProfilesConfig loadStockProfilesConfig() {
+        final FileConfiguration config = this.loadYaml("stock-profiles.yml");
+        final ConfigurationSection profilesSection = config.getConfigurationSection("stock-profiles");
+        if (profilesSection == null) {
+            throw new IllegalStateException("stock-profiles.yml is missing the 'stock-profiles' section");
+        }
+
+        final Map<String, StockProfilesConfig.StockProfileDefinition> stockProfiles = new LinkedHashMap<>();
+        for (final String rawKey : profilesSection.getKeys(false)) {
+            final ConfigurationSection section = profilesSection.getConfigurationSection(rawKey);
+            if (section == null) {
+                continue;
+            }
+
+            final String normalizedKey = StockProfilesConfig.normalizeKey(rawKey);
+            stockProfiles.put(
+                normalizedKey,
+                new StockProfilesConfig.StockProfileDefinition(
+                    Math.max(0L, section.getLong("stock-cap", 0L)),
+                    Math.max(0L, section.getLong("turnover-amount-per-interval", 0L))
+                )
+            );
+        }
+
+        return new StockProfilesConfig(stockProfiles);
+    }
+
     private RawItemSpec parseRawItemSpec(final ConfigurationSection section) {
         final String displayName = section.contains("display-name") ? section.getString("display-name") : null;
         final ItemCategory category = this.parseTopLevelCategory(section.getString("category", null));
         final GeneratedItemCategory generatedCategory = this.parseGeneratedCategory(section.getString("generated-category", null));
-        final ItemPolicyMode policyMode = ItemPolicyMode.valueOf(
-            section.getString("policy", "DISABLED").toUpperCase(Locale.ROOT)
-        );
-        final boolean buyEnabled = section.getBoolean("buy-enabled", false);
-        final boolean sellEnabled = section.getBoolean("sell-enabled", false);
-        final long stockCap = section.getLong("stock-cap", 0L);
-        final long turnoverAmountPerInterval = section.getLong("turnover-amount-per-interval", 0L);
+        final ItemPolicyMode policyMode = section.contains("policy")
+            ? ItemPolicyMode.valueOf(section.getString("policy", "DISABLED").toUpperCase(Locale.ROOT))
+            : null;
+        final Boolean buyEnabled = this.getBooleanObject(section, "buy-enabled");
+        final Boolean sellEnabled = this.getBooleanObject(section, "sell-enabled");
+        final String stockProfileKey = StockProfilesConfig.normalizeKey(section.getString("stock-profile", null));
+        final Long stockCap = this.getLongObject(section, "stock-cap");
+        final Long turnoverAmountPerInterval = this.getLongObject(section, "turnover-amount-per-interval");
+        final String ecoEnvelopeKey = EcoEnvelopesConfig.normalizeKey(section.getString("eco-envelope", null));
         final BigDecimal buyPrice = this.getBigDecimal(section, "buy-price");
         final BigDecimal sellPrice = this.getBigDecimal(section, "sell-price");
         final List<SellPriceBand> sellPriceBands = this.parseSellPriceEnvelope(
@@ -148,8 +213,10 @@ public final class ConfigLoader {
             policyMode,
             buyEnabled,
             sellEnabled,
+            stockProfileKey,
             stockCap,
             turnoverAmountPerInterval,
+            ecoEnvelopeKey,
             buyPrice,
             sellPrice,
             sellPriceBands
@@ -212,8 +279,10 @@ public final class ConfigLoader {
             spec.policyMode(),
             spec.buyEnabled(),
             spec.sellEnabled(),
+            spec.stockProfileKey(),
             spec.stockCap(),
             spec.turnoverAmountPerInterval(),
+            spec.ecoEnvelopeKey(),
             spec.buyPrice(),
             spec.sellPrice(),
             spec.sellPriceBands()
@@ -222,7 +291,7 @@ public final class ConfigLoader {
 
     private List<SellPriceBand> parseSellPriceEnvelope(final ConfigurationSection section) {
         if (section == null) {
-            return List.of();
+            return null;
         }
 
         final long minStock = Math.max(0L, section.getLong("min-stock", 0L));
@@ -230,7 +299,7 @@ public final class ConfigLoader {
         final BigDecimal minUnitPrice = this.getBigDecimal(section, "min-unit-price");
 
         if (minUnitPrice == null) {
-            return List.of();
+            return null;
         }
 
         return List.of(new SellPriceBand(minStock, maxStock, minUnitPrice));
@@ -242,6 +311,25 @@ public final class ConfigLoader {
         }
 
         return this.asBigDecimal(section.get(path));
+    }
+
+    private BigDecimal getBigDecimal(final ConfigurationSection section, final String path, final BigDecimal fallback) {
+        final BigDecimal value = this.getBigDecimal(section, path);
+        return value != null ? value : fallback;
+    }
+
+    private Boolean getBooleanObject(final ConfigurationSection section, final String path) {
+        if (!section.contains(path)) {
+            return null;
+        }
+        return section.getBoolean(path);
+    }
+
+    private Long getLongObject(final ConfigurationSection section, final String path) {
+        if (!section.contains(path)) {
+            return null;
+        }
+        return section.getLong(path);
     }
 
     private BigDecimal asBigDecimal(final Object value) {
@@ -258,18 +346,6 @@ public final class ConfigLoader {
         }
 
         return new BigDecimal(String.valueOf(value));
-    }
-
-    private double asDouble(final Object value, final double fallback) {
-        if (value == null) {
-            return fallback;
-        }
-
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
-
-        return Double.parseDouble(String.valueOf(value));
     }
 
     private FileConfiguration loadYaml(final String resourceName) {
@@ -352,10 +428,12 @@ public final class ConfigLoader {
         ItemCategory category,
         GeneratedItemCategory generatedCategory,
         ItemPolicyMode policyMode,
-        boolean buyEnabled,
-        boolean sellEnabled,
-        long stockCap,
-        long turnoverAmountPerInterval,
+        Boolean buyEnabled,
+        Boolean sellEnabled,
+        String stockProfileKey,
+        Long stockCap,
+        Long turnoverAmountPerInterval,
+        String ecoEnvelopeKey,
         BigDecimal buyPrice,
         BigDecimal sellPrice,
         List<SellPriceBand> sellPriceBands

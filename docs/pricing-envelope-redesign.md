@@ -1,21 +1,14 @@
 # Pricing envelope redesign
 
-Base revision: `d45012340b77da728538fd1e35f197faf18f9274`
+Base revision: `b9910a2b970eb60430dfc674f4881dbf271e40ed`
 
 ## Purpose
 
 This note records the pricing redesign direction agreed for the current runtime pricing audit.
 
-The old design used ordered fill-ratio bands to taper sell value as stock increased.
+The old design used ordered fill-ratio bands and disconnected stock-profile defaults.
 
-The new design replaces that with one linear sell envelope per item:
-
-- a full / maximum sell price
-- a floor / minimum sell price
-- a minimum stock anchor
-- a maximum stock anchor
-
-This is easier to explain, easier to hand-edit, and less error-prone than ordered overlapping bands.
+The new direction keeps the linear sell model from the first slice, then wires reusable named pricing and stock defaults into the live runtime path.
 
 ## Buy model
 
@@ -44,7 +37,9 @@ That payout is piecewise:
 
 The linear section uses trapezoid / averaged integration, which matches the current code style while removing the config complexity of bands.
 
-## Live runtime schema for this slice
+## Runtime schema in this slice
 
-This first implementation slice keeps the live runtime schema inline in `exchange-items.yml`:
+This slice moves the live runtime path to named reusable refs.
+
+### exchange-items.yml
 

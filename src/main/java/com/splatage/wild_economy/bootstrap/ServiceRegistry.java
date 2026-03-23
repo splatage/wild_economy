@@ -9,8 +9,10 @@ import com.splatage.wild_economy.command.ShopSellContainerSubcommand;
 import com.splatage.wild_economy.command.ShopSellHandSubcommand;
 import com.splatage.wild_economy.config.ConfigLoader;
 import com.splatage.wild_economy.config.DatabaseConfig;
+import com.splatage.wild_economy.config.EcoEnvelopesConfig;
 import com.splatage.wild_economy.config.ExchangeItemsConfig;
 import com.splatage.wild_economy.config.GlobalConfig;
+import com.splatage.wild_economy.config.StockProfilesConfig;
 import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.VaultEconomyGateway;
 import com.splatage.wild_economy.exchange.catalog.CatalogLoader;
@@ -84,6 +86,8 @@ public final class ServiceRegistry {
     private GlobalConfig globalConfig;
     private DatabaseConfig databaseConfig;
     private ExchangeItemsConfig exchangeItemsConfig;
+    private EcoEnvelopesConfig ecoEnvelopesConfig;
+    private StockProfilesConfig stockProfilesConfig;
     private DatabaseProvider databaseProvider;
     private ExchangeCatalog exchangeCatalog;
     private ItemNormalizer itemNormalizer;
@@ -115,6 +119,8 @@ public final class ServiceRegistry {
         this.globalConfig = configLoader.loadGlobalConfig();
         this.databaseConfig = configLoader.loadDatabaseConfig();
         this.exchangeItemsConfig = configLoader.loadExchangeItemsConfig();
+        this.ecoEnvelopesConfig = configLoader.loadEcoEnvelopesConfig();
+        this.stockProfilesConfig = configLoader.loadStockProfilesConfig();
 
         this.databaseProvider = new DatabaseProvider(this.databaseConfig);
 
@@ -122,6 +128,7 @@ public final class ServiceRegistry {
             case SQLITE -> new SqliteSchemaVersionRepository(this.databaseProvider);
             case MYSQL -> new MysqlSchemaVersionRepository(this.databaseProvider);
         };
+
         final MigrationManager migrationManager = new MigrationManager(this.databaseProvider, schemaVersionRepository);
         migrationManager.migrate();
 
@@ -129,6 +136,7 @@ public final class ServiceRegistry {
             case SQLITE -> new SqliteExchangeStockRepository(this.databaseProvider);
             case MYSQL -> new MysqlExchangeStockRepository(this.databaseProvider);
         };
+
         this.exchangeTransactionRepository = switch (this.databaseProvider.dialect()) {
             case SQLITE -> new SqliteExchangeTransactionRepository(this.databaseProvider);
             case MYSQL -> new MysqlExchangeTransactionRepository(this.databaseProvider);
@@ -144,12 +152,20 @@ public final class ServiceRegistry {
         final RootValueImporter rootValueImporter = new RootValueImporter();
         final CatalogMergeService catalogMergeService = new CatalogMergeService();
         final CatalogLoader catalogLoader = new CatalogLoader(generatedCatalogImporter, rootValueImporter, catalogMergeService);
-        this.exchangeCatalog = Objects.requireNonNull(catalogLoader.load(this.exchangeItemsConfig, rootValuesFile, generatedCatalogFile), "exchangeCatalog");
+        this.exchangeCatalog = Objects.requireNonNull(
+            catalogLoader.load(
+                this.exchangeItemsConfig,
+                rootValuesFile,
+                generatedCatalogFile,
+                this.ecoEnvelopesConfig,
+                this.stockProfilesConfig
+            ),
+            "exchangeCatalog"
+        );
 
         final CanonicalItemRules canonicalItemRules = new CanonicalItemRules();
         this.itemNormalizer = new BukkitItemNormalizer(canonicalItemRules);
         this.itemValidationService = new ItemValidationServiceImpl(this.itemNormalizer, this.exchangeCatalog);
-
         this.economyGateway = this.resolveVaultEconomy();
 
         final StockStateResolver stockStateResolver = new StockStateResolver();
@@ -162,12 +178,14 @@ public final class ServiceRegistry {
             this.databaseConfig.mysqlMaximumPoolSize()
         );
         this.pricingService = new PricingServiceImpl(this.exchangeCatalog);
+
         this.transactionLogService = new TransactionLogServiceImpl(
             this.exchangeTransactionRepository,
             this.plugin.getLogger(),
             this.databaseProvider.dialect(),
             this.databaseConfig.mysqlMaximumPoolSize()
         );
+
         this.stockTurnoverService = new StockTurnoverServiceImpl(this.exchangeCatalog, this.stockService, this.transactionLogService);
         this.exchangeBrowseService = new ExchangeBrowseServiceImpl(this.exchangeCatalog, this.stockService);
 
@@ -180,6 +198,7 @@ public final class ServiceRegistry {
             this.transactionLogService,
             this.globalConfig
         );
+
         final ExchangeSellServiceImpl rawSellService = new ExchangeSellServiceImpl(
             this.exchangeCatalog,
             this.itemValidationService,
@@ -198,13 +217,11 @@ public final class ServiceRegistry {
         final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService);
         final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService);
         final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService, this.platformExecutor);
-
         this.shopMenuRouter = new ShopMenuRouter(this.platformExecutor, rootMenu, subcategoryMenu, browseMenu, itemDetailMenu);
         rootMenu.setShopMenuRouter(this.shopMenuRouter);
         subcategoryMenu.setShopMenuRouter(this.shopMenuRouter);
         browseMenu.setShopMenuRouter(this.shopMenuRouter);
         itemDetailMenu.setShopMenuRouter(this.shopMenuRouter);
-
         this.shopMenuListener = new ShopMenuListener(rootMenu, subcategoryMenu, browseMenu, itemDetailMenu);
         this.plugin.getServer().getPluginManager().registerEvents(this.shopMenuListener, this.plugin);
 
@@ -213,7 +230,6 @@ public final class ServiceRegistry {
         final AdminRuleImpactMenu adminRuleImpactMenu = new AdminRuleImpactMenu();
         final AdminItemInspectorMenu adminItemInspectorMenu = new AdminItemInspectorMenu();
         final AdminOverrideEditMenu adminOverrideEditMenu = new AdminOverrideEditMenu();
-
         this.adminMenuRouter = new AdminMenuRouter(
             this.plugin,
             this.platformExecutor,
@@ -223,13 +239,11 @@ public final class ServiceRegistry {
             adminItemInspectorMenu,
             adminOverrideEditMenu
         );
-
         adminRootMenu.setAdminMenuRouter(this.adminMenuRouter);
         adminReviewBucketMenu.setAdminMenuRouter(this.adminMenuRouter);
         adminRuleImpactMenu.setAdminMenuRouter(this.adminMenuRouter);
         adminItemInspectorMenu.setAdminMenuRouter(this.adminMenuRouter);
         adminOverrideEditMenu.setAdminMenuRouter(this.adminMenuRouter);
-
         this.adminMenuListener = new AdminMenuListener(
             adminRootMenu,
             adminReviewBucketMenu,
@@ -322,8 +336,7 @@ public final class ServiceRegistry {
     }
 
     private EconomyGateway resolveVaultEconomy() {
-        final RegisteredServiceProvider<Economy> registration =
-            this.plugin.getServer().getServicesManager().getRegistration(Economy.class);
+        final RegisteredServiceProvider<Economy> registration = this.plugin.getServer().getServicesManager().getRegistration(Economy.class);
         if (registration == null || registration.getProvider() == null) {
             throw new IllegalStateException("Vault economy provider not found");
         }

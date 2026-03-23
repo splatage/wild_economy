@@ -1,24 +1,38 @@
 package com.splatage.wild_economy.exchange.catalog;
 
+import com.splatage.wild_economy.config.EcoEnvelopesConfig;
 import com.splatage.wild_economy.config.ExchangeItemsConfig;
+import com.splatage.wild_economy.config.StockProfilesConfig;
 import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
+import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
+import com.splatage.wild_economy.exchange.domain.SellPriceBand;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 
 public final class CatalogMergeService {
 
+    private static final int MONEY_SCALE = 2;
+    private static final RoundingMode MONEY_ROUNDING = RoundingMode.HALF_UP;
+    private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(MONEY_SCALE, MONEY_ROUNDING);
+    private static final BigDecimal ONE = BigDecimal.ONE.setScale(MONEY_SCALE, MONEY_ROUNDING);
+
     public ExchangeCatalogEntry merge(
         final ExchangeCatalogEntry baseEntry,
         final ExchangeItemsConfig.RawItemEntry overrideEntry,
-        final Map<ItemKey, BigDecimal> importedRootValues
+        final Map<ItemKey, BigDecimal> importedRootValues,
+        final EcoEnvelopesConfig ecoEnvelopesConfig,
+        final StockProfilesConfig stockProfilesConfig
     ) {
         final BigDecimal rootValue = importedRootValues.get(overrideEntry.itemKey());
         final BigDecimal baseWorth = this.resolveBaseWorth(baseEntry, rootValue);
-        final BigDecimal buyPrice = this.resolvePrice(overrideEntry.buyPrice(), baseEntry != null ? baseEntry.buyPrice() : null, rootValue);
-        final BigDecimal sellPrice = this.resolvePrice(overrideEntry.sellPrice(), baseEntry != null ? baseEntry.sellPrice() : null, rootValue);
+        final EcoEnvelopesConfig.EcoEnvelopeDefinition ecoEnvelope = ecoEnvelopesConfig.get(overrideEntry.ecoEnvelopeKey()).orElse(null);
+        final StockProfilesConfig.StockProfileDefinition stockProfile = stockProfilesConfig.get(overrideEntry.stockProfileKey()).orElse(null);
+        final BigDecimal buyPrice = this.resolveBuyPrice(overrideEntry, baseEntry, baseWorth, rootValue, ecoEnvelope);
+        final BigDecimal sellPrice = this.resolveSellPrice(overrideEntry, baseEntry, baseWorth, rootValue, ecoEnvelope);
 
         final String displayName = overrideEntry.displayName() != null
             ? overrideEntry.displayName()
@@ -32,24 +46,44 @@ public final class CatalogMergeService {
             ? overrideEntry.generatedCategory()
             : baseEntry != null ? baseEntry.generatedCategory() : GeneratedItemCategory.MISC;
 
-        final List sellPriceBands = overrideEntry.sellPriceBands() != null
-            ? overrideEntry.sellPriceBands()
-            : baseEntry != null ? baseEntry.sellPriceBands() : List.of();
+        final ItemPolicyMode policyMode = overrideEntry.policyMode() != null
+            ? overrideEntry.policyMode()
+            : baseEntry != null ? baseEntry.policyMode() : ItemPolicyMode.DISABLED;
+
+        final boolean buyEnabled = overrideEntry.buyEnabled() != null
+            ? overrideEntry.buyEnabled()
+            : baseEntry != null && baseEntry.buyEnabled();
+
+        final boolean sellEnabled = overrideEntry.sellEnabled() != null
+            ? overrideEntry.sellEnabled()
+            : baseEntry != null && baseEntry.sellEnabled();
+
+        final long stockCap = this.resolveLong(
+            overrideEntry.stockCap(),
+            stockProfile != null ? stockProfile.stockCap() : null,
+            baseEntry != null ? baseEntry.stockCap() : null
+        );
+        final long turnoverAmountPerInterval = this.resolveLong(
+            overrideEntry.turnoverAmountPerInterval(),
+            stockProfile != null ? stockProfile.turnoverAmountPerInterval() : null,
+            baseEntry != null ? baseEntry.turnoverAmountPerInterval() : null
+        );
+        final List<SellPriceBand> sellPriceBands = this.resolveSellPriceBands(overrideEntry, baseEntry, sellPrice, ecoEnvelope);
 
         return new ExchangeCatalogEntry(
             overrideEntry.itemKey(),
             displayName,
             category,
             generatedCategory,
-            overrideEntry.policyMode(),
+            policyMode,
             baseWorth,
             buyPrice,
             sellPrice,
-            overrideEntry.stockCap(),
-            overrideEntry.turnoverAmountPerInterval(),
+            stockCap,
+            turnoverAmountPerInterval,
             sellPriceBands,
-            overrideEntry.buyEnabled(),
-            overrideEntry.sellEnabled()
+            buyEnabled,
+            sellEnabled
         );
     }
 
@@ -58,28 +92,124 @@ public final class CatalogMergeService {
         final BigDecimal rootValue
     ) {
         if (baseEntry != null && baseEntry.baseWorth() != null) {
-            return baseEntry.baseWorth();
+            return this.scaleMoney(baseEntry.baseWorth());
         }
         if (rootValue != null) {
-            return rootValue;
+            return this.scaleMoney(rootValue);
         }
-        return BigDecimal.ZERO;
+        return ZERO;
     }
 
-    private BigDecimal resolvePrice(
-        final BigDecimal explicitPrice,
-        final BigDecimal baseCatalogPrice,
-        final BigDecimal rootValueFallback
+    private BigDecimal resolveBuyPrice(
+        final ExchangeItemsConfig.RawItemEntry overrideEntry,
+        final ExchangeCatalogEntry baseEntry,
+        final BigDecimal baseWorth,
+        final BigDecimal rootValueFallback,
+        final EcoEnvelopesConfig.EcoEnvelopeDefinition ecoEnvelope
     ) {
-        if (explicitPrice != null) {
-            return explicitPrice;
+        if (overrideEntry.buyPrice() != null) {
+            return this.scaleMoney(overrideEntry.buyPrice());
         }
-        if (baseCatalogPrice != null) {
-            return baseCatalogPrice;
+        if (ecoEnvelope != null) {
+            return this.scaleMoney(baseWorth.multiply(this.nonNegative(ecoEnvelope.buyPriceMultiplier())));
+        }
+        if (baseEntry != null && baseEntry.buyPrice() != null) {
+            return this.scaleMoney(baseEntry.buyPrice());
         }
         if (rootValueFallback != null) {
-            return rootValueFallback;
+            return this.scaleMoney(rootValueFallback);
         }
-        return BigDecimal.ZERO;
+        return ZERO;
+    }
+
+    private BigDecimal resolveSellPrice(
+        final ExchangeItemsConfig.RawItemEntry overrideEntry,
+        final ExchangeCatalogEntry baseEntry,
+        final BigDecimal baseWorth,
+        final BigDecimal rootValueFallback,
+        final EcoEnvelopesConfig.EcoEnvelopeDefinition ecoEnvelope
+    ) {
+        if (overrideEntry.sellPrice() != null) {
+            return this.scaleMoney(overrideEntry.sellPrice());
+        }
+        if (ecoEnvelope != null) {
+            return this.scaleMoney(baseWorth.multiply(this.nonNegative(ecoEnvelope.sellPriceMultiplier())));
+        }
+        if (baseEntry != null && baseEntry.sellPrice() != null) {
+            return this.scaleMoney(baseEntry.sellPrice());
+        }
+        if (rootValueFallback != null) {
+            return this.scaleMoney(rootValueFallback);
+        }
+        return ZERO;
+    }
+
+    private List<SellPriceBand> resolveSellPriceBands(
+        final ExchangeItemsConfig.RawItemEntry overrideEntry,
+        final ExchangeCatalogEntry baseEntry,
+        final BigDecimal resolvedSellPrice,
+        final EcoEnvelopesConfig.EcoEnvelopeDefinition ecoEnvelope
+    ) {
+        if (overrideEntry.sellPriceBands() != null && !overrideEntry.sellPriceBands().isEmpty()) {
+            return overrideEntry.sellPriceBands();
+        }
+        if (ecoEnvelope != null) {
+            return List.of(this.toSellPriceBand(resolvedSellPrice, ecoEnvelope));
+        }
+        if (baseEntry != null && baseEntry.sellPriceBands() != null) {
+            return baseEntry.sellPriceBands();
+        }
+        return List.of();
+    }
+
+    private SellPriceBand toSellPriceBand(
+        final BigDecimal resolvedSellPrice,
+        final EcoEnvelopesConfig.EcoEnvelopeDefinition ecoEnvelope
+    ) {
+        final long minStock = Math.max(0L, ecoEnvelope.minStock());
+        final long maxStock = Math.max(minStock, ecoEnvelope.maxStock());
+        final BigDecimal floorFactor = this.clampUnitInterval(ecoEnvelope.floorPriceFactor());
+        final BigDecimal minUnitPrice = this.scaleMoney(resolvedSellPrice.multiply(floorFactor));
+        return new SellPriceBand(minStock, maxStock, minUnitPrice);
+    }
+
+    private long resolveLong(
+        final Long explicitValue,
+        final Long profileValue,
+        final Long baseValue
+    ) {
+        if (explicitValue != null) {
+            return Math.max(0L, explicitValue);
+        }
+        if (profileValue != null) {
+            return Math.max(0L, profileValue);
+        }
+        if (baseValue != null) {
+            return Math.max(0L, baseValue);
+        }
+        return 0L;
+    }
+
+    private BigDecimal nonNegative(final BigDecimal value) {
+        final BigDecimal normalized = this.scaleMoney(value == null ? BigDecimal.ZERO : value);
+        return normalized.compareTo(BigDecimal.ZERO) < 0 ? ZERO : normalized;
+    }
+
+    private BigDecimal clampUnitInterval(final BigDecimal value) {
+        final BigDecimal normalized = this.scaleMoney(value == null ? BigDecimal.ONE : value);
+        if (normalized.compareTo(BigDecimal.ZERO) < 0) {
+            return ZERO;
+        }
+        if (normalized.compareTo(BigDecimal.ONE) > 0) {
+            return ONE;
+        }
+        return normalized;
+    }
+
+    private BigDecimal scaleMoney(final BigDecimal value) {
+        if (value == null) {
+            return ZERO;
+        }
+        return value.setScale(MONEY_SCALE, MONEY_ROUNDING);
     }
 }
