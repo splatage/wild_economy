@@ -44,6 +44,7 @@ public final class BukkitRecipeGraphBuilder {
             recipesByOutput.computeIfAbsent(outputKey, ignored -> new ArrayList<>()).addAll(extracted);
         }
 
+        CommonCraftingRecipeNormalizers.apply(recipesByOutput);
         RecipeGraphFallbacks.apply(recipesByOutput);
 
         final Map<String, List<RecipeDefinition>> frozen = new LinkedHashMap<>();
