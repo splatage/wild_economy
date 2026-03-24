@@ -1,12 +1,5 @@
 items:
-  minecraft:oak_log: 12.0
-  minecraft:spruce_log: 12.0
-  minecraft:birch_log: 12.0
-  minecraft:jungle_log: 12.0
-  minecraft:acacia_log: 12.0
-  minecraft:dark_oak_log: 12.0
-  minecraft:mangrove_log: 14.0
-  minecraft:cherry_log: 14.0
+  minecraft:*_log: 12.0
 
   minecraft:cobblestone: 2.0
   minecraft:stone: 2.5

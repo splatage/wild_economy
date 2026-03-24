@@ -3,7 +3,6 @@ rules:
     match:
       item-key-patterns:
         - "minecraft:sand"
-        - "minecraft:red_sand"
         - "minecraft:gravel"
         - "minecraft:ice"
         - "minecraft:packed_ice"

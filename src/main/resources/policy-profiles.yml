@@ -2,7 +2,7 @@ policies:
   ALWAYS_AVAILABLE:
     runtime-policy: UNLIMITED_BUY
     buy-enabled: true
-    sell-enabled: false
+    sell-enabled: true
     stock-backed: false
     unlimited-buy: true
     requires-player-stock-to-buy: false
