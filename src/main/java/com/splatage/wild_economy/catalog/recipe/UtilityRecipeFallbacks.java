@@ -4,38 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 import org.bukkit.Material;
 
 final class UtilityRecipeFallbacks {
-
-    private static final List<String> BOWL_PLANK_KEYS = List.of(
-        "oak_planks",
-        "spruce_planks",
-        "birch_planks",
-        "jungle_planks",
-        "acacia_planks",
-        "dark_oak_planks",
-        "mangrove_planks",
-        "cherry_planks",
-        "pale_oak_planks",
-        "crimson_planks",
-        "warped_planks",
-        "bamboo_planks"
-    );
-
-    private static final List<String> CAMPFIRE_LOG_KEYS = List.of(
-        "oak_log",
-        "spruce_log",
-        "birch_log",
-        "jungle_log",
-        "acacia_log",
-        "dark_oak_log",
-        "mangrove_log",
-        "cherry_log",
-        "pale_oak_log",
-        "crimson_stem",
-        "warped_stem"
-    );
 
     private UtilityRecipeFallbacks() {
     }
@@ -63,20 +35,18 @@ final class UtilityRecipeFallbacks {
         if (!hasMaterial("chest") || hasRecipes(recipesByOutput, "chest")) {
             return;
         }
-        for (final WoodLikeRecipeFamily family : WoodLikeRecipeFamilies.all()) {
-            if (!hasMaterial(family.planksKey())) {
-                continue;
-            }
-            addRecipe(
+        forEachWoodLikeFamily(
+            family -> family.planksKey(),
+            plankKey -> addRecipe(
                 recipesByOutput,
                 new RecipeDefinition(
                     "chest",
                     1,
                     "fallback_chest_from_planks",
-                    List.of(new RecipeIngredient(family.planksKey(), 8))
+                    List.of(new RecipeIngredient(plankKey, 8))
                 )
-            );
-        }
+            )
+        );
     }
 
     private static void applyBarrel(final Map<String, List<RecipeDefinition>> recipesByOutput) {
@@ -294,11 +264,9 @@ final class UtilityRecipeFallbacks {
         if (!hasMaterial("bowl")) {
             return;
         }
-        for (final String plankKey : BOWL_PLANK_KEYS) {
-            if (!hasMaterial(plankKey)) {
-                continue;
-            }
-            addRecipe(
+        forEachWoodLikeFamily(
+            family -> family.planksKey(),
+            plankKey -> addRecipe(
                 recipesByOutput,
                 new RecipeDefinition(
                     "bowl",
@@ -306,8 +274,8 @@ final class UtilityRecipeFallbacks {
                     "fallback_bowl_from_" + plankKey,
                     List.of(new RecipeIngredient(plankKey, 3))
                 )
-            );
-        }
+            )
+        );
     }
 
     private static void applyBeetrootSoup(final Map<String, List<RecipeDefinition>> recipesByOutput) {
@@ -332,63 +300,74 @@ final class UtilityRecipeFallbacks {
         if (!hasMaterial("campfire") || !hasMaterial("stick")) {
             return;
         }
-        for (final String logKey : CAMPFIRE_LOG_KEYS) {
-            if (!hasMaterial(logKey)) {
-                continue;
-            }
-            if (hasMaterial("coal")) {
-                addRecipe(
-                    recipesByOutput,
-                    new RecipeDefinition(
-                        "campfire",
-                        1,
-                        "fallback_campfire_from_" + logKey + "_and_coal",
-                        List.of(
-                            new RecipeIngredient("stick", 3),
-                            new RecipeIngredient("coal", 1),
-                            new RecipeIngredient(logKey, 3)
+        forEachWoodLikeFamily(
+            family -> family.inputUnitKey(),
+            inputUnitKey -> {
+                if (hasMaterial("coal")) {
+                    addRecipe(
+                        recipesByOutput,
+                        new RecipeDefinition(
+                            "campfire",
+                            1,
+                            "fallback_campfire_from_" + inputUnitKey + "_and_coal",
+                            List.of(
+                                new RecipeIngredient("stick", 3),
+                                new RecipeIngredient("coal", 1),
+                                new RecipeIngredient(inputUnitKey, 3)
+                            )
                         )
-                    )
-                );
-            }
-            if (hasMaterial("charcoal")) {
-                addRecipe(
-                    recipesByOutput,
-                    new RecipeDefinition(
-                        "campfire",
-                        1,
-                        "fallback_campfire_from_" + logKey + "_and_charcoal",
-                        List.of(
-                            new RecipeIngredient("stick", 3),
-                            new RecipeIngredient("charcoal", 1),
-                            new RecipeIngredient(logKey, 3)
+                    );
+                }
+                if (hasMaterial("charcoal")) {
+                    addRecipe(
+                        recipesByOutput,
+                        new RecipeDefinition(
+                            "campfire",
+                            1,
+                            "fallback_campfire_from_" + inputUnitKey + "_and_charcoal",
+                            List.of(
+                                new RecipeIngredient("stick", 3),
+                                new RecipeIngredient("charcoal", 1),
+                                new RecipeIngredient(inputUnitKey, 3)
+                            )
                         )
-                    )
-                );
+                    );
+                }
             }
-        }
+        );
     }
 
     private static void applySmokerRecipes(final Map<String, List<RecipeDefinition>> recipesByOutput) {
         if (!hasMaterial("smoker") || !hasMaterial("furnace")) {
             return;
         }
-        for (final String logKey : CAMPFIRE_LOG_KEYS) {
-            if (!hasMaterial(logKey)) {
-                continue;
-            }
-            addRecipe(
+        forEachWoodLikeFamily(
+            family -> family.inputUnitKey(),
+            inputUnitKey -> addRecipe(
                 recipesByOutput,
                 new RecipeDefinition(
                     "smoker",
                     1,
-                    "fallback_smoker_from_furnace_and_" + logKey,
+                    "fallback_smoker_from_furnace_and_" + inputUnitKey,
                     List.of(
                         new RecipeIngredient("furnace", 1),
-                        new RecipeIngredient(logKey, 4)
+                        new RecipeIngredient(inputUnitKey, 4)
                     )
                 )
-            );
+            )
+        );
+    }
+
+    private static void forEachWoodLikeFamily(
+        final Function<WoodLikeRecipeFamily, String> inputSelector,
+        final java.util.function.Consumer<String> consumer
+    ) {
+        for (final WoodLikeRecipeFamily family : WoodLikeRecipeFamilies.all()) {
+            final String itemKey = inputSelector.apply(family);
+            if (itemKey == null || !hasMaterial(itemKey)) {
+                continue;
+            }
+            consumer.accept(itemKey);
         }
     }
 
