@@ -44,7 +44,7 @@ public final class BukkitRecipeGraphBuilder {
             recipesByOutput.computeIfAbsent(outputKey, ignored -> new ArrayList<>()).addAll(extracted);
         }
 
-        WoodFamilyRecipeFallbacks.apply(recipesByOutput);
+        RecipeGraphFallbacks.apply(recipesByOutput);
 
         final Map<String, List<RecipeDefinition>> frozen = new LinkedHashMap<>();
         for (final Map.Entry<String, List<RecipeDefinition>> entry : recipesByOutput.entrySet()) {
@@ -292,4 +292,3 @@ public final class BukkitRecipeGraphBuilder {
     private record SlotOptionGroup(List<String> options, int repeats) {
     }
 }
-
