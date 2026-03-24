@@ -227,7 +227,7 @@ plugins/wild_economy/
 
 ### 5.1 File roles
 
-- `root-values.yml`: economic anchors
+- `root-values.yml`: economic anchors plus admin-editable `layout.groups` filing hints for generated browse categories
 - `policy-rules.yml`: broad ordered assignment rules
 - `policy-profiles.yml`: behavior contracts behind policies
 - `manual-overrides.yml`: per-item corrections and explicit admin choices
@@ -236,6 +236,46 @@ plugins/wild_economy/
 - `generated/*`: proposal and review output
 - `exchange-items.yml`: published live/effective runtime catalog consumed by `/shop`
 - `snapshots/*`: rollback history
+
+### 5.2 `root-values.yml` shape
+
+`root-values.yml` now carries two separate concerns:
+
+- `items`: explicit root/base worth anchors
+- `layout.groups`: ordered browse filing hints consumed by the classifier during generation
+
+The design intent is to keep the price list clean while still letting admins steer user-facing filing without patching Java code.
+
+Example shape:
+
+```yml
+items:
+  minecraft:oak_log: 12.00
+  minecraft:stone: 2.50
+  minecraft:bone: 3.00
+
+layout:
+  groups:
+    woods:
+      generated-category: WOODS
+      item-key-patterns:
+        - "minecraft:*_log"
+        - "minecraft:*_stem"
+
+    mob-drops:
+      generated-category: MOB_DROPS
+      item-keys:
+        - "minecraft:bone"
+        - "minecraft:string"
+```
+
+Matching behavior:
+
+- exact `item-keys` win first
+- wildcard `item-key-patterns` are then applied by specificity and file order
+- classifier heuristics only run when no layout hint matches
+
+This keeps durable shipped filing in generator inputs rather than `exchange-items.yml`, which is rewritten by publish/apply.
 
 ---
 

@@ -26,6 +26,7 @@ The v1 design is intentionally narrow and opinionated:
 - Buy-side player-stocked stock consumption is atomic per purchase action to prevent overselling
 - Runtime pricing is resolved from the published `exchange-items.yml` catalog and current live stock rather than an external worth file
 - Admin generation still uses `root-values.yml`, `stock-profiles.yml`, `eco-envelopes.yml`, rules, and overrides to publish that runtime catalog
+- `root-values.yml` now carries both clean value anchors and `layout.groups` filing hints that the classifier consumes during generation
 
 ## Command surface
 
@@ -139,6 +140,8 @@ The current canonical runtime pricing path consumes only the published, fully re
 
 `root-values.yml`, `stock-profiles.yml`, and `eco-envelopes.yml` remain admin/build inputs used to generate and publish that runtime catalog. They are not runtime `/shop` dependencies.
 
+The shipped `root-values.yml` keeps the price list explicit and separate from browse filing. Category filing hints live under `layout.groups`, and `/shopadmin catalog apply` now preserves that generated subcategory into the published runtime catalog.
+
 ## Shulker safety rules
 
 To protect player trust and prevent accidental storage loss:
@@ -147,4 +150,3 @@ To protect player trust and prevent accidental storage loss:
 - placed world containers are subject to protection / access checks
 - broad sell flows do not sell the shulker container item itself
 - sellcontainer only sells the contents of the supported container target
-

@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.catalog.rootvalue;
 
+import com.splatage.wild_economy.catalog.model.CatalogCategory;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -17,24 +18,36 @@ import java.util.regex.Pattern;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-public final class RootValueLoader implements RootValueLookup {
+public final class RootValueLoader implements RootValueLookup, CategoryHintLookup {
 
     private final Map<String, BigDecimal> exactRootValuesByKey;
-    private final List<WildcardRule> wildcardRules;
+    private final List<WildcardRule<BigDecimal>> rootValueWildcardRules;
+    private final Map<String, CatalogCategory> exactCategoryHintsByKey;
+    private final List<WildcardRule<CatalogCategory>> categoryWildcardRules;
     private final Set<String> configuredKeys;
 
     private RootValueLoader(
         final Map<String, BigDecimal> exactRootValuesByKey,
-        final List<WildcardRule> wildcardRules,
+        final List<WildcardRule<BigDecimal>> rootValueWildcardRules,
+        final Map<String, CatalogCategory> exactCategoryHintsByKey,
+        final List<WildcardRule<CatalogCategory>> categoryWildcardRules,
         final Set<String> configuredKeys
     ) {
         this.exactRootValuesByKey = Map.copyOf(exactRootValuesByKey);
-        this.wildcardRules = List.copyOf(wildcardRules);
+        this.rootValueWildcardRules = List.copyOf(rootValueWildcardRules);
+        this.exactCategoryHintsByKey = Map.copyOf(exactCategoryHintsByKey);
+        this.categoryWildcardRules = List.copyOf(categoryWildcardRules);
         this.configuredKeys = Set.copyOf(configuredKeys);
     }
 
     public static RootValueLoader empty() {
-        return new RootValueLoader(Collections.emptyMap(), Collections.emptyList(), Collections.emptySet());
+        return new RootValueLoader(
+            Collections.emptyMap(),
+            Collections.emptyList(),
+            Collections.emptyMap(),
+            Collections.emptyList(),
+            Collections.emptySet()
+        );
     }
 
     public static RootValueLoader fromFile(final File rootValuesFile) throws IOException {
@@ -52,7 +65,7 @@ public final class RootValueLoader implements RootValueLookup {
         }
 
         final Map<String, BigDecimal> exactValues = new LinkedHashMap<>();
-        final List<WildcardRule> wildcardRules = new ArrayList<>();
+        final List<WildcardRule<BigDecimal>> valueWildcardRules = new ArrayList<>();
         final Set<String> configuredKeys = new LinkedHashSet<>();
 
         int order = 0;
@@ -66,7 +79,7 @@ public final class RootValueLoader implements RootValueLookup {
             configuredKeys.add(normalizedKey);
 
             if (isWildcardPattern(normalizedKey)) {
-                wildcardRules.add(new WildcardRule(
+                valueWildcardRules.add(new WildcardRule<>(
                     normalizedKey,
                     compileGlob(normalizedKey),
                     value,
@@ -80,12 +93,20 @@ public final class RootValueLoader implements RootValueLookup {
             order++;
         }
 
-        wildcardRules.sort(
-            Comparator.comparingInt(WildcardRule::specificity).reversed()
-                .thenComparingInt(WildcardRule::order)
+        valueWildcardRules.sort(
+            Comparator.comparingInt(WildcardRule<BigDecimal>::specificity).reversed()
+                .thenComparingInt(WildcardRule<BigDecimal>::order)
         );
 
-        return new RootValueLoader(exactValues, wildcardRules, configuredKeys);
+        final CategoryHints categoryHints = loadCategoryHints(yaml);
+
+        return new RootValueLoader(
+            exactValues,
+            valueWildcardRules,
+            categoryHints.exactCategoryHintsByKey(),
+            categoryHints.categoryWildcardRules(),
+            configuredKeys
+        );
     }
 
     @Override
@@ -101,7 +122,29 @@ public final class RootValueLoader implements RootValueLookup {
             return Optional.of(exactValue);
         }
 
-        for (final WildcardRule rule : this.wildcardRules) {
+        for (final WildcardRule<BigDecimal> rule : this.rootValueWildcardRules) {
+            if (rule.matches(normalizedItemKey)) {
+                return Optional.of(rule.value());
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<CatalogCategory> findCategoryHint(final String itemKey) {
+        if (itemKey == null || itemKey.isBlank()) {
+            return Optional.empty();
+        }
+
+        final String normalizedItemKey = normalizeKey(itemKey);
+
+        final CatalogCategory exactCategory = this.exactCategoryHintsByKey.get(normalizedItemKey);
+        if (exactCategory != null) {
+            return Optional.of(exactCategory);
+        }
+
+        for (final WildcardRule<CatalogCategory> rule : this.categoryWildcardRules) {
             if (rule.matches(normalizedItemKey)) {
                 return Optional.of(rule.value());
             }
@@ -111,11 +154,89 @@ public final class RootValueLoader implements RootValueLookup {
     }
 
     public int size() {
-        return this.exactRootValuesByKey.size() + this.wildcardRules.size();
+        return this.exactRootValuesByKey.size() + this.rootValueWildcardRules.size();
     }
 
     public Set<String> keys() {
         return this.configuredKeys;
+    }
+
+    private static CategoryHints loadCategoryHints(final YamlConfiguration yaml) {
+        final ConfigurationSection groupsSection = yaml.getConfigurationSection("layout.groups");
+        if (groupsSection == null) {
+            return new CategoryHints(Collections.emptyMap(), Collections.emptyList());
+        }
+
+        final Map<String, CatalogCategory> exactCategoryHints = new LinkedHashMap<>();
+        final List<WildcardRule<CatalogCategory>> wildcardRules = new ArrayList<>();
+
+        int order = 0;
+        for (final String groupId : groupsSection.getKeys(false)) {
+            final ConfigurationSection groupSection = groupsSection.getConfigurationSection(groupId);
+            if (groupSection == null) {
+                continue;
+            }
+
+            final CatalogCategory category = parseCategory(
+                groupSection.getString("generated-category", groupSection.getString("category", null))
+            );
+            if (category == null) {
+                continue;
+            }
+
+            for (final String rawKey : groupSection.getStringList("item-keys")) {
+                final String normalizedKey = normalizeKey(rawKey);
+                if (normalizedKey.isBlank()) {
+                    continue;
+                }
+                if (isWildcardPattern(normalizedKey)) {
+                    wildcardRules.add(new WildcardRule<>(
+                        normalizedKey,
+                        compileGlob(normalizedKey),
+                        category,
+                        wildcardSpecificity(normalizedKey),
+                        order++
+                    ));
+                    continue;
+                }
+                exactCategoryHints.putIfAbsent(normalizedKey, category);
+                order++;
+            }
+
+            for (final String rawPattern : groupSection.getStringList("item-key-patterns")) {
+                final String normalizedPattern = normalizeKey(rawPattern);
+                if (normalizedPattern.isBlank()) {
+                    continue;
+                }
+                wildcardRules.add(new WildcardRule<>(
+                    normalizedPattern,
+                    compileGlob(normalizedPattern),
+                    category,
+                    wildcardSpecificity(normalizedPattern),
+                    order++
+                ));
+            }
+        }
+
+        wildcardRules.sort(
+            Comparator.comparingInt(WildcardRule<CatalogCategory>::specificity).reversed()
+                .thenComparingInt(WildcardRule<CatalogCategory>::order)
+        );
+
+        return new CategoryHints(exactCategoryHints, wildcardRules);
+    }
+
+    private static CatalogCategory parseCategory(final String rawCategory) {
+        if (rawCategory == null || rawCategory.isBlank()) {
+            return null;
+        }
+
+        final String normalized = rawCategory.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
+        try {
+            return CatalogCategory.valueOf(normalized);
+        } catch (final IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     private static BigDecimal parseDecimal(final Object value) {
@@ -179,10 +300,16 @@ public final class RootValueLoader implements RootValueLookup {
         return Pattern.compile(regex.toString());
     }
 
-    private record WildcardRule(
+    private record CategoryHints(
+        Map<String, CatalogCategory> exactCategoryHintsByKey,
+        List<WildcardRule<CatalogCategory>> categoryWildcardRules
+    ) {
+    }
+
+    private record WildcardRule<T>(
         String pattern,
         Pattern regex,
-        BigDecimal value,
+        T value,
         int specificity,
         int order
     ) {

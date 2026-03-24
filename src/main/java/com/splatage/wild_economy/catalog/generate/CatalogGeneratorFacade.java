@@ -32,7 +32,7 @@ public final class CatalogGeneratorFacade {
 
         final CatalogGenerationService service = new CatalogGenerationService(
             new BukkitMaterialScanner(rootValueLoader),
-            new DefaultCategoryClassifier(),
+            new DefaultCategoryClassifier(rootValueLoader),
             new DefaultPolicySuggestionService(DEFAULT_MAX_AUTO_INCLUSION_DEPTH),
             derivationService
         );

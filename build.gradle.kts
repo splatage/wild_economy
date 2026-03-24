@@ -28,6 +28,7 @@ dependencies {
 
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
 
     testRuntimeOnly("org.xerial:sqlite-jdbc:3.46.1.3")
     testRuntimeOnly("com.mysql:mysql-connector-j:9.0.0")

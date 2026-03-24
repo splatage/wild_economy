@@ -4,7 +4,8 @@ This phase adds rooted recipe derivation.
 
 ## Locked rules
 
-- `root-values.yml` is the only anchor source.
+- `root-values.yml` is the only anchor source for economic roots.
+- `root-values.yml layout.groups` is the durable filing-hint source for generated browse categories.
 - Only anchored items can seed derivation.
 - Missing anchors block that derivation path.
 - An item may still be included if another complete recipe path resolves from anchored roots.
@@ -30,5 +31,6 @@ This phase adds rooted recipe derivation.
 
 - config-driven derivation depth instead of facade constant
 - generated base catalog as runtime source
+- published runtime output should preserve generated subcategories derived from classifier/layout hints
 - `exchange-items.yml` overrides winning last
 - more specific policy heuristics beyond root/derived inclusion
