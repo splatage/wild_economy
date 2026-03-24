@@ -31,6 +31,6 @@ This phase adds rooted recipe derivation.
 
 - config-driven derivation depth instead of facade constant
 - generated base catalog as runtime source
-- published runtime output should preserve generated subcategories derived from classifier/layout hints
+- published runtime output preserves generated subcategories derived from classifier/layout hints
 - `exchange-items.yml` overrides winning last
 - more specific policy heuristics beyond root/derived inclusion

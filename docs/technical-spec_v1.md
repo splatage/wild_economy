@@ -1,6 +1,6 @@
 # wild_economy — Repo-Ready Technical Spec (v1)
 
-Revision date: 2026-03-23  
+Revision date: 2026-03-24  
 Repo snapshot: `016f204299469b899359f9057ad4e0b1cde8d7e5`  
 Status: Current intended v1 technical spec aligned to the repo direction and current pricing QC corrections.
 
@@ -16,6 +16,7 @@ It reflects the current direction to date:
 - selling is command-driven
 - the runtime catalog is the published, fully resolved `exchange-items.yml`
 - root values remain anchored in `root-values.yml` for admin generation
+- `root-values.yml` also carries admin-editable `layout.groups` filing hints consumed by the classifier during generation
 - item derivation remains recipe-graph based on the admin/build side
 - admin generation resolves roots, rules, overrides, stock profiles, and eco envelopes into the published runtime catalog
 - player-stocked items use soft stock-cap anchoring, turnover, stock-sensitive pricing, and atomic buy-side stock consumption
@@ -119,7 +120,10 @@ The runtime catalog is a single published artifact:
 
 ### 4.2 Root values and derivation
 
-`root-values.yml` is the anchor source for base item values.
+`root-values.yml` is the anchor source for base item values. It now carries two distinct concerns:
+
+- `items`: explicit economic anchors
+- `layout.groups`: durable browse-filing hints consumed by the classifier during generation
 
 Generation uses a recipe graph to:
 
@@ -133,12 +137,14 @@ Generation uses a recipe graph to:
 
 The current generator writes proposal artifacts under a generated output area.
 
-At the current repo snapshot, the implemented outputs are:
+At the current repo snapshot, the implemented outputs span two related paths:
 
-- `generated/generated-catalog.yml`
-- `generated/generated-catalog-summary.yml`
+- generator artifact: `generated/generated-catalog.yml`
+- generator summary artifact: `generated/generated-catalog-summary.yml`
+- admin publish/apply summary: `generated/generated-summary.yml`
+- admin validation/diff reports: `generated/generated-validation.yml`, `generated/generated-diff.yml`, and related review outputs
 
-These files are part of the current generator path. The fuller staged publish/diff/snapshot workflow is planned admin work, not complete runtime behavior yet.
+The staged preview/validate/diff/apply workflow now exists. Runtime `/shop` still consumes only the published `exchange-items.yml`.
 
 ### 4.4 Override layer
 
@@ -581,4 +587,3 @@ The locked Phase 1 admin/catalog slice is:
 9. item decision trace backend
 
 Phase 1 remains intentionally modest. It is about making the generated catalog explainable, reviewable, and safely applicable rather than building a broad admin UI first.
-
