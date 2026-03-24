@@ -178,12 +178,16 @@ Defines stock-related behavior, such as:
 - turnover behavior
 
 ### 4.4 Eco envelope
-Defines pricing/economic behavior, such as:
+Defines admin-side reusable pricing behavior that is resolved into the published runtime catalog.
 
-- base buy multiplier
-- base sell multiplier
-- banded sell behavior
-- floor/penalty behavior
+Current admin eco-envelope definitions should support:
+
+- buy price at minimum stock multiplier
+- buy price at maximum stock multiplier
+- sell price at minimum stock multiplier
+- sell price at maximum stock multiplier
+
+Price bands are legacy and no longer part of the target model.
 
 ### 4.5 Category and classification
 Defines how items are grouped and reviewed.
@@ -215,8 +219,7 @@ plugins/wild_economy/
     generated-rule-impacts.yml
     generated-review-buckets.yml
     item-decision-traces.yml
-  published/
-    exchange-items.yml
+  exchange-items.yml
   snapshots/
     <timestamp>/
       ...
@@ -231,7 +234,7 @@ plugins/wild_economy/
 - `stock-profiles.yml`: stock behavior definitions
 - `eco-envelopes.yml`: pricing/economic guardrails
 - `generated/*`: proposal and review output
-- `published/*`: live/effective catalog
+- `exchange-items.yml`: published live/effective runtime catalog consumed by `/shop`
 - `snapshots/*`: rollback history
 
 ---
@@ -255,9 +258,11 @@ What does that mean operationally?
 Examples:
 - can players buy it?
 - can players sell it?
-- is it unlimited-buy?
-- is it stock-backed?
-- does it require player stock to buy?
+- what runtime policy will be published?
+- which stock profile should be resolved?
+- which eco envelope should be resolved?
+
+Some internal admin metadata may still exist while the admin model is refined, but runtime `/shop` consumes only the published resolved catalog.
 
 ### 6.3 Why this matters
 

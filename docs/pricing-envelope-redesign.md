@@ -8,16 +8,21 @@ This note records the pricing redesign direction agreed for the current runtime 
 
 The old design used ordered fill-ratio bands to taper sell value as stock increased.
 
-The new design uses one linear sell envelope per item through reusable named `eco-envelope` and `stock-profile` references:
+The new design uses one resolved linear eco envelope per item.
+
+Admin-side generation may still use reusable `eco-envelope` and `stock-profile` abstractions internally, but runtime consumes only the published per-item resolved pricing parameters in `exchange-items.yml`.
+
+The resolved per-item runtime shape is:
 
 - a base worth
-- a buy multiplier
-- a sell multiplier
 - a minimum stock anchor
 - a maximum stock anchor
-- a floor price factor
+- a buy price at minimum stock
+- a buy price at maximum stock
+- a sell price at minimum stock
+- a sell price at maximum stock
 
-This is easier to explain, easier to hand-edit, and less error-prone than ordered overlapping bands.
+This is easier to explain, easier to validate, and avoids the old banded sell model.
 
 ## Buy model
 
@@ -55,5 +60,6 @@ The linear section uses trapezoid / averaged integration, which matches the curr
 
 ## Runtime schema
 
-`exchange-items.yml` provides per-item refs or overrides:
+`exchange-items.yml` is the published runtime catalog.
 
+It should contain fully resolved per-item data, not reusable admin references. Runtime does not consume `stock-profile`, `eco-envelope`, or price-band definitions.

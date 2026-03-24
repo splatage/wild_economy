@@ -14,14 +14,14 @@ It reflects the current direction to date:
 - disabled items protect progression and server identity
 - buying is GUI-driven
 - selling is command-driven
-- the catalog is built from a generated base plus explicit overrides
-- root values are anchored in `root-values.yml`
-- item derivation is recipe-graph based
-- generated catalog output is merged with explicit overrides for runtime use
-- player-stocked items use soft stock-cap anchoring, turnover, stock-sensitive sell taper, and atomic buy-side stock consumption
-- pricing QC has removed `initialStock` from the canonical pricing model
-- pricing QC has removed `stock-profiles.yml` from the canonical pricing path
-- admin/catalog work is now moving toward a staged preview/validate/diff/apply pipeline, but that full admin workflow is not yet complete in code
+- the runtime catalog is the published, fully resolved `exchange-items.yml`
+- root values remain anchored in `root-values.yml` for admin generation
+- item derivation remains recipe-graph based on the admin/build side
+- admin generation resolves roots, rules, overrides, stock profiles, and eco envelopes into the published runtime catalog
+- player-stocked items use soft stock-cap anchoring, turnover, stock-sensitive pricing, and atomic buy-side stock consumption
+- `initialStock` is not part of the canonical runtime pricing model
+- `stock-profiles.yml` and `eco-envelopes.yml` remain admin/build inputs, not runtime `/shop` dependencies
+- the staged preview/validate/diff/apply admin workflow now exists to support publishing the runtime catalog
 
 ---
 
@@ -111,10 +111,11 @@ This keeps the player UX intuitive while preserving clean domain language in cod
 
 ### 4.1 High-level model
 
-The runtime catalog is built from two layers:
+The runtime catalog is a single published artifact:
 
-1. a **generated base catalog**
-2. an **explicit override layer** that wins last
+1. admin/build inputs are resolved through the catalog pipeline
+2. `/shopadmin ... apply` publishes the final runtime `exchange-items.yml`
+3. runtime `/shop` loads only that published catalog
 
 ### 4.2 Root values and derivation
 
@@ -252,12 +253,16 @@ Purpose:
 
 All player-stocked items track live stock.
 
-Each catalog entry may define:
+Each runtime catalog entry may define:
 
 - `stock-cap`
 - turnover amount and interval
-- stock-state thresholds
-- reusable eco-envelope references with resolved taper controls in the runtime catalog
+- resolved eco minimum stock
+- resolved eco maximum stock
+- resolved buy price at minimum stock
+- resolved buy price at maximum stock
+- resolved sell price at minimum stock
+- resolved sell price at maximum stock
 
 ### Behavior
 
@@ -286,8 +291,9 @@ It is a deliberate form of **passive server-side consumption / turnover**.
 
 The canonical runtime pricing model does **not** use `initialStock`.
 
-The canonical runtime pricing path also does **not** rely on `stock-profiles.yml`.
-Compatibility structures may still exist in the repo while cleanup continues, but they are not the pricing source of truth.
+The canonical runtime pricing path does **not** rely on `stock-profiles.yml`, `eco-envelopes.yml`, or `root-values.yml`.
+
+Those remain admin/build inputs used to publish `exchange-items.yml`. Runtime `/shop` pricing reads only the published catalog and current stock.
 
 ---
 
@@ -300,9 +306,10 @@ The economic anchor is no longer described as direct runtime dependence on Essen
 The intended v1 source flow is:
 
 1. anchor root/basic values in `root-values.yml`
-2. derive generated values through recipe relationships
-3. merge generated defaults with explicit overrides
-4. use the internal runtime catalog for all runtime pricing logic
+2. derive values through recipe relationships
+3. apply rules, profiles, and overrides on the admin/build side
+4. publish the fully resolved runtime `exchange-items.yml`
+5. use that internal published catalog for all runtime pricing logic
 
 Runtime code should use the internal catalog, not repeatedly consult an external worth file.
 

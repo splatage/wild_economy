@@ -104,69 +104,6 @@ public final class ConfigLoader {
         return new ExchangeItemsConfig(entries);
     }
 
-    public EcoEnvelopesConfig loadEcoEnvelopesConfig() {
-        final FileConfiguration config = this.loadYaml("eco-envelopes.yml");
-        final ConfigurationSection envelopesSection = config.getConfigurationSection("eco-envelopes");
-        if (envelopesSection == null) {
-            throw new IllegalStateException("eco-envelopes.yml is missing the 'eco-envelopes' section");
-        }
-
-        final Map<String, EcoEnvelopesConfig.EcoEnvelopeDefinition> envelopes = new LinkedHashMap<>();
-        for (final String rawKey : envelopesSection.getKeys(false)) {
-            final ConfigurationSection section = envelopesSection.getConfigurationSection(rawKey);
-            if (section == null) {
-                continue;
-            }
-
-            final String normalizedKey = EcoEnvelopesConfig.normalizeKey(rawKey);
-            final BigDecimal buyPriceMultiplier = this.getBigDecimal(section, "buy-price-multiplier", BigDecimal.ONE);
-            final BigDecimal sellPriceMultiplier = this.getBigDecimal(section, "sell-price-multiplier", BigDecimal.ONE);
-            final long minStock = Math.max(0L, section.getLong("min-stock", 0L));
-            final long maxStock = Math.max(minStock, section.getLong("max-stock", minStock));
-            final BigDecimal floorPriceFactor = this.getBigDecimal(section, "floor-price-factor", BigDecimal.ONE);
-
-            envelopes.put(
-                    normalizedKey,
-                    new EcoEnvelopesConfig.EcoEnvelopeDefinition(
-                            buyPriceMultiplier,
-                            sellPriceMultiplier,
-                            minStock,
-                            maxStock,
-                            floorPriceFactor
-                    )
-            );
-        }
-
-        return new EcoEnvelopesConfig(envelopes);
-    }
-
-    public StockProfilesConfig loadStockProfilesConfig() {
-        final FileConfiguration config = this.loadYaml("stock-profiles.yml");
-        final ConfigurationSection profilesSection = config.getConfigurationSection("stock-profiles");
-        if (profilesSection == null) {
-            throw new IllegalStateException("stock-profiles.yml is missing the 'stock-profiles' section");
-        }
-
-        final Map<String, StockProfilesConfig.StockProfileDefinition> stockProfiles = new LinkedHashMap<>();
-        for (final String rawKey : profilesSection.getKeys(false)) {
-            final ConfigurationSection section = profilesSection.getConfigurationSection(rawKey);
-            if (section == null) {
-                continue;
-            }
-
-            final String normalizedKey = StockProfilesConfig.normalizeKey(rawKey);
-            stockProfiles.put(
-                    normalizedKey,
-                    new StockProfilesConfig.StockProfileDefinition(
-                            Math.max(0L, section.getLong("stock-cap", 0L)),
-                            Math.max(0L, section.getLong("turnover-amount-per-interval", 0L))
-                    )
-            );
-        }
-
-        return new StockProfilesConfig(stockProfiles);
-    }
-
     private ExchangeItemsConfig.RawItemEntry parseRuntimeItemSpec(
             final ItemKey itemKey,
             final ConfigurationSection section
@@ -441,18 +378,6 @@ public final class ConfigLoader {
             throw new IllegalStateException(message);
         }
         return section;
-    }
-
-    private BigDecimal getBigDecimal(final ConfigurationSection section, final String path) {
-        if (!section.contains(path)) {
-            return null;
-        }
-        return this.asBigDecimal(section.get(path));
-    }
-
-    private BigDecimal getBigDecimal(final ConfigurationSection section, final String path, final BigDecimal fallback) {
-        final BigDecimal value = this.getBigDecimal(section, path);
-        return value != null ? value : fallback;
     }
 
     private BigDecimal asBigDecimal(final Object value) {

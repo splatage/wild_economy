@@ -23,9 +23,9 @@ The design goal is to make catalog and economy administration:
 This document is aligned to the current plugin direction:
 
 - Exchange-first economy
-- generated catalog + override merge model
-- root-value anchored item derivation
-- fast player-facing runtime paths
+- admin/build generation from rooted values, rules, profiles, envelopes, and overrides
+- published live runtime catalog at `exchange-items.yml`
+- fast player-facing runtime paths that consume only the published catalog
 - admin changes reviewed before going live
 
 ---
@@ -358,20 +358,20 @@ Stock profiles are reusable tuning profiles for item stock behavior.
 
 A stock profile should let admins change stock behavior for many items at once without repeating fields everywhere.
 
-### 9.2 Typical stock profile fields
+### 9.2 Current stock profile fields
 
-A stock profile may support fields such as:
+The current Phase 1 admin stock-profile contract is centered on reusable publish-time stock tuning.
 
-- `target-stock`
-- `soft-cap`
-- `overflow-threshold`
+The current bundled/admin loader contract is:
+
+- `stock-cap`
+- `turnover-amount-per-interval`
 - `low-stock-threshold`
-- `dead-stock-threshold`
-- `buy-visible-below`
-- `restock-priority-weight`
-- `turnover-window`
-- `turnover-decay-rate`
-- `notes`
+- `overflow-threshold`
+
+These are resolved by the admin pipeline into the published runtime `exchange-items.yml`.
+
+This document does not define additional stock-profile fields beyond the current implemented contract.
 
 ---
 
@@ -383,15 +383,18 @@ Eco envelopes are reusable guardrail profiles that constrain economic behavior.
 
 An eco envelope should make it easy to reuse consistent economic guardrails across many items.
 
-### 10.2 Typical envelope fields
+### 10.2 Current eco-envelope fields
 
-Examples include:
+The current Phase 1 admin eco-envelope contract resolves reusable pricing behavior into per-item runtime endpoint prices.
 
-- minimum sell multiplier
-- maximum buy multiplier
-- soft-cap taper behavior
-- emergency suppression toggles
-- notes
+The current bundled/admin loader contract is:
+
+- `buy-price-at-min-stock-multiplier`
+- `buy-price-at-max-stock-multiplier`
+- `sell-price-at-min-stock-multiplier`
+- `sell-price-at-max-stock-multiplier`
+
+These are admin/build inputs only. Runtime `/shop` does not consume named eco-envelope references.
 
 ---
 
@@ -421,6 +424,17 @@ The admin pipeline writes report artifacts under `generated/`, including outputs
 ### 11.3 Live output
 
 Publishing writes the live catalog to `exchange-items.yml`.
+
+That file is the canonical published runtime catalog consumed by `/shop`.
+
+Runtime does not consume:
+
+- `root-values.yml`
+- `stock-profiles.yml`
+- `eco-envelopes.yml`
+- generated review artifacts
+
+Those remain admin/build inputs and reports only.
 
 ### 11.4 Snapshot behavior
 
@@ -510,6 +524,8 @@ What is already true:
 - manual overrides exist
 - GUI review exists
 - managed config recovery is intended to be central, not loader-local
+- runtime `/shop` is intended to consume only the published `exchange-items.yml`
+- admin source abstractions remain on the admin/build side
 
 What still needs improvement:
 

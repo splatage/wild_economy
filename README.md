@@ -24,7 +24,8 @@ The v1 design is intentionally narrow and opinionated:
 - Catalog and browse structures are precomputed in memory
 - Soft stock anchors shape value, not hard sell blockers
 - Buy-side player-stocked stock consumption is atomic per purchase action to prevent overselling
-- Runtime pricing is anchored from `root-values.yml`, derived through the catalog pipeline, and resolved from the internal runtime catalog rather than an external worth file
+- Runtime pricing is resolved from the published `exchange-items.yml` catalog and current live stock rather than an external worth file
+- Admin generation still uses `root-values.yml`, `stock-profiles.yml`, `eco-envelopes.yml`, rules, and overrides to publish that runtime catalog
 
 ## Command surface
 
@@ -134,8 +135,9 @@ For `PLAYER_STOCKED` items:
   - floor-price plateau after the taper range
 - payout is rounded once at the end of the batch quote
 
-The current canonical pricing path uses named reusable references from `exchange-items.yml` into `eco-envelopes.yml`.
-`stock-profiles.yml` and `initialStock` are not part of the canonical runtime pricing model.
+The current canonical runtime pricing path consumes only the published, fully resolved `exchange-items.yml`.
+
+`root-values.yml`, `stock-profiles.yml`, and `eco-envelopes.yml` remain admin/build inputs used to generate and publish that runtime catalog. They are not runtime `/shop` dependencies.
 
 ## Shulker safety rules
 
