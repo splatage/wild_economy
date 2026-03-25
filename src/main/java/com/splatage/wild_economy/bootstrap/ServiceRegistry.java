@@ -19,6 +19,7 @@ import com.splatage.wild_economy.config.EconomyConfig;
 import com.splatage.wild_economy.config.GlobalConfig;
 import com.splatage.wild_economy.economy.InternalEconomyGateway;
 import com.splatage.wild_economy.economy.listener.EconomyPlayerSessionListener;
+import com.splatage.wild_economy.economy.placeholder.WildEconomyExpansion;
 import com.splatage.wild_economy.economy.repository.EconomyAccountRepository;
 import com.splatage.wild_economy.economy.repository.EconomyLedgerRepository;
 import com.splatage.wild_economy.economy.repository.EconomyNameCacheRepository;
@@ -130,6 +131,7 @@ public final class ServiceRegistry {
     private BaltopService baltopService;
     private EconomyPlayerSessionListener economyPlayerSessionListener;
     private WildEconomyVaultProvider vaultEconomyProvider;
+    private WildEconomyExpansion placeholderExpansion;
 
     public ServiceRegistry(final WildEconomyPlugin plugin) {
         this.plugin = plugin;
@@ -326,6 +328,16 @@ public final class ServiceRegistry {
             );
         }
 
+        if (this.plugin.getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            this.placeholderExpansion = new WildEconomyExpansion(
+                    this.plugin,
+                    this.economyService,
+                    this.baltopService,
+                    this.economyConfig
+            );
+            this.placeholderExpansion.register();
+        }
+
         this.plugin.getServer().getPluginManager().registerEvents(this.adminMenuListener, this.plugin);
     }
 
@@ -442,7 +454,10 @@ public final class ServiceRegistry {
             this.databaseProvider.close();
             this.databaseProvider = null;
         }
-
+        if (this.placeholderExpansion != null) {
+            this.placeholderExpansion.unregister();
+            this.placeholderExpansion = null;
+        }
         this.exchangeService = null;
         this.exchangeBuyService = null;
         this.exchangeSellService = null;

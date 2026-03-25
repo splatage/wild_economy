@@ -9,6 +9,7 @@ description: Curated Exchange-first economy plugin for Minecraft
 softdepend:
   - Vault
   - Essentials
+  - PlaceholderAPI
 
 libraries:
   - org.xerial:sqlite-jdbc:3.46.1.3
