@@ -62,7 +62,27 @@ public final class ConfigLoader {
                 config.getString("mysql.username", "root"),
                 config.getString("mysql.password", "change-me"),
                 config.getBoolean("mysql.ssl", false),
-                config.getInt("mysql.maximum-pool-size", 10)
+                config.getInt("mysql.maximum-pool-size", 10),
+                this.requireTablePrefix(config, "tables.economy-prefix"),
+                this.requireTablePrefix(config, "tables.exchange-prefix")
+        );
+    }
+
+    public EconomyConfig loadEconomyConfig() {
+        final FileConfiguration config = this.loadYaml("economy.yml");
+        return new EconomyConfig(
+                config.getString("currency.singular", "Coin"),
+                config.getString("currency.plural", "Coins"),
+                config.getString("currency.symbol", "$"),
+                config.getInt("currency.fractional-digits", 2),
+                config.getBoolean("currency.use-symbol-in-formatting", true),
+                config.getBoolean("accounts.auto-create-on-join", true),
+                config.getBoolean("accounts.auto-create-on-first-transaction", true),
+                config.getInt("cache.online-refresh-seconds", 30),
+                config.getInt("cache.offline-cache-seconds", 60),
+                config.getBoolean("cache.refresh-on-join", true),
+                config.getBoolean("cache.refresh-before-sensitive-operations", true),
+                config.getBoolean("admin.log-balance-adjustments", true)
         );
     }
 
@@ -407,5 +427,18 @@ public final class ConfigLoader {
             key = "minecraft:" + key;
         }
         return key;
+    }
+
+    private String requireTablePrefix(final FileConfiguration config, final String path) {
+        final String value = config.getString(path, "").trim();
+        if (value.isEmpty()) {
+            throw new IllegalStateException("database.yml is missing required value '" + path + "'");
+        }
+        if (!value.matches("[A-Za-z0-9_]+")) {
+            throw new IllegalStateException(
+                    "database.yml value '" + path + "' contains invalid characters: '" + value + "'"
+            );
+        }
+        return value;
     }
 }

@@ -11,3 +11,7 @@ mysql:
   password: change-me
   ssl: false
   maximum-pool-size: 10
+
+tables:
+  economy-prefix: network_
+  exchange-prefix: survival1_

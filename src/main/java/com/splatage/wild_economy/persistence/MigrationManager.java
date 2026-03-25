@@ -5,17 +5,27 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.JarURLConnection;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 public final class MigrationManager {
 
@@ -34,7 +44,7 @@ public final class MigrationManager {
 
     public void migrate() {
         final int currentVersion = this.safeGetCurrentVersion();
-        final List<MigrationResource> migrations = this.loadKnownMigrations();
+        final List<MigrationResource> migrations = this.loadMigrations();
         migrations.sort(Comparator.comparingInt(MigrationResource::version));
 
         for (final MigrationResource migration : migrations) {
@@ -54,19 +64,156 @@ public final class MigrationManager {
         }
     }
 
-    private List<MigrationResource> loadKnownMigrations() {
-        final String basePath = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> "/db/migration/sqlite/";
-            case MYSQL -> "/db/migration/mysql/";
+    private List<MigrationResource> loadMigrations() {
+        final String resourceDirectory = switch (this.databaseProvider.dialect()) {
+            case SQLITE -> "db/migration/sqlite/";
+            case MYSQL -> "db/migration/mysql/";
         };
 
-        final List<MigrationResource> migrations = new ArrayList<>();
-        // v1 only for now
-        final String resourceName = "V1__initial_schema.sql";
-        final int version = this.extractVersion(resourceName);
-        final String sql = this.readResource(basePath + resourceName);
-        migrations.add(new MigrationResource(version, resourceName, sql));
+        final List<String> resourceNames = this.discoverMigrationResourceNames(resourceDirectory);
+        final List<MigrationResource> migrations = new ArrayList<>(resourceNames.size());
+        final Set<Integer> seenVersions = new HashSet<>();
+
+        for (final String resourceName : resourceNames) {
+            final int version = this.extractVersion(resourceName);
+            if (!seenVersions.add(version)) {
+                throw new IllegalStateException(
+                    "Duplicate migration version " + version + " under /" + resourceDirectory
+                );
+            }
+            final String sql = this.readResource('/' + resourceDirectory + resourceName);
+            migrations.add(new MigrationResource(version, resourceName, sql));
+        }
+
         return migrations;
+    }
+
+    private List<String> discoverMigrationResourceNames(final String resourceDirectory) {
+        final URL directoryUrl = this.getClass().getClassLoader().getResource(resourceDirectory);
+        final List<String> discovered;
+
+        if (directoryUrl != null) {
+            discovered = switch (directoryUrl.getProtocol()) {
+                case "file" -> this.discoverFromDirectoryUrl(directoryUrl);
+                case "jar" -> this.discoverFromJarUrl(directoryUrl, resourceDirectory);
+                default -> throw new IllegalStateException(
+                    "Unsupported migration resource protocol: " + directoryUrl.getProtocol()
+                );
+            };
+        } else {
+            discovered = this.discoverFromCodeSource(resourceDirectory);
+        }
+
+        if (discovered.isEmpty()) {
+            throw new IllegalStateException("No migration resources found under /" + resourceDirectory);
+        }
+
+        discovered.sort(Comparator.comparingInt(this::extractVersion));
+        return discovered;
+    }
+
+    private List<String> discoverFromCodeSource(final String resourceDirectory) {
+        final URL codeSourceUrl = this.getClass().getProtectionDomain().getCodeSource().getLocation();
+        if (codeSourceUrl == null) {
+            throw new IllegalStateException(
+                "Unable to resolve code source for migration discovery under /" + resourceDirectory
+            );
+        }
+
+        final Path codeSourcePath;
+        try {
+            codeSourcePath = Paths.get(codeSourceUrl.toURI());
+        } catch (final URISyntaxException exception) {
+            throw new IllegalStateException("Invalid code source URL: " + codeSourceUrl, exception);
+        }
+
+        if (Files.isDirectory(codeSourcePath)) {
+            return this.discoverFromDirectoryPath(codeSourcePath.resolve(resourceDirectory));
+        }
+        if (Files.isRegularFile(codeSourcePath) && codeSourcePath.toString().endsWith(".jar")) {
+            return this.discoverFromJarPath(codeSourcePath, resourceDirectory);
+        }
+
+        throw new IllegalStateException(
+            "Unsupported code source for migration discovery: " + codeSourcePath
+        );
+    }
+
+    private List<String> discoverFromDirectoryUrl(final URL directoryUrl) {
+        final Path directoryPath;
+        try {
+            directoryPath = Paths.get(directoryUrl.toURI());
+        } catch (final URISyntaxException exception) {
+            throw new IllegalStateException("Invalid migration directory URL: " + directoryUrl, exception);
+        }
+        return this.discoverFromDirectoryPath(directoryPath);
+    }
+
+    private List<String> discoverFromDirectoryPath(final Path directoryPath) {
+        if (!Files.isDirectory(directoryPath)) {
+            throw new IllegalStateException("Migration resource path is not a directory: " + directoryPath);
+        }
+
+        try (Stream<Path> stream = Files.list(directoryPath)) {
+            return stream
+                .filter(Files::isRegularFile)
+                .map(path -> path.getFileName().toString())
+                .filter(this::isMigrationFileName)
+                .toList();
+        } catch (final IOException exception) {
+            throw new IllegalStateException("Failed to list migration directory: " + directoryPath, exception);
+        }
+    }
+
+    private List<String> discoverFromJarUrl(final URL directoryUrl, final String resourceDirectory) {
+        final JarURLConnection connection;
+        try {
+            connection = (JarURLConnection) directoryUrl.openConnection();
+        } catch (final IOException exception) {
+            throw new IllegalStateException("Failed to open jar resource: " + directoryUrl, exception);
+        }
+
+        try {
+            return this.discoverFromJarFile(connection.getJarFile(), resourceDirectory);
+        } catch (final IOException exception) {
+            throw new IllegalStateException("Failed to inspect jar migrations under /" + resourceDirectory, exception);
+        }
+    }
+
+    private List<String> discoverFromJarPath(final Path jarPath, final String resourceDirectory) {
+        try (JarFile jarFile = new JarFile(jarPath.toFile())) {
+            return this.discoverFromJarFile(jarFile, resourceDirectory);
+        } catch (final IOException exception) {
+            throw new IllegalStateException("Failed to inspect jar migrations under /" + resourceDirectory, exception);
+        }
+    }
+
+    private List<String> discoverFromJarFile(final JarFile jarFile, final String resourceDirectory) {
+        final List<String> resourceNames = new ArrayList<>();
+        final String prefix = resourceDirectory.endsWith("/") ? resourceDirectory : resourceDirectory + '/';
+
+        for (final JarEntry entry : java.util.Collections.list(jarFile.entries())) {
+            if (entry.isDirectory()) {
+                continue;
+            }
+            final String entryName = entry.getName();
+            if (!entryName.startsWith(prefix)) {
+                continue;
+            }
+            final String relativeName = entryName.substring(prefix.length());
+            if (relativeName.isEmpty() || relativeName.contains("/")) {
+                continue;
+            }
+            if (this.isMigrationFileName(relativeName)) {
+                resourceNames.add(relativeName);
+            }
+        }
+
+        return resourceNames;
+    }
+
+    private boolean isMigrationFileName(final String resourceName) {
+        return VERSION_PATTERN.matcher(resourceName).matches();
     }
 
     private void applyMigration(final MigrationResource migration) {

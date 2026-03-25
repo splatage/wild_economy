@@ -9,5 +9,7 @@ public record DatabaseConfig(
     String mysqlUsername,
     String mysqlPassword,
     boolean mysqlSsl,
-    int mysqlMaximumPoolSize
+    int mysqlMaximumPoolSize,
+    String economyTablePrefix,
+    String exchangeTablePrefix
 ) {}
