@@ -1,6 +1,10 @@
 package com.splatage.wild_economy.bootstrap;
 
 import com.splatage.wild_economy.WildEconomyPlugin;
+import com.splatage.wild_economy.command.BalanceCommand;
+import com.splatage.wild_economy.command.BaltopCommand;
+import com.splatage.wild_economy.command.EcoCommand;
+import com.splatage.wild_economy.command.PayCommand;
 import com.splatage.wild_economy.command.ShopAdminCommand;
 import com.splatage.wild_economy.command.ShopCommand;
 import com.splatage.wild_economy.command.ShopOpenSubcommand;
@@ -30,7 +34,7 @@ import com.splatage.wild_economy.economy.service.BaltopServiceImpl;
 import com.splatage.wild_economy.economy.service.EconomyService;
 import com.splatage.wild_economy.economy.service.EconomyServiceImpl;
 import com.splatage.wild_economy.economy.EconomyGateway;
-import com.splatage.wild_economy.economy.VaultEconomyGateway;
+import com.splatage.wild_economy.economy.vault.WildEconomyVaultProvider;
 import com.splatage.wild_economy.exchange.catalog.CatalogLoader;
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalog;
 import com.splatage.wild_economy.exchange.item.BukkitItemNormalizer;
@@ -87,9 +91,11 @@ import com.splatage.wild_economy.persistence.TransactionRunner;
 import com.splatage.wild_economy.platform.PaperFoliaPlatformExecutor;
 import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.util.Objects;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.event.HandlerList;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.ServicePriority;
 
 public final class ServiceRegistry {
 
@@ -123,6 +129,7 @@ public final class ServiceRegistry {
     private EconomyService economyService;
     private BaltopService baltopService;
     private EconomyPlayerSessionListener economyPlayerSessionListener;
+    private WildEconomyVaultProvider vaultEconomyProvider;
 
     public ServiceRegistry(final WildEconomyPlugin plugin) {
         this.plugin = plugin;
@@ -309,6 +316,16 @@ public final class ServiceRegistry {
            this.economyService.warmPlayerSession(onlinePlayer.getUniqueId(), onlinePlayer.getName());
         }
 
+        if (this.plugin.getServer().getPluginManager().isPluginEnabled("Vault")) {
+            this.vaultEconomyProvider = new WildEconomyVaultProvider(this.plugin, this.economyService, this.economyConfig);
+            this.plugin.getServer().getServicesManager().register(
+                    Economy.class,
+                    this.vaultEconomyProvider,
+                    this.plugin,
+                    ServicePriority.Highest
+            );
+        }
+
         this.plugin.getServer().getPluginManager().registerEvents(this.adminMenuListener, this.plugin);
     }
 
@@ -342,6 +359,31 @@ public final class ServiceRegistry {
         if (shopAdmin != null) {
             shopAdmin.setExecutor(new ShopAdminCommand(this.plugin, this.adminMenuRouter));
         }
+
+        final BalanceCommand balanceCommand = new BalanceCommand(this.economyService, this.economyConfig);
+        final PayCommand payCommand = new PayCommand(this.economyService, this.economyConfig);
+        final BaltopCommand baltopCommand = new BaltopCommand(this.baltopService, this.economyConfig);
+        final EcoCommand ecoCommand = new EcoCommand(this.economyService, this.economyConfig);
+
+        final PluginCommand balance = this.plugin.getCommand("balance");
+        if (balance != null) {
+            balance.setExecutor(balanceCommand);
+        }
+
+        final PluginCommand pay = this.plugin.getCommand("pay");
+        if (pay != null) {
+            pay.setExecutor(payCommand);
+        }
+
+        final PluginCommand baltop = this.plugin.getCommand("baltop");
+        if (baltop != null) {
+            baltop.setExecutor(baltopCommand);
+        }
+
+        final PluginCommand eco = this.plugin.getCommand("eco");
+        if (eco != null) {
+            eco.setExecutor(ecoCommand);
+        }
     }
 
     public void registerTasks() {
@@ -372,6 +414,10 @@ public final class ServiceRegistry {
         if (this.adminMenuRouter != null) {
             this.adminMenuRouter.closeAllAdminViews();
             this.adminMenuRouter = null;
+        }
+        if (this.vaultEconomyProvider != null) {
+            this.plugin.getServer().getServicesManager().unregister(Economy.class, this.vaultEconomyProvider);
+            this.vaultEconomyProvider = null;
         }
 
         this.platformExecutor.cancelPluginTasks();

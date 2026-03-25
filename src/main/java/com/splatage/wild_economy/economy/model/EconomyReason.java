@@ -10,5 +10,7 @@ public enum EconomyReason {
     EXCHANGE_SELL,
     STORE_PURCHASE,
     STORE_REFUND,
+    VAULT_DEPOSIT,
+    VAULT_WITHDRAW,
     MIGRATION_ADJUSTMENT
 }
