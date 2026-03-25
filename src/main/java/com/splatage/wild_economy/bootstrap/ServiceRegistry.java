@@ -81,6 +81,7 @@ import com.splatage.wild_economy.gui.admin.AdminReviewBucketMenu;
 import com.splatage.wild_economy.gui.admin.AdminRootMenu;
 import com.splatage.wild_economy.gui.admin.AdminRuleImpactMenu;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
+import com.splatage.wild_economy.persistence.MigrationDomain;
 import com.splatage.wild_economy.persistence.MigrationManager;
 import com.splatage.wild_economy.persistence.TransactionRunner;
 import com.splatage.wild_economy.platform.PaperFoliaPlatformExecutor;
