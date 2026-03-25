@@ -1,6 +1,6 @@
 package com.splatage.wild_economy.catalog.recipe;
 
-import com.splatage.wild_economy.catalog.scan.BukkitMaterialScanner;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.bukkit.Bukkit;
+import org.bukkit.Keyed;
 import org.bukkit.Material;
 import org.bukkit.inventory.CookingRecipe;
 import org.bukkit.inventory.ItemStack;
@@ -34,7 +35,7 @@ public final class BukkitRecipeGraphBuilder {
                 continue;
             }
 
-            final String outputKey = BukkitMaterialScanner.normalizeKey(result.getType());
+            final String outputKey = this.normalizeMaterialKey(result.getType());
             final int outputAmount = Math.max(1, result.getAmount());
             final List<RecipeDefinition> extracted = this.extractRecipeDefinitions(recipe, outputKey, outputAmount);
             if (extracted.isEmpty()) {
@@ -44,7 +45,6 @@ public final class BukkitRecipeGraphBuilder {
             recipesByOutput.computeIfAbsent(outputKey, ignored -> new ArrayList<>()).addAll(extracted);
         }
 
-        CommonCraftingRecipeNormalizers.apply(recipesByOutput);
         RecipeGraphFallbacks.apply(recipesByOutput);
 
         final Map<String, List<RecipeDefinition>> frozen = new LinkedHashMap<>();
@@ -61,16 +61,16 @@ public final class BukkitRecipeGraphBuilder {
         final int outputAmount
     ) {
         if (recipe instanceof ShapedRecipe shapedRecipe) {
-            return this.extractShapedRecipes(shapedRecipe, outputKey, outputAmount);
+            return this.extractShapedRecipes(shapedRecipe, outputKey, outputAmount, this.describeRecipeType(recipe, "shaped"));
         }
         if (recipe instanceof ShapelessRecipe shapelessRecipe) {
-            return this.extractShapelessRecipes(shapelessRecipe, outputKey, outputAmount);
+            return this.extractShapelessRecipes(shapelessRecipe, outputKey, outputAmount, this.describeRecipeType(recipe, "shapeless"));
         }
         if (recipe instanceof StonecuttingRecipe stonecuttingRecipe) {
             return this.extractSingleInputRecipe(
                 outputKey,
                 outputAmount,
-                "stonecutting",
+                this.describeRecipeType(recipe, "stonecutting"),
                 stonecuttingRecipe.getInputChoice()
             );
         }
@@ -78,9 +78,19 @@ public final class BukkitRecipeGraphBuilder {
             return this.extractSingleInputRecipe(
                 outputKey,
                 outputAmount,
-                recipe.getClass().getSimpleName().toLowerCase(Locale.ROOT),
+                this.describeRecipeType(recipe, recipe.getClass().getSimpleName().toLowerCase(Locale.ROOT)),
                 cookingRecipe.getInputChoice()
             );
+        }
+
+        final List<RecipeDefinition> smithingLike = this.extractSmithingLikeRecipeByReflection(recipe, outputKey, outputAmount);
+        if (!smithingLike.isEmpty()) {
+            return smithingLike;
+        }
+
+        final List<RecipeDefinition> reflectedSingleInput = this.extractSingleInputRecipeByReflection(recipe, outputKey, outputAmount);
+        if (!reflectedSingleInput.isEmpty()) {
+            return reflectedSingleInput;
         }
 
         return Collections.emptyList();
@@ -89,7 +99,8 @@ public final class BukkitRecipeGraphBuilder {
     private List<RecipeDefinition> extractShapedRecipes(
         final ShapedRecipe recipe,
         final String outputKey,
-        final int outputAmount
+        final int outputAmount,
+        final String recipeType
     ) {
         final Map<Character, RecipeChoice> choiceMap = recipe.getChoiceMap();
         final List<List<String>> slotOptions = new ArrayList<>();
@@ -112,13 +123,14 @@ public final class BukkitRecipeGraphBuilder {
             }
         }
 
-        return this.expandRecipes(outputKey, outputAmount, "shaped", slotOptions);
+        return this.expandRecipes(outputKey, outputAmount, recipeType, slotOptions);
     }
 
     private List<RecipeDefinition> extractShapelessRecipes(
         final ShapelessRecipe recipe,
         final String outputKey,
-        final int outputAmount
+        final int outputAmount,
+        final String recipeType
     ) {
         final List<List<String>> slotOptions = new ArrayList<>();
         for (final RecipeChoice choice : recipe.getChoiceList()) {
@@ -129,14 +141,14 @@ public final class BukkitRecipeGraphBuilder {
             slotOptions.add(options);
         }
 
-        return this.expandRecipes(outputKey, outputAmount, "shapeless", slotOptions);
+        return this.expandRecipes(outputKey, outputAmount, recipeType, slotOptions);
     }
 
     private List<RecipeDefinition> extractSingleInputRecipe(
         final String outputKey,
         final int outputAmount,
         final String recipeType,
-        final RecipeChoice inputChoice
+        final Object inputChoice
     ) {
         final List<String> options = this.resolveChoiceOptions(inputChoice);
         if (options.isEmpty()) {
@@ -155,18 +167,113 @@ public final class BukkitRecipeGraphBuilder {
         return List.copyOf(definitions);
     }
 
-    private List<String> resolveChoiceOptions(final RecipeChoice choice) {
-        if (choice == null) {
+    private List<RecipeDefinition> extractSingleInputRecipeByReflection(
+        final Recipe recipe,
+        final String outputKey,
+        final int outputAmount
+    ) {
+        final Object inputChoice = this.invokeNoArg(recipe, "getInputChoice");
+        if (inputChoice != null) {
+            return this.extractSingleInputRecipe(
+                outputKey,
+                outputAmount,
+                this.describeRecipeType(recipe, recipe.getClass().getSimpleName().toLowerCase(Locale.ROOT)),
+                inputChoice
+            );
+        }
+
+        final Object input = this.invokeNoArg(recipe, "getInput");
+        final List<String> options = this.resolveChoiceOptions(input);
+        if (options.isEmpty()) {
             return Collections.emptyList();
         }
 
-        if (choice instanceof RecipeChoice.MaterialChoice materialChoice) {
+        final List<RecipeDefinition> definitions = new ArrayList<>(options.size());
+        for (final String option : options) {
+            definitions.add(new RecipeDefinition(
+                outputKey,
+                outputAmount,
+                this.describeRecipeType(recipe, recipe.getClass().getSimpleName().toLowerCase(Locale.ROOT)),
+                List.of(new RecipeIngredient(option, 1))
+            ));
+        }
+        return List.copyOf(definitions);
+    }
+
+    private List<RecipeDefinition> extractSmithingLikeRecipeByReflection(
+        final Recipe recipe,
+        final String outputKey,
+        final int outputAmount
+    ) {
+        final List<List<String>> slotOptions = new ArrayList<>();
+
+        final Object baseChoice = this.invokeNoArg(recipe, "getBase");
+        if (baseChoice != null) {
+            final List<String> baseOptions = this.resolveChoiceOptions(baseChoice);
+            if (baseOptions.isEmpty()) {
+                return Collections.emptyList();
+            }
+            slotOptions.add(baseOptions);
+        }
+
+        final Object additionChoice = this.invokeNoArg(recipe, "getAddition");
+        if (additionChoice != null) {
+            final List<String> additionOptions = this.resolveChoiceOptions(additionChoice);
+            if (additionOptions.isEmpty()) {
+                return Collections.emptyList();
+            }
+            slotOptions.add(additionOptions);
+        }
+
+        final Object templateChoice = this.invokeNoArg(recipe, "getTemplate");
+        if (templateChoice != null) {
+            final List<String> templateOptions = this.resolveChoiceOptions(templateChoice);
+            if (templateOptions.isEmpty()) {
+                return Collections.emptyList();
+            }
+            slotOptions.add(templateOptions);
+        }
+
+        if (slotOptions.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return this.expandRecipes(
+            outputKey,
+            outputAmount,
+            this.describeRecipeType(recipe, recipe.getClass().getSimpleName().toLowerCase(Locale.ROOT)),
+            slotOptions
+        );
+    }
+
+    private Object invokeNoArg(final Object target, final String methodName) {
+        try {
+            final Method method = target.getClass().getMethod(methodName);
+            return method.invoke(target);
+        } catch (final ReflectiveOperationException ignored) {
+            return null;
+        }
+    }
+
+    private String describeRecipeType(final Recipe recipe, final String baseType) {
+        if (recipe instanceof Keyed keyed) {
+            return keyed.getKey() + "/" + baseType;
+        }
+        return baseType;
+    }
+
+    private List<String> resolveChoiceOptions(final Object choiceOrInput) {
+        if (choiceOrInput == null) {
+            return Collections.emptyList();
+        }
+
+        if (choiceOrInput instanceof RecipeChoice.MaterialChoice materialChoice) {
             final List<String> keys = new ArrayList<>();
             for (final Material material : materialChoice.getChoices()) {
                 if (material == null || material == Material.AIR || !material.isItem()) {
                     continue;
                 }
-                final String key = BukkitMaterialScanner.normalizeKey(material);
+                final String key = this.normalizeMaterialKey(material);
                 if (!keys.contains(key)) {
                     keys.add(key);
                 }
@@ -174,7 +281,7 @@ public final class BukkitRecipeGraphBuilder {
             return List.copyOf(keys);
         }
 
-        if (choice instanceof RecipeChoice.ExactChoice exactChoice) {
+        if (choiceOrInput instanceof RecipeChoice.ExactChoice exactChoice) {
             final List<String> keys = new ArrayList<>();
             for (final ItemStack itemStack : exactChoice.getChoices()) {
                 if (itemStack == null || itemStack.getType() == null || itemStack.getType() == Material.AIR) {
@@ -183,7 +290,7 @@ public final class BukkitRecipeGraphBuilder {
                 if (!itemStack.getType().isItem()) {
                     continue;
                 }
-                final String key = BukkitMaterialScanner.normalizeKey(itemStack.getType());
+                final String key = this.normalizeMaterialKey(itemStack.getType());
                 if (!keys.contains(key)) {
                     keys.add(key);
                 }
@@ -191,7 +298,52 @@ public final class BukkitRecipeGraphBuilder {
             return List.copyOf(keys);
         }
 
+        if (choiceOrInput instanceof Material material) {
+            if (material == Material.AIR || !material.isItem()) {
+                return Collections.emptyList();
+            }
+            return List.of(this.normalizeMaterialKey(material));
+        }
+
+        if (choiceOrInput instanceof ItemStack itemStack) {
+            if (itemStack.getType() == null || itemStack.getType() == Material.AIR || !itemStack.getType().isItem()) {
+                return Collections.emptyList();
+            }
+            return List.of(this.normalizeMaterialKey(itemStack.getType()));
+        }
+
+        final Object rawChoices = this.invokeNoArg(choiceOrInput, "getChoices");
+        if (rawChoices instanceof Iterable<?> iterable) {
+            final List<String> keys = new ArrayList<>();
+            for (final Object entry : iterable) {
+                if (entry instanceof Material material) {
+                    if (material == Material.AIR || !material.isItem()) {
+                        continue;
+                    }
+                    final String key = this.normalizeMaterialKey(material);
+                    if (!keys.contains(key)) {
+                        keys.add(key);
+                    }
+                    continue;
+                }
+                if (entry instanceof ItemStack itemStack) {
+                    if (itemStack.getType() == null || itemStack.getType() == Material.AIR || !itemStack.getType().isItem()) {
+                        continue;
+                    }
+                    final String key = this.normalizeMaterialKey(itemStack.getType());
+                    if (!keys.contains(key)) {
+                        keys.add(key);
+                    }
+                }
+            }
+            return List.copyOf(keys);
+        }
+
         return Collections.emptyList();
+    }
+
+    private String normalizeMaterialKey(final Material material) {
+        return material.name().toLowerCase(Locale.ROOT);
     }
 
     private List<RecipeDefinition> expandRecipes(

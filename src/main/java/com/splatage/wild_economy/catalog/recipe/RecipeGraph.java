@@ -3,6 +3,7 @@ package com.splatage.wild_economy.catalog.recipe;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public final class RecipeGraph {
 
@@ -18,5 +19,9 @@ public final class RecipeGraph {
 
     public int recipeOutputCount() {
         return this.recipesByOutputKey.size();
+    }
+
+    public Set<String> allOutputKeys() {
+        return this.recipesByOutputKey.keySet();
     }
 }
