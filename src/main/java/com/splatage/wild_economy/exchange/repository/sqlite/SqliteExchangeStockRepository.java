@@ -15,14 +15,16 @@ import java.util.Objects;
 public final class SqliteExchangeStockRepository implements ExchangeStockRepository {
 
     private final DatabaseProvider databaseProvider;
+    private final String exchangeStockTableName;
 
-    public SqliteExchangeStockRepository(final DatabaseProvider databaseProvider) {
+    public SqliteExchangeStockRepository(final DatabaseProvider databaseProvider, final String exchangeTablePrefix) {
         this.databaseProvider = Objects.requireNonNull(databaseProvider, "databaseProvider");
+        this.exchangeStockTableName = Objects.requireNonNull(exchangeTablePrefix, "exchangeTablePrefix") + "exchange_stock";
     }
 
     @Override
     public long getStock(final ItemKey itemKey) {
-        final String sql = "SELECT stock_count FROM exchange_stock WHERE item_key = ?";
+        final String sql = "SELECT stock_count FROM " + this.exchangeStockTableName + " WHERE item_key = ?";
         try (
             Connection connection = this.databaseProvider.getConnection();
             PreparedStatement statement = connection.prepareStatement(sql)
@@ -50,7 +52,7 @@ public final class SqliteExchangeStockRepository implements ExchangeStockReposit
 
     @Override
     public Map<ItemKey, Long> loadAllStocks() {
-        final String sql = "SELECT item_key, stock_count FROM exchange_stock";
+        final String sql = "SELECT item_key, stock_count FROM " + this.exchangeStockTableName;
         final Map<ItemKey, Long> result = new LinkedHashMap<>();
         try (
             Connection connection = this.databaseProvider.getConnection();
@@ -94,12 +96,12 @@ public final class SqliteExchangeStockRepository implements ExchangeStockReposit
         }
 
         final String sql = """
-            INSERT INTO exchange_stock (item_key, stock_count, updated_at)
+            INSERT INTO %s (item_key, stock_count, updated_at)
             VALUES (?, ?, ?)
             ON CONFLICT(item_key) DO UPDATE SET
                 stock_count = excluded.stock_count,
                 updated_at = excluded.updated_at
-            """;
+            """.formatted(this.exchangeStockTableName);
 
         try (Connection connection = this.databaseProvider.getConnection()) {
             connection.setAutoCommit(false);
@@ -123,8 +125,8 @@ public final class SqliteExchangeStockRepository implements ExchangeStockReposit
     }
 
     private void changeStockAtomic(final ItemKey itemKey, final int delta) {
-        final String insertSql = "INSERT OR IGNORE INTO exchange_stock (item_key, stock_count, updated_at) VALUES (?, ?, ?)";
-        final String updateSql = "UPDATE exchange_stock SET stock_count = MAX(0, stock_count + ?), updated_at = ? WHERE item_key = ?";
+        final String insertSql = "INSERT OR IGNORE INTO " + this.exchangeStockTableName + " (item_key, stock_count, updated_at) VALUES (?, ?, ?)";
+        final String updateSql = "UPDATE " + this.exchangeStockTableName + " SET stock_count = MAX(0, stock_count + ?), updated_at = ? WHERE item_key = ?";
 
         try (Connection connection = this.databaseProvider.getConnection()) {
             connection.setAutoCommit(false);

@@ -1,6 +1,6 @@
 package com.splatage.wild_economy.exchange.repository;
 
 public interface SchemaVersionRepository {
-    int getCurrentVersion();
-    void setCurrentVersion(int version);
+    int getCurrentVersion(String tableName);
+    void setCurrentVersion(String tableName, int version);
 }

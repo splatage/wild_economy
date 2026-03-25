@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.persistence;
 
+import com.splatage.wild_economy.config.DatabaseConfig;
 import com.splatage.wild_economy.exchange.repository.SchemaVersionRepository;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.jar.JarEntry;
@@ -32,14 +34,20 @@ public final class MigrationManager {
     private static final Pattern VERSION_PATTERN = Pattern.compile("V(\\d+)__.*\\.sql");
 
     private final DatabaseProvider databaseProvider;
+    private final DatabaseConfig databaseConfig;
     private final SchemaVersionRepository schemaVersionRepository;
+    private final MigrationDomain migrationDomain;
 
     public MigrationManager(
         final DatabaseProvider databaseProvider,
-        final SchemaVersionRepository schemaVersionRepository
+        final DatabaseConfig databaseConfig,
+        final SchemaVersionRepository schemaVersionRepository,
+        final MigrationDomain migrationDomain
     ) {
         this.databaseProvider = Objects.requireNonNull(databaseProvider, "databaseProvider");
+        this.databaseConfig = Objects.requireNonNull(databaseConfig, "databaseConfig");
         this.schemaVersionRepository = Objects.requireNonNull(schemaVersionRepository, "schemaVersionRepository");
+        this.migrationDomain = Objects.requireNonNull(migrationDomain, "migrationDomain");
     }
 
     public void migrate() {
@@ -52,22 +60,26 @@ public final class MigrationManager {
                 continue;
             }
             this.applyMigration(migration);
-            this.schemaVersionRepository.setCurrentVersion(migration.version());
+            this.schemaVersionRepository.setCurrentVersion(this.schemaVersionTableName(), migration.version());
         }
     }
 
     private int safeGetCurrentVersion() {
         try {
-            return this.schemaVersionRepository.getCurrentVersion();
+            return this.schemaVersionRepository.getCurrentVersion(this.schemaVersionTableName());
         } catch (final RuntimeException ignored) {
             return 0;
         }
     }
 
+    private String schemaVersionTableName() {
+        return this.migrationDomain.schemaVersionTableName(this.databaseConfig);
+    }
+
     private List<MigrationResource> loadMigrations() {
         final String resourceDirectory = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> "db/migration/sqlite/";
-            case MYSQL -> "db/migration/mysql/";
+            case SQLITE -> "db/migration/sqlite/" + this.migrationDomain.resourceDirectoryName() + "/";
+            case MYSQL -> "db/migration/mysql/" + this.migrationDomain.resourceDirectoryName() + "/";
         };
 
         final List<String> resourceNames = this.discoverMigrationResourceNames(resourceDirectory);
@@ -81,11 +93,20 @@ public final class MigrationManager {
                     "Duplicate migration version " + version + " under /" + resourceDirectory
                 );
             }
-            final String sql = this.readResource('/' + resourceDirectory + resourceName);
+            final String rawSql = this.readResource('/' + resourceDirectory + resourceName);
+            final String sql = this.applyPlaceholders(rawSql, this.migrationDomain.placeholders(this.databaseConfig));
             migrations.add(new MigrationResource(version, resourceName, sql));
         }
 
         return migrations;
+    }
+
+    private String applyPlaceholders(final String sql, final Map<String, String> placeholders) {
+        String rendered = sql;
+        for (final Map.Entry<String, String> entry : placeholders.entrySet()) {
+            rendered = rendered.replace(entry.getKey(), entry.getValue());
+        }
+        return rendered;
     }
 
     private List<String> discoverMigrationResourceNames(final String resourceDirectory) {
@@ -228,7 +249,10 @@ public final class MigrationManager {
             }
             connection.commit();
         } catch (final SQLException exception) {
-            throw new IllegalStateException("Failed to apply migration " + migration.name(), exception);
+            throw new IllegalStateException(
+                    "Failed to apply " + this.migrationDomain.name() + " migration " + migration.name(),
+                    exception
+            );
         }
     }
 

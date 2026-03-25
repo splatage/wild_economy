@@ -120,19 +120,32 @@ public final class ServiceRegistry {
             case MYSQL -> new MysqlSchemaVersionRepository(this.databaseProvider);
         };
 
-        final MigrationManager migrationManager = new MigrationManager(this.databaseProvider, schemaVersionRepository);
-        migrationManager.migrate();
+        final MigrationManager exchangeMigrationManager = new MigrationManager(
+                this.databaseProvider,
+                this.databaseConfig,
+                schemaVersionRepository,
+                MigrationDomain.EXCHANGE
+        );
+        exchangeMigrationManager.migrate();
+
+        final MigrationManager economyMigrationManager = new MigrationManager(
+                this.databaseProvider,
+                this.databaseConfig,
+                schemaVersionRepository,
+                MigrationDomain.ECONOMY
+        );
+        economyMigrationManager.migrate();
 
         this.exchangeStockRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteExchangeStockRepository(this.databaseProvider);
-            case MYSQL -> new MysqlExchangeStockRepository(this.databaseProvider);
+            case SQLITE -> new SqliteExchangeStockRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
+            case MYSQL -> new MysqlExchangeStockRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
         };
 
         this.exchangeTransactionRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteExchangeTransactionRepository(this.databaseProvider);
-            case MYSQL -> new MysqlExchangeTransactionRepository(this.databaseProvider);
-        };
-
+            case SQLITE -> new SqliteExchangeTransactionRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
+            case MYSQL -> new MysqlExchangeTransactionRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
+        }
+;
         final CatalogLoader catalogLoader = new CatalogLoader();
         this.exchangeCatalog = Objects.requireNonNull(
                 catalogLoader.load(this.exchangeItemsConfig),

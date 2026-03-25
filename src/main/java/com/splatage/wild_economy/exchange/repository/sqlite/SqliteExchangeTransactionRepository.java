@@ -15,9 +15,11 @@ import java.util.UUID;
 public final class SqliteExchangeTransactionRepository implements ExchangeTransactionRepository {
 
     private final DatabaseProvider databaseProvider;
+    private final String exchangeTransactionsTableName;
 
-    public SqliteExchangeTransactionRepository(final DatabaseProvider databaseProvider) {
+    public SqliteExchangeTransactionRepository(final DatabaseProvider databaseProvider, final String exchangeTablePrefix) {
         this.databaseProvider = Objects.requireNonNull(databaseProvider, "databaseProvider");
+        this.exchangeTransactionsTableName = Objects.requireNonNull(exchangeTablePrefix, "exchangeTablePrefix") + "exchange_transactions";
     }
 
     @Override
@@ -31,7 +33,7 @@ public final class SqliteExchangeTransactionRepository implements ExchangeTransa
         final Instant createdAt,
         final String metaJson
     ) {
-        final String sql = "INSERT INTO exchange_transactions "
+        final String sql = "INSERT INTO " + this.exchangeTransactionsTableName + " "
             + "(transaction_type, player_uuid, item_key, amount, unit_price, total_value, created_at, meta_json) "
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 

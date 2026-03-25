@@ -18,8 +18,8 @@ public final class MysqlSchemaVersionRepository implements SchemaVersionReposito
     }
 
     @Override
-    public int getCurrentVersion() {
-        final String sql = "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1";
+    public int getCurrentVersion(final String tableName) {
+        final String sql = "SELECT version FROM " + tableName + " ORDER BY version DESC LIMIT 1";
         try (Connection connection = this.databaseProvider.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql);
              ResultSet resultSet = statement.executeQuery()) {
@@ -33,9 +33,9 @@ public final class MysqlSchemaVersionRepository implements SchemaVersionReposito
     }
 
     @Override
-    public void setCurrentVersion(final int version) {
-        final String deleteSql = "DELETE FROM schema_version";
-        final String insertSql = "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)";
+    public void setCurrentVersion(final String tableName, final int version) {
+        final String deleteSql = "DELETE FROM " + tableName;
+        final String insertSql = "INSERT INTO " + tableName + " (version, applied_at) VALUES (?, ?)";
 
         try (Connection connection = this.databaseProvider.getConnection()) {
             connection.setAutoCommit(false);
@@ -52,7 +52,10 @@ public final class MysqlSchemaVersionRepository implements SchemaVersionReposito
 
             connection.commit();
         } catch (final SQLException exception) {
-            throw new IllegalStateException("Failed to set schema version to " + version, exception);
+            throw new IllegalStateException(
+                    "Failed to set schema version to " + version + " in table '" + tableName + "'",
+                    exception
+            );
         }
     }
 }
