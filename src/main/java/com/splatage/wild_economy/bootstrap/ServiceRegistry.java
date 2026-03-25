@@ -11,7 +11,23 @@ import com.splatage.wild_economy.config.ConfigLoader;
 import com.splatage.wild_economy.config.ConfigValidator;
 import com.splatage.wild_economy.config.DatabaseConfig;
 import com.splatage.wild_economy.config.ExchangeItemsConfig;
+import com.splatage.wild_economy.config.EconomyConfig;
 import com.splatage.wild_economy.config.GlobalConfig;
+import com.splatage.wild_economy.economy.listener.EconomyPlayerSessionListener;
+import com.splatage.wild_economy.economy.repository.EconomyAccountRepository;
+import com.splatage.wild_economy.economy.repository.EconomyLedgerRepository;
+import com.splatage.wild_economy.economy.repository.EconomyNameCacheRepository;
+import com.splatage.wild_economy.economy.repository.mysql.MysqlEconomyAccountRepository;
+import com.splatage.wild_economy.economy.repository.mysql.MysqlEconomyLedgerRepository;
+import com.splatage.wild_economy.economy.repository.mysql.MysqlEconomyNameCacheRepository;
+import com.splatage.wild_economy.economy.repository.sqlite.SqliteEconomyAccountRepository;
+import com.splatage.wild_economy.economy.repository.sqlite.SqliteEconomyLedgerRepository;
+import com.splatage.wild_economy.economy.repository.sqlite.SqliteEconomyNameCacheRepository;
+import com.splatage.wild_economy.economy.service.BalanceCache;
+import com.splatage.wild_economy.economy.service.BaltopService;
+import com.splatage.wild_economy.economy.service.BaltopServiceImpl;
+import com.splatage.wild_economy.economy.service.EconomyService;
+import com.splatage.wild_economy.economy.service.EconomyServiceImpl;
 import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.VaultEconomyGateway;
 import com.splatage.wild_economy.exchange.catalog.CatalogLoader;
@@ -65,12 +81,14 @@ import com.splatage.wild_economy.gui.admin.AdminRootMenu;
 import com.splatage.wild_economy.gui.admin.AdminRuleImpactMenu;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
 import com.splatage.wild_economy.persistence.MigrationManager;
+import com.splatage.wild_economy.persistence.TransactionRunner;
 import com.splatage.wild_economy.platform.PaperFoliaPlatformExecutor;
 import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.util.Objects;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.event.HandlerList;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
 public final class ServiceRegistry {
@@ -101,6 +119,10 @@ public final class ServiceRegistry {
     private AdminMenuRouter adminMenuRouter;
     private AdminMenuListener adminMenuListener;
     private FoliaContainerSellCoordinator foliaContainerSellCoordinator;
+    private EconomyConfig economyConfig;
+    private EconomyService economyService;
+    private BaltopService baltopService;
+    private EconomyPlayerSessionListener economyPlayerSessionListener;
 
     public ServiceRegistry(final WildEconomyPlugin plugin) {
         this.plugin = plugin;
@@ -112,8 +134,41 @@ public final class ServiceRegistry {
         this.globalConfig = configLoader.loadGlobalConfig();
         this.databaseConfig = configLoader.loadDatabaseConfig();
         this.exchangeItemsConfig = configLoader.loadExchangeItemsConfig();
-
+        this.economyConfig = configLoader.loadEconomyConfig();
         this.databaseProvider = new DatabaseProvider(this.databaseConfig);
+
+        final TransactionRunner transactionRunner = new TransactionRunner(this.databaseProvider);
+
+        final EconomyAccountRepository economyAccountRepository = switch (this.databaseProvider.dialect()) {
+            case SQLITE -> new SqliteEconomyAccountRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+            case MYSQL -> new MysqlEconomyAccountRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+        };
+
+        final EconomyLedgerRepository economyLedgerRepository = switch (this.databaseProvider.dialect()) {
+            case SQLITE -> new SqliteEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+            case MYSQL -> new MysqlEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+        };
+
+        final EconomyNameCacheRepository economyNameCacheRepository = switch (this.databaseProvider.dialect()) {
+            case SQLITE -> new SqliteEconomyNameCacheRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+            case MYSQL -> new MysqlEconomyNameCacheRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+        };
+
+        final BalanceCache balanceCache = new BalanceCache();
+        this.baltopService = new BaltopServiceImpl(
+                economyAccountRepository,
+                economyNameCacheRepository,
+                this.economyConfig
+        );
+        this.economyService = new EconomyServiceImpl(
+                this.economyConfig,
+                economyAccountRepository,
+                economyLedgerRepository,
+                economyNameCacheRepository,
+                transactionRunner,
+                balanceCache,
+                this.baltopService
+        );
 
         final SchemaVersionRepository schemaVersionRepository = switch (this.databaseProvider.dialect()) {
             case SQLITE -> new SqliteSchemaVersionRepository(this.databaseProvider);
@@ -247,6 +302,13 @@ public final class ServiceRegistry {
                 adminItemInspectorMenu,
                 adminOverrideEditMenu
         );
+        this.economyPlayerSessionListener = new EconomyPlayerSessionListener(this.economyService);
+        this.plugin.getServer().getPluginManager().registerEvents(this.economyPlayerSessionListener, this.plugin);
+
+        for (final Player onlinePlayer : this.plugin.getServer().getOnlinePlayers()) {
+           this.economyService.warmPlayerSession(onlinePlayer.getUniqueId(), onlinePlayer.getName());
+        }
+
         this.plugin.getServer().getPluginManager().registerEvents(this.adminMenuListener, this.plugin);
     }
 
@@ -291,6 +353,10 @@ public final class ServiceRegistry {
     }
 
     public void shutdown() {
+         if (this.economyPlayerSessionListener != null) {
+             HandlerList.unregisterAll(this.economyPlayerSessionListener);
+            this.economyPlayerSessionListener = null;
+        }
         if (this.shopMenuListener != null) {
             HandlerList.unregisterAll(this.shopMenuListener);
             this.shopMenuListener = null;
@@ -318,6 +384,14 @@ public final class ServiceRegistry {
             this.stockService.shutdown();
             this.stockService = null;
         }
+        if (this.economyService != null) {
+            for (final Player onlinePlayer : this.plugin.getServer().getOnlinePlayers()) {
+                this.economyService.flushPlayerSession(onlinePlayer.getUniqueId(), onlinePlayer.getName());
+            }
+            this.economyService = null;
+        }
+        this.baltopService = null;
+        this.economyConfig = null;
         if (this.databaseProvider != null) {
             this.databaseProvider.close();
             this.databaseProvider = null;
