@@ -17,6 +17,7 @@ import com.splatage.wild_economy.config.DatabaseConfig;
 import com.splatage.wild_economy.config.ExchangeItemsConfig;
 import com.splatage.wild_economy.config.EconomyConfig;
 import com.splatage.wild_economy.config.GlobalConfig;
+import com.splatage.wild_economy.config.StoreProductsConfig;
 import com.splatage.wild_economy.economy.InternalEconomyGateway;
 import com.splatage.wild_economy.economy.listener.EconomyPlayerSessionListener;
 import com.splatage.wild_economy.economy.placeholder.WildEconomyExpansion;
@@ -34,6 +35,16 @@ import com.splatage.wild_economy.economy.service.BaltopService;
 import com.splatage.wild_economy.economy.service.BaltopServiceImpl;
 import com.splatage.wild_economy.economy.service.EconomyService;
 import com.splatage.wild_economy.economy.service.EconomyServiceImpl;
+import com.splatage.wild_economy.store.action.ProductActionExecutor;
+import com.splatage.wild_economy.store.action.SimpleProductActionExecutor;
+import com.splatage.wild_economy.store.repository.StoreEntitlementRepository;
+import com.splatage.wild_economy.store.repository.StorePurchaseRepository;
+import com.splatage.wild_economy.store.repository.mysql.MysqlStoreEntitlementRepository;
+import com.splatage.wild_economy.store.repository.mysql.MysqlStorePurchaseRepository;
+import com.splatage.wild_economy.store.repository.sqlite.SqliteStoreEntitlementRepository;
+import com.splatage.wild_economy.store.repository.sqlite.SqliteStorePurchaseRepository;
+import com.splatage.wild_economy.store.service.StoreService;
+import com.splatage.wild_economy.store.service.StoreServiceImpl;
 import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.vault.WildEconomyVaultProvider;
 import com.splatage.wild_economy.exchange.catalog.CatalogLoader;
@@ -130,6 +141,8 @@ public final class ServiceRegistry {
     private EconomyService economyService;
     private BaltopService baltopService;
     private EconomyPlayerSessionListener economyPlayerSessionListener;
+    private StoreProductsConfig storeProductsConfig;
+    private StoreService storeService;
     private WildEconomyVaultProvider vaultEconomyProvider;
     private WildEconomyExpansion placeholderExpansion;
 
@@ -145,6 +158,7 @@ public final class ServiceRegistry {
         this.exchangeItemsConfig = configLoader.loadExchangeItemsConfig();
         this.economyConfig = configLoader.loadEconomyConfig();
         this.databaseProvider = new DatabaseProvider(this.databaseConfig);
+        this.storeProductsConfig = configLoader.loadStoreProductsConfig(this.economyConfig);
 
         final TransactionRunner transactionRunner = new TransactionRunner(this.databaseProvider);
 
@@ -177,6 +191,27 @@ public final class ServiceRegistry {
                 transactionRunner,
                 balanceCache,
                 this.baltopService
+        );
+
+        final StoreEntitlementRepository storeEntitlementRepository = switch (this.databaseProvider.dialect()) {
+            case SQLITE -> new SqliteStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+            case MYSQL -> new MysqlStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+        };
+
+        final StorePurchaseRepository storePurchaseRepository = switch (this.databaseProvider.dialect()) {
+            case SQLITE -> new SqliteStorePurchaseRepository(this.databaseConfig.economyTablePrefix());
+            case MYSQL -> new MysqlStorePurchaseRepository(this.databaseConfig.economyTablePrefix());
+        };
+
+        final ProductActionExecutor productActionExecutor = new SimpleProductActionExecutor();
+
+        this.storeService = new StoreServiceImpl(
+                this.storeProductsConfig,
+                this.economyService,
+                storeEntitlementRepository,
+                storePurchaseRepository,
+                productActionExecutor,
+                transactionRunner
         );
 
         final SchemaVersionRepository schemaVersionRepository = switch (this.databaseProvider.dialect()) {
@@ -465,5 +500,7 @@ public final class ServiceRegistry {
         this.stockTurnoverService = null;
         this.foliaContainerSellCoordinator = null;
         this.economyGateway = null;
+        this.storeService = null;
+        this.storeProductsConfig = null;
     }
 }

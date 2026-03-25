@@ -1,0 +1,48 @@
+categories:
+  ranks:
+    display-name: "Ranks"
+    icon: NETHER_STAR
+    slot: 10
+
+  cosmetics:
+    display-name: "Cosmetics"
+    icon: GLOW_ITEM_FRAME
+    slot: 12
+
+  perks:
+    display-name: "Perks"
+    icon: BEACON
+    slot: 14
+
+  tools:
+    display-name: "Tools"
+    icon: DIAMOND_PICKAXE
+    slot: 16
+
+products:
+  vip_rank:
+    category: ranks
+    type: PERMANENT_UNLOCK
+    display-name: "&6VIP"
+    icon: GOLD_INGOT
+    price: 25000.00
+    entitlement-key: "rank.vip"
+    confirm: true
+    actions:
+      - type: CONSOLE_COMMAND
+        command: "lp user {player} parent add vip"
+      - type: MESSAGE
+        message: "&aYou unlocked VIP!"
+
+  builder_wand:
+    category: tools
+    type: REPEATABLE_GRANT
+    display-name: "&bBuilder Wand"
+    icon: BLAZE_ROD
+    price: 5000.00
+    confirm: true
+    actions:
+      - type: CONSOLE_COMMAND
+        command: "customtools givewand {player}"
+      - type: MESSAGE
+        message: "&aYour Builder Wand has been delivered."

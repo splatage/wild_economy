@@ -21,6 +21,10 @@ public final class ManagedConfigMaterializer {
             "Review shared economy settings in economy.yml, then run /shopadmin reload after any edits."
         ),
         new ManagedConfigFile(
+            "store-products.yml",
+            "Review store products in store-products.yml, then run /shopadmin reload after any edits."
+        ),
+        new ManagedConfigFile(
             "exchange-items.yml",
             "Review live catalog overrides, then run /shopadmin reload after any edits."
         ),

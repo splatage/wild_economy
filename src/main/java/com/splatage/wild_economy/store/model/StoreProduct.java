@@ -1,0 +1,40 @@
+package com.splatage.wild_economy.store.model;
+
+import com.splatage.wild_economy.economy.model.MoneyAmount;
+import java.util.List;
+import java.util.Objects;
+
+public record StoreProduct(
+    String productId,
+    String categoryId,
+    StoreProductType type,
+    String displayName,
+    String iconKey,
+    MoneyAmount price,
+    String entitlementKey,
+    boolean requireConfirmation,
+    List<StoreAction> actions
+) {
+    public StoreProduct {
+        if (productId == null || productId.isBlank()) {
+            throw new IllegalArgumentException("productId cannot be blank");
+        }
+        if (categoryId == null || categoryId.isBlank()) {
+            throw new IllegalArgumentException("categoryId cannot be blank");
+        }
+        Objects.requireNonNull(type, "type");
+        if (displayName == null || displayName.isBlank()) {
+            throw new IllegalArgumentException("displayName cannot be blank");
+        }
+        if (iconKey == null || iconKey.isBlank()) {
+            throw new IllegalArgumentException("iconKey cannot be blank");
+        }
+        Objects.requireNonNull(price, "price");
+        actions = List.copyOf(Objects.requireNonNull(actions, "actions"));
+
+        if (type == StoreProductType.PERMANENT_UNLOCK
+                && (entitlementKey == null || entitlementKey.isBlank())) {
+            throw new IllegalArgumentException("Permanent unlock products require an entitlement key");
+        }
+    }
+}

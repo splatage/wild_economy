@@ -5,8 +5,16 @@ import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
+import com.splatage.wild_economy.economy.model.MoneyAmount;
+import com.splatage.wild_economy.store.model.StoreAction;
+import com.splatage.wild_economy.store.model.StoreActionType;
+import com.splatage.wild_economy.store.model.StoreCategory;
+import com.splatage.wild_economy.store.model.StoreProduct;
+import com.splatage.wild_economy.store.model.StoreProductType;
 import java.io.File;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -84,6 +92,73 @@ public final class ConfigLoader {
                 config.getBoolean("cache.refresh-before-sensitive-operations", true),
                 config.getBoolean("admin.log-balance-adjustments", true)
         );
+    }
+
+    public StoreProductsConfig loadStoreProductsConfig(final EconomyConfig economyConfig) {
+        final FileConfiguration config = this.loadYaml("store-products.yml");
+
+        final ConfigurationSection categoriesSection = this.requireSection(
+                config,
+                "categories",
+                "store-products.yml is missing the 'categories' section"
+        );
+        final ConfigurationSection productsSection = this.requireSection(
+                config,
+                "products",
+                "store-products.yml is missing the 'products' section"
+        );
+
+        final Map<String, StoreCategory> categories = new LinkedHashMap<>();
+        for (final String categoryId : categoriesSection.getKeys(false)) {
+            final ConfigurationSection section = categoriesSection.getConfigurationSection(categoryId);
+            if (section == null) {
+                continue;
+            }
+
+            categories.put(categoryId, new StoreCategory(
+                    categoryId,
+                    this.requireNonBlank(section, "display-name", "store category '" + categoryId + "'"),
+                    this.requireNonBlank(section, "icon", "store category '" + categoryId + "'"),
+                    this.requireNonNegativeInt(section, "slot", "store category '" + categoryId + "'")
+            ));
+        }
+
+        final Map<String, StoreProduct> products = new LinkedHashMap<>();
+        for (final String productId : productsSection.getKeys(false)) {
+            final ConfigurationSection section = productsSection.getConfigurationSection(productId);
+            if (section == null) {
+                continue;
+            }
+
+            final String categoryId = this.requireNonBlank(section, "category", "store product '" + productId + "'");
+            if (!categories.containsKey(categoryId)) {
+                throw new IllegalStateException(
+                       "store-products.yml product '" + productId + "' references unknown category '" + categoryId + "'"
+               );
+           }
+
+           final StoreProductType productType = this.parseStoreProductType(
+                   this.requireNonBlank(section, "type", "store product '" + productId + "'"),
+                   productId
+           );
+
+           final BigDecimal price = this.requireNonNegativeBigDecimal("store product '" + productId + "'", section, "price");
+           final List<StoreAction> actions = this.parseStoreActions(section, productId);
+
+           products.put(productId, new StoreProduct(
+                   productId,
+                   categoryId,
+                   productType,
+                   this.requireNonBlank(section, "display-name", "store product '" + productId + "'"),
+                   this.requireNonBlank(section, "icon", "store product '" + productId + "'"),
+                   MoneyAmount.fromMajor(price, economyConfig.fractionalDigits()),
+                   this.getOptionalString(section, "entitlement-key"),
+                   section.getBoolean("confirm", true),
+                   actions
+           ));
+       }
+
+       return new StoreProductsConfig(categories, products);
     }
 
     public ExchangeItemsConfig loadExchangeItemsConfig() {
@@ -440,5 +515,114 @@ public final class ConfigLoader {
             );
         }
         return value;
+    }
+
+    private StoreProductType parseStoreProductType(final String rawValue, final String productId) {
+        try {
+            return StoreProductType.valueOf(rawValue.trim().toUpperCase(Locale.ROOT));
+        } catch (final IllegalArgumentException exception) {
+            throw new IllegalStateException(
+                    "store-products.yml product '" + productId + "' has invalid type '" + rawValue + "'",
+                    exception
+            );
+        }
+    }
+
+    private List<StoreAction> parseStoreActions(final ConfigurationSection section, final String productId) {
+        final List<Map<?, ?>> rawActions = section.getMapList("actions");
+        if (rawActions.isEmpty()) {
+            throw new IllegalStateException(
+                    "store-products.yml product '" + productId + "' must define at least one action"
+            );
+        }
+
+        final List<StoreAction> actions = new ArrayList<>(rawActions.size());
+        for (final Map<?, ?> rawAction : rawActions) {
+            final Object rawType = rawAction.get("type");
+            if (rawType == null) {
+                throw new IllegalStateException(
+                        "store-products.yml product '" + productId + "' contains an action with no type"
+                );
+            }
+
+            final StoreActionType actionType;
+            try {
+                actionType = StoreActionType.valueOf(String.valueOf(rawType).trim().toUpperCase(Locale.ROOT));
+            } catch (final IllegalArgumentException exception) {
+                throw new IllegalStateException(
+                        "store-products.yml product '" + productId + "' has an action with invalid type '" + rawType + "'",
+                        exception
+                );
+            }
+
+            final String value = switch (actionType) {
+                case CONSOLE_COMMAND -> this.requireMapValue(rawAction, "command", "store product '" + productId + "' console action");
+                case MESSAGE -> this.requireMapValue(rawAction, "message", "store product '" + productId + "' message action");
+            };
+
+            actions.add(new StoreAction(actionType, value));
+        }
+
+        return List.copyOf(actions);
+    }
+
+    private String requireNonBlank(final ConfigurationSection section, final String path, final String context) {
+        final String value = this.getOptionalString(section, path);
+        if (value == null) {
+            throw new IllegalStateException(context + " is missing required field '" + path + "'");
+        }
+        return value;
+    }
+
+    private int requireNonNegativeInt(final ConfigurationSection section, final String path, final String context) {
+        if (!section.contains(path)) {
+            throw new IllegalStateException(context + " is missing required numeric field '" + path + "'");
+        }
+        final Object rawValue = section.get(path);
+        final int parsed;
+        if (rawValue instanceof Number number) {
+            parsed = number.intValue();
+        } else {
+            try {
+                parsed = Integer.parseInt(String.valueOf(rawValue).trim());
+            } catch (final NumberFormatException exception) {
+                throw new IllegalStateException(context + " has invalid integer field '" + path + "'", exception);
+            }
+        }
+        if (parsed < 0) {
+            throw new IllegalStateException(context + " has negative integer field '" + path + "'");
+        }
+        return parsed;
+    }
+
+    private BigDecimal requireNonNegativeBigDecimal(
+            final String context,
+            final ConfigurationSection section,
+            final String path
+    ) {
+        if (!section.contains(path)) {
+            throw new IllegalStateException(context + " is missing required decimal field '" + path + "'");
+        }
+
+        final BigDecimal value = this.asBigDecimal(section.get(path));
+        if (value == null) {
+            throw new IllegalStateException(context + " has null decimal field '" + path + "'");
+        }
+        if (value.signum() < 0) {
+            throw new IllegalStateException(context + " has negative decimal field '" + path + "'");
+        }
+        return value;
+    }
+
+    private String requireMapValue(final Map<?, ?> map, final String key, final String context) {
+        final Object rawValue = map.get(key);
+        if (rawValue == null) {
+            throw new IllegalStateException(context + " is missing required key '" + key + "'");
+        }
+        final String value = String.valueOf(rawValue).trim();
+        if (value.isEmpty()) {
+           throw new IllegalStateException(context + " has blank key '" + key + "'");
+       }
+       return value;
     }
 }
