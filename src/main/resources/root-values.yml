@@ -191,6 +191,25 @@ items:
   minecraft:diamond: 90.00
   minecraft:emerald: 75.00
   minecraft:amethyst_shard: 10.00
+  minecraft:coal_ore: 6.00
+  minecraft:deepslate_coal_ore: 6.50
+  minecraft:iron_ore: 14.00
+  minecraft:deepslate_iron_ore: 14.50
+  minecraft:copper_ore: 10.00
+  minecraft:deepslate_copper_ore: 10.50
+  minecraft:gold_ore: 18.00
+  minecraft:deepslate_gold_ore: 18.50
+  minecraft:redstone_ore: 18.00
+  minecraft:deepslate_redstone_ore: 18.50
+  minecraft:lapis_ore: 24.00
+  minecraft:deepslate_lapis_ore: 24.50
+  minecraft:diamond_ore: 90.00
+  minecraft:deepslate_diamond_ore: 90.50
+  minecraft:emerald_ore: 75.00
+  minecraft:deepslate_emerald_ore: 75.50
+  minecraft:nether_gold_ore: 12.00
+  minecraft:nether_quartz_ore: 8.00
+  minecraft:ancient_debris: 240.00
 
   # Flowers Decoration
   minecraft:allium: 2.00
@@ -350,6 +369,25 @@ layout:
         - "minecraft:diamond"
         - "minecraft:emerald"
         - "minecraft:amethyst_shard"
+        - "minecraft:coal_ore"
+        - "minecraft:deepslate_coal_ore"
+        - "minecraft:iron_ore"
+        - "minecraft:deepslate_iron_ore"
+        - "minecraft:copper_ore"
+        - "minecraft:deepslate_copper_ore"
+        - "minecraft:gold_ore"
+        - "minecraft:deepslate_gold_ore"
+        - "minecraft:redstone_ore"
+        - "minecraft:deepslate_redstone_ore"
+        - "minecraft:lapis_ore"
+        - "minecraft:deepslate_lapis_ore"
+        - "minecraft:diamond_ore"
+        - "minecraft:deepslate_diamond_ore"
+        - "minecraft:emerald_ore"
+        - "minecraft:deepslate_emerald_ore"
+        - "minecraft:nether_gold_ore"
+        - "minecraft:nether_quartz_ore"
+        - "minecraft:ancient_debris"
 
     farming:
       generated-category: FARMING

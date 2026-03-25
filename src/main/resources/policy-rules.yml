@@ -1,19 +1,31 @@
 rules:
   - id: always-available-landscape
     match:
-      item-key-patterns:
+      item-keys:
+        - "minecraft:oak_log"
+        - "minecraft:spruce_log"
+        - "minecraft:birch_log"
+        - "minecraft:jungle_log"
+        - "minecraft:acacia_log"
+        - "minecraft:dark_oak_log"
+        - "minecraft:mangrove_log"
+        - "minecraft:cherry_log"
+        - "minecraft:pale_oak_log"
+        - "minecraft:crimson_stem"
+        - "minecraft:warped_stem"
+        - "minecraft:dirt"
+        - "minecraft:coarse_dirt"
+        - "minecraft:rooted_dirt"
+        - "minecraft:grass_block"
+        - "minecraft:podzol"
+        - "minecraft:mycelium"
         - "minecraft:sand"
-        - "minecraft:gravel"
-        - "minecraft:ice"
-        - "minecraft:packed_ice"
-        - "minecraft:blue_ice"
-        - "minecraft:*_log"
-        - "minecraft:*_stem"
+        - "minecraft:red_sand"
     set:
       policy: ALWAYS_AVAILABLE
       stock-profile: unlimited_buy_utility
       eco-envelope: world_damage_unlimited_buy
-      note: "Unlimited-buy nuisance or landscape-protection material."
+      note: "Unlimited-buy landscape-protection material."
 
   - id: disable-spawn-eggs
     match:
@@ -24,38 +36,6 @@ rules:
       stock-profile: disabled_placeholder
       eco-envelope: disabled_placeholder
       note: "Spawn eggs are disabled from the exchange."
-
-  - id: sell-only-unstackables
-    match:
-      max-derivation-depth: 8
-      item-key-patterns:
-        - "minecraft:*_helmet"
-        - "minecraft:*_chestplate"
-        - "minecraft:*_leggings"
-        - "minecraft:*_boots"
-        - "minecraft:*_sword"
-        - "minecraft:*_pickaxe"
-        - "minecraft:*_axe"
-        - "minecraft:*_shovel"
-        - "minecraft:*_hoe"
-    set:
-      policy: SELL_ONLY
-      stock-profile: sell_only_cleanup
-      eco-envelope: sell_only_cleanup
-      note: "Unstackable gear defaults to sell-only."
-
-  - id: depth-limited-disable
-    match:
-      derivation-reasons:
-        - DEPTH_LIMIT
-        - ALL_PATHS_BLOCKED
-        - NO_RECIPE_AND_NO_ROOT
-        - HARD_DISABLED
-    set:
-      policy: DISABLED
-      stock-profile: disabled_placeholder
-      eco-envelope: disabled_placeholder
-      note: "Blocked by derivation policy."
 
   - id: default-exchange
     match: {}
