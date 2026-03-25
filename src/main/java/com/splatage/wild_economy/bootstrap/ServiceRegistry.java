@@ -13,6 +13,7 @@ import com.splatage.wild_economy.config.DatabaseConfig;
 import com.splatage.wild_economy.config.ExchangeItemsConfig;
 import com.splatage.wild_economy.config.EconomyConfig;
 import com.splatage.wild_economy.config.GlobalConfig;
+import com.splatage.wild_economy.economy.InternalEconomyGateway;
 import com.splatage.wild_economy.economy.listener.EconomyPlayerSessionListener;
 import com.splatage.wild_economy.economy.repository.EconomyAccountRepository;
 import com.splatage.wild_economy.economy.repository.EconomyLedgerRepository;
@@ -85,11 +86,9 @@ import com.splatage.wild_economy.persistence.TransactionRunner;
 import com.splatage.wild_economy.platform.PaperFoliaPlatformExecutor;
 import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.util.Objects;
-import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.event.HandlerList;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.RegisteredServiceProvider;
 
 public final class ServiceRegistry {
 
@@ -216,7 +215,7 @@ public final class ServiceRegistry {
         final CanonicalItemRules canonicalItemRules = new CanonicalItemRules();
         this.itemNormalizer = new BukkitItemNormalizer(canonicalItemRules);
         this.itemValidationService = new ItemValidationServiceImpl(this.itemNormalizer, this.exchangeCatalog);
-        this.economyGateway = this.resolveVaultEconomy();
+        this.economyGateway = new InternalEconomyGateway(this.economyService, this.economyConfig);
 
         final StockStateResolver stockStateResolver = new StockStateResolver();
         this.stockService = new StockServiceImpl(
@@ -403,13 +402,6 @@ public final class ServiceRegistry {
         this.exchangeBrowseService = null;
         this.stockTurnoverService = null;
         this.foliaContainerSellCoordinator = null;
-    }
-
-    private EconomyGateway resolveVaultEconomy() {
-        final RegisteredServiceProvider<Economy> registration = this.plugin.getServer().getServicesManager().getRegistration(Economy.class);
-        if (registration == null || registration.getProvider() == null) {
-            throw new IllegalStateException("Vault economy provider not found");
-        }
-        return new VaultEconomyGateway(registration.getProvider());
+        this.economyGateway = null;
     }
 }
