@@ -13,25 +13,6 @@ final class CommonCraftingRecipeNormalizers {
     private CommonCraftingRecipeNormalizers() {
     }
 
-    private static final List<String> CONCRETE_COLOR_KEYS = List.of(
-        "white",
-        "light_gray",
-        "gray",
-        "black",
-        "brown",
-        "red",
-        "orange",
-        "yellow",
-        "lime",
-        "green",
-        "cyan",
-        "light_blue",
-        "blue",
-        "purple",
-        "magenta",
-        "pink"
-    );
-
     static void apply(final Map<String, List<RecipeDefinition>> recipesByOutput) {
         applyChest(recipesByOutput);
         applyBarrel(recipesByOutput);
@@ -43,17 +24,17 @@ final class CommonCraftingRecipeNormalizers {
         applyBlastFurnace(recipesByOutput);
         applyCrafter(recipesByOutput);
         applyComparator(recipesByOutput);
+
+        applyBoneBlockCompression(recipesByOutput);
         applyBucket(recipesByOutput);
         applyCauldron(recipesByOutput);
         applyAnvil(recipesByOutput);
         applyBrewingStand(recipesByOutput);
-
-        applyBoneBlockCompression(recipesByOutput);
+        applyConcreteConversions(recipesByOutput);
         applyBowlRecipes(recipesByOutput);
         applyBeetrootSoup(recipesByOutput);
         applyCampfireRecipes(recipesByOutput);
         applySmokerRecipes(recipesByOutput);
-        applyConcreteConversions(recipesByOutput);
     }
 
     private static void applyChest(final Map<String, List<RecipeDefinition>> recipesByOutput) {
@@ -267,6 +248,20 @@ final class CommonCraftingRecipeNormalizers {
         );
     }
 
+    private static void applyBoneBlockCompression(final Map<String, List<RecipeDefinition>> recipesByOutput) {
+        if (!hasMaterial("bone_block") || !hasMaterial("bone_meal") || hasRecipes(recipesByOutput, "bone_block")) {
+            return;
+        }
+        addRecipe(
+            recipesByOutput,
+            new RecipeDefinition(
+                "bone_block",
+                1,
+                "normalized_bone_block_from_bone_meal",
+                List.of(new RecipeIngredient("bone_meal", 9))
+            )
+        );
+    }
 
     private static void applyBucket(final Map<String, List<RecipeDefinition>> recipesByOutput) {
         if (!hasMaterial("bucket") || hasRecipes(recipesByOutput, "bucket") || !hasMaterial("iron_ingot")) {
@@ -340,19 +335,26 @@ final class CommonCraftingRecipeNormalizers {
         );
     }
 
-    private static void applyBoneBlockCompression(final Map<String, List<RecipeDefinition>> recipesByOutput) {
-        if (!hasMaterial("bone_block") || !hasMaterial("bone_meal") || hasRecipes(recipesByOutput, "bone_block")) {
-            return;
+    private static void applyConcreteConversions(final Map<String, List<RecipeDefinition>> recipesByOutput) {
+        for (final String color : List.of(
+            "white", "light_gray", "gray", "black", "brown", "red", "orange", "yellow",
+            "lime", "green", "cyan", "light_blue", "blue", "purple", "magenta", "pink"
+        )) {
+            final String concreteKey = color + "_concrete";
+            final String powderKey = color + "_concrete_powder";
+            if (!hasMaterial(concreteKey) || !hasMaterial(powderKey) || hasRecipes(recipesByOutput, concreteKey)) {
+                continue;
+            }
+            addRecipe(
+                recipesByOutput,
+                new RecipeDefinition(
+                    concreteKey,
+                    1,
+                    "normalized_" + concreteKey + "_from_powder",
+                    List.of(new RecipeIngredient(powderKey, 1))
+                )
+            );
         }
-        addRecipe(
-            recipesByOutput,
-            new RecipeDefinition(
-                "bone_block",
-                1,
-                "normalized_bone_block_from_bone_meal",
-                List.of(new RecipeIngredient("bone_meal", 9))
-            )
-        );
     }
 
     private static void applyBowlRecipes(final Map<String, List<RecipeDefinition>> recipesByOutput) {
@@ -454,26 +456,6 @@ final class CommonCraftingRecipeNormalizers {
                 )
             )
         );
-    }
-
-
-    private static void applyConcreteConversions(final Map<String, List<RecipeDefinition>> recipesByOutput) {
-        for (final String colorKey : CONCRETE_COLOR_KEYS) {
-            final String outputKey = colorKey + "_concrete";
-            final String inputKey = colorKey + "_concrete_powder";
-            if (!hasMaterial(outputKey) || !hasMaterial(inputKey) || hasRecipes(recipesByOutput, outputKey)) {
-                continue;
-            }
-            addRecipe(
-                recipesByOutput,
-                new RecipeDefinition(
-                    outputKey,
-                    1,
-                    "normalized_" + outputKey + "_from_" + inputKey,
-                    List.of(new RecipeIngredient(inputKey, 1))
-                )
-            );
-        }
     }
 
     private static void forEachWoodLikeFamily(
