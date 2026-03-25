@@ -66,6 +66,57 @@ final class UtilityRecipeFallbacksTest {
         assertEquals(new BigDecimal("64"), service.resolve("smoker").derivedValue().stripTrailingZeros());
     }
 
+
+    @Test
+    void apply_unblocksMetalUtilityAndConcreteFamilies() {
+        final Map<String, List<RecipeDefinition>> recipesByOutput = new LinkedHashMap<>();
+        recipesByOutput.put(
+            "iron_block",
+            List.of(new RecipeDefinition(
+                "iron_block",
+                1,
+                "test_seed_iron_block",
+                List.of(new RecipeIngredient("iron_ingot", 9))
+            ))
+        );
+        recipesByOutput.put(
+            "blue_concrete_powder",
+            List.of(new RecipeDefinition(
+                "blue_concrete_powder",
+                1,
+                "test_seed_blue_concrete_powder",
+                List.of(new RecipeIngredient("sand", 4))
+            ))
+        );
+
+        RecipeGraphFallbacks.apply(recipesByOutput);
+
+        final RootAnchoredDerivationService service = new RootAnchoredDerivationService(
+            new RecipeGraph(copyOf(recipesByOutput)),
+            rootValues(Map.of(
+                "iron_ingot", new BigDecimal("18.00"),
+                "blaze_rod", new BigDecimal("12.00"),
+                "cobblestone", new BigDecimal("2.00"),
+                "sand", new BigDecimal("4.00")
+            ))
+        );
+
+        assertTrue(service.resolve("bucket").resolved());
+        assertEquals(new BigDecimal("54"), service.resolve("bucket").derivedValue().stripTrailingZeros());
+
+        assertTrue(service.resolve("cauldron").resolved());
+        assertEquals(new BigDecimal("126"), service.resolve("cauldron").derivedValue().stripTrailingZeros());
+
+        assertTrue(service.resolve("anvil").resolved());
+        assertEquals(new BigDecimal("558"), service.resolve("anvil").derivedValue().stripTrailingZeros());
+
+        assertTrue(service.resolve("brewing_stand").resolved());
+        assertEquals(new BigDecimal("18"), service.resolve("brewing_stand").derivedValue().stripTrailingZeros());
+
+        assertTrue(service.resolve("blue_concrete").resolved());
+        assertEquals(new BigDecimal("16"), service.resolve("blue_concrete").derivedValue().stripTrailingZeros());
+    }
+
     private static RootValueLookup rootValues(final Map<String, BigDecimal> values) {
         return itemKey -> Optional.ofNullable(values.get(itemKey));
     }
