@@ -21,7 +21,7 @@ public final class SimpleProductActionExecutor implements ProductActionExecutor 
                 return result;
             }
         }
-        return StoreActionExecutionResult.success();
+        return StoreActionExecutionResult.succeed();
     }
 
     private StoreActionExecutionResult executeAction(
@@ -33,7 +33,7 @@ public final class SimpleProductActionExecutor implements ProductActionExecutor 
             case CONSOLE_COMMAND -> this.executeConsoleCommand(player, product, action.value());
             case MESSAGE -> {
                 player.sendMessage(this.render(player, product, action.value()));
-                yield StoreActionExecutionResult.success();
+                yield StoreActionExecutionResult.succeed();
             }
         };
     }
@@ -49,7 +49,7 @@ public final class SimpleProductActionExecutor implements ProductActionExecutor 
         if (!success) {
             return StoreActionExecutionResult.failure("Action failed while dispatching command: " + command);
         }
-        return StoreActionExecutionResult.success();
+        return StoreActionExecutionResult.succeed();
     }
 
     private String render(final Player player, final StoreProduct product, final String template) {

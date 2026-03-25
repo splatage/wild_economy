@@ -4,7 +4,7 @@ public record StoreActionExecutionResult(
     boolean success,
     String message
 ) {
-    public static StoreActionExecutionResult success() {
+    public static StoreActionExecutionResult succeed() {
         return new StoreActionExecutionResult(true, null);
     }
 
