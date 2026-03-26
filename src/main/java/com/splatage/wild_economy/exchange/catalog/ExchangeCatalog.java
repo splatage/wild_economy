@@ -17,8 +17,7 @@ import java.util.Optional;
 public final class ExchangeCatalog {
 
     private static final Comparator<ExchangeCatalogEntry> DISPLAY_NAME_ORDER =
-        Comparator.comparing(ExchangeCatalogEntry::displayName, String.CASE_INSENSITIVE_ORDER)
-            .thenComparing(entry -> entry.itemKey().value());
+        ExchangeCatalog::compareEntriesByReverseItemKeySegments;
 
     private static final Comparator<GeneratedItemCategory> GENERATED_CATEGORY_ORDER =
         Comparator.comparing(GeneratedItemCategory::displayName, String.CASE_INSENSITIVE_ORDER)
@@ -90,6 +89,65 @@ public final class ExchangeCatalog {
 
     public List<GeneratedItemCategory> generatedSubcategories(final ItemCategory category) {
         return this.generatedSubcategoriesByCategory.getOrDefault(category, List.of());
+    }
+
+    private static int compareEntriesByReverseItemKeySegments(
+        final ExchangeCatalogEntry left,
+        final ExchangeCatalogEntry right
+    ) {
+        final String leftKey = left.itemKey().value();
+        final String rightKey = right.itemKey().value();
+
+        final int pathComparison = comparePathsByReverseSegments(extractPath(leftKey), extractPath(rightKey));
+        if (pathComparison != 0) {
+            return pathComparison;
+        }
+
+        final int namespaceComparison = extractNamespace(leftKey).compareToIgnoreCase(extractNamespace(rightKey));
+        if (namespaceComparison != 0) {
+            return namespaceComparison;
+        }
+
+        return leftKey.compareToIgnoreCase(rightKey);
+    }
+
+    private static int comparePathsByReverseSegments(final String leftPath, final String rightPath) {
+        final String[] leftSegments = leftPath.split("_");
+        final String[] rightSegments = rightPath.split("_");
+
+        int leftIndex = leftSegments.length - 1;
+        int rightIndex = rightSegments.length - 1;
+
+        while (leftIndex >= 0 && rightIndex >= 0) {
+            final int comparison = leftSegments[leftIndex].compareToIgnoreCase(rightSegments[rightIndex]);
+            if (comparison != 0) {
+                return comparison;
+            }
+            leftIndex--;
+            rightIndex--;
+        }
+
+        if (leftIndex < 0 && rightIndex < 0) {
+            return 0;
+        }
+
+        return Integer.compare(leftSegments.length, rightSegments.length);
+    }
+
+    private static String extractNamespace(final String itemKey) {
+        final int colonIndex = itemKey.indexOf(':');
+        if (colonIndex < 0) {
+            return "";
+        }
+        return itemKey.substring(0, colonIndex);
+    }
+
+    private static String extractPath(final String itemKey) {
+        final int colonIndex = itemKey.indexOf(':');
+        if (colonIndex < 0 || colonIndex + 1 >= itemKey.length()) {
+            return itemKey;
+        }
+        return itemKey.substring(colonIndex + 1);
     }
 
     private static Map<ItemCategory, List<ExchangeCatalogEntry>> freezeCategoryIndex(
