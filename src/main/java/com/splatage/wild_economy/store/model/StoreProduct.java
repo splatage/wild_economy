@@ -13,7 +13,8 @@ public record StoreProduct(
     MoneyAmount price,
     String entitlementKey,
     boolean requireConfirmation,
-    List<StoreAction> actions
+    List<StoreAction> actions,
+    int xpCostPoints
 ) {
     public StoreProduct {
         if (productId == null || productId.isBlank()) {
@@ -35,6 +36,25 @@ public record StoreProduct(
         if (type == StoreProductType.PERMANENT_UNLOCK
                 && (entitlementKey == null || entitlementKey.isBlank())) {
             throw new IllegalArgumentException("Permanent unlock products require an entitlement key");
+        }
+
+        if (type == StoreProductType.XP_WITHDRAWAL) {
+            if (xpCostPoints <= 0) {
+                throw new IllegalArgumentException("XP withdrawal products require positive xpCostPoints");
+            }
+            if (!price.isZero()) {
+                throw new IllegalArgumentException("XP withdrawal products must not have a money price");
+            }
+            if (!actions.isEmpty()) {
+                throw new IllegalArgumentException("XP withdrawal products must not define Store actions");
+            }
+        } else {
+            if (xpCostPoints != 0) {
+                throw new IllegalArgumentException("Non-XP products must not define xpCostPoints");
+            }
+            if (actions.isEmpty()) {
+                throw new IllegalArgumentException("Non-XP products must define at least one Store action");
+            }
         }
     }
 }

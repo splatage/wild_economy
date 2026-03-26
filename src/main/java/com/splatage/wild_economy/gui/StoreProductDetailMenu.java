@@ -3,8 +3,10 @@ package com.splatage.wild_economy.gui;
 import com.splatage.wild_economy.config.EconomyConfig;
 import com.splatage.wild_economy.economy.EconomyFormatter;
 import com.splatage.wild_economy.store.model.StoreProduct;
+import com.splatage.wild_economy.store.model.StoreProductType;
 import com.splatage.wild_economy.store.model.StorePurchaseResult;
 import com.splatage.wild_economy.store.service.StoreService;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.bukkit.Material;
@@ -35,10 +37,7 @@ public final class StoreProductDetailMenu {
         final Inventory inventory = holder.createInventory(27, "Store - " + product.displayName());
 
         inventory.setItem(11, this.detailItem(player, product));
-        inventory.setItem(13, this.button(Material.GREEN_STAINED_GLASS_PANE, "Purchase", List.of(
-                "Price: " + EconomyFormatter.format(product.price(), this.economyConfig),
-                "Click to confirm purchase"
-        )));
+        inventory.setItem(13, this.purchaseButton(product));
         inventory.setItem(18, this.button(Material.ARROW, "Back", List.of("Return to the product list")));
         inventory.setItem(22, this.button(Material.BARRIER, "Close", List.of("Close the shop")));
 
@@ -80,21 +79,41 @@ public final class StoreProductDetailMenu {
         final ItemMeta meta = stack.getItemMeta();
 
         if (meta != null) {
-            final boolean owned = product.entitlementKey() != null
-                    && !product.entitlementKey().isBlank()
-                    && this.storeService.ownsEntitlement(player.getUniqueId(), product.entitlementKey());
-
+            final List<String> lore = new ArrayList<>();
             meta.setDisplayName(product.displayName());
-            meta.setLore(List.of(
-                    "Price: " + EconomyFormatter.format(product.price(), this.economyConfig),
-                    "Type: " + product.type().name(),
-                    owned ? "Owned: Yes" : "Owned: No",
-                    product.requireConfirmation() ? "Confirmation: Required" : "Confirmation: Not required"
-            ));
+
+            if (product.type() == StoreProductType.XP_WITHDRAWAL) {
+                lore.add("XP Cost: " + product.xpCostPoints());
+                lore.add("Type: XP_WITHDRAWAL");
+                lore.add("Throw the bottle to redeem the stored XP.");
+            } else {
+                final boolean owned = product.entitlementKey() != null
+                        && !product.entitlementKey().isBlank()
+                        && this.storeService.ownsEntitlement(player.getUniqueId(), product.entitlementKey());
+
+                lore.add("Price: " + EconomyFormatter.format(product.price(), this.economyConfig));
+                lore.add("Type: " + product.type().name());
+                lore.add(owned ? "Owned: Yes" : "Owned: No");
+            }
+
+            lore.add(product.requireConfirmation() ? "Confirmation: Required" : "Confirmation: Not required");
+            meta.setLore(lore);
             stack.setItemMeta(meta);
         }
 
         return stack;
+    }
+
+    private ItemStack purchaseButton(final StoreProduct product) {
+        final List<String> lore = new ArrayList<>();
+        if (product.type() == StoreProductType.XP_WITHDRAWAL) {
+            lore.add("XP Cost: " + product.xpCostPoints());
+        } else {
+            lore.add("Price: " + EconomyFormatter.format(product.price(), this.economyConfig));
+        }
+        lore.add("Click to confirm purchase");
+
+        return this.button(Material.GREEN_STAINED_GLASS_PANE, "Purchase", lore);
     }
 
     private ItemStack button(final Material material, final String name, final List<String> lore) {

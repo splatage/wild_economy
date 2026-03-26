@@ -142,21 +142,36 @@ public final class ConfigLoader {
                    productId
            );
 
-           final BigDecimal price = this.requireNonNegativeBigDecimal("store product '" + productId + "'", section, "price");
-           final List<StoreAction> actions = this.parseStoreActions(section, productId);
+            final MoneyAmount price;
+            final List<StoreAction> actions;
+            final int xpCostPoints;
 
-           products.put(productId, new StoreProduct(
-                   productId,
-                   categoryId,
-                   productType,
-                   this.requireNonBlank(section, "display-name", "store product '" + productId + "'"),
-                   this.requireNonBlank(section, "icon", "store product '" + productId + "'"),
-                   MoneyAmount.fromMajor(price, economyConfig.fractionalDigits()),
-                   this.getOptionalString(section, "entitlement-key"),
-                   section.getBoolean("confirm", true),
-                   actions
-           ));
-       }
+            if (productType == StoreProductType.XP_WITHDRAWAL) {
+                price = MoneyAmount.zero();
+                actions = List.of();
+                xpCostPoints = this.requirePositiveInt(section, "xp-points", "store product '" + productId + "'");
+            } else {
+                price = MoneyAmount.fromMajor(
+                        this.requireNonNegativeBigDecimal("store product '" + productId + "'", section, "price"),
+                        economyConfig.fractionalDigits()
+                );
+                actions = this.parseStoreActions(section, productId);
+                xpCostPoints = 0;
+            }
+
+            products.put(productId, new StoreProduct(
+                    productId,
+                    categoryId,
+                    productType,
+                    this.requireNonBlank(section, "display-name", "store product '" + productId + "'"),
+                    this.requireNonBlank(section, "icon", "store product '" + productId + "'"),
+                    price,
+                    this.getOptionalString(section, "entitlement-key"),
+                    section.getBoolean("confirm", true),
+                    actions,
+                    xpCostPoints
+            ));
+        }
 
        return new StoreProductsConfig(categories, products);
     }
@@ -593,6 +608,14 @@ public final class ConfigLoader {
             throw new IllegalStateException(context + " has negative integer field '" + path + "'");
         }
         return parsed;
+    }
+
+    private int requirePositiveInt(final ConfigurationSection section, final String path, final String context) {
+        final int value = this.requireNonNegativeInt(section, path, context);
+        if (value <= 0) {
+            throw new IllegalStateException(context + " must define a positive integer field '" + path + "'");
+        }
+        return value;
     }
 
     private BigDecimal requireNonNegativeBigDecimal(

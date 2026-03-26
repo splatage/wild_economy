@@ -2,7 +2,9 @@ package com.splatage.wild_economy.gui;
 
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
+import com.splatage.wild_economy.store.model.StoreProductType;
 import com.splatage.wild_economy.store.service.StoreService;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.bukkit.Material;
@@ -89,16 +91,23 @@ public final class StoreCategoryMenu {
         if (meta != null) {
             meta.setDisplayName(product.displayName());
 
-            final boolean owned = product.entitlementKey() != null
-                    && !product.entitlementKey().isBlank()
-                    && this.storeService.ownsEntitlement(player.getUniqueId(), product.entitlementKey());
+            final List<String> lore = new ArrayList<>();
+            if (product.type() == StoreProductType.XP_WITHDRAWAL) {
+                lore.add("XP Cost: " + product.xpCostPoints());
+                lore.add("Type: XP_WITHDRAWAL");
+                lore.add("Throw to redeem");
+            } else {
+                final boolean owned = product.entitlementKey() != null
+                        && !product.entitlementKey().isBlank()
+                        && this.storeService.ownsEntitlement(player.getUniqueId(), product.entitlementKey());
 
-            meta.setLore(List.of(
-                    "Price: " + product.price().minorUnits(),
-                    "Type: " + product.type().name(),
-                    owned ? "Owned: Yes" : "Owned: No",
-                    "Click to view"
-            ));
+                lore.add("Price: " + product.price().minorUnits());
+                lore.add("Type: " + product.type().name());
+                lore.add(owned ? "Owned: Yes" : "Owned: No");
+            }
+            lore.add("Click to view");
+
+            meta.setLore(lore);
             stack.setItemMeta(meta);
         }
 

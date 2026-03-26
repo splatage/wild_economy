@@ -50,6 +50,9 @@ import com.splatage.wild_economy.store.service.StoreService;
 import com.splatage.wild_economy.store.service.StoreServiceImpl;
 import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.vault.WildEconomyVaultProvider;
+import com.splatage.wild_economy.xp.listener.XpBottleRedeemListener;
+import com.splatage.wild_economy.xp.service.XpBottleService;
+import com.splatage.wild_economy.xp.service.XpBottleServiceImpl;
 import com.splatage.wild_economy.exchange.catalog.CatalogLoader;
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalog;
 import com.splatage.wild_economy.exchange.item.BukkitItemNormalizer;
@@ -148,6 +151,8 @@ public final class ServiceRegistry {
     private StoreService storeService;
     private WildEconomyVaultProvider vaultEconomyProvider;
     private WildEconomyExpansion placeholderExpansion;
+    private XpBottleService xpBottleService;
+    private XpBottleRedeemListener xpBottleRedeemListener;
 
     public ServiceRegistry(final WildEconomyPlugin plugin) {
         this.plugin = plugin;
@@ -196,6 +201,8 @@ public final class ServiceRegistry {
                 this.baltopService
         );
 
+        this.xpBottleService = new XpBottleServiceImpl(this.plugin);
+
         final StoreEntitlementRepository storeEntitlementRepository = switch (this.databaseProvider.dialect()) {
             case SQLITE -> new SqliteStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
             case MYSQL -> new MysqlStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
@@ -214,7 +221,8 @@ public final class ServiceRegistry {
                 storeEntitlementRepository,
                 storePurchaseRepository,
                 productActionExecutor,
-                transactionRunner
+                transactionRunner,
+                this.xpBottleService
         );
 
         final SchemaVersionRepository schemaVersionRepository = switch (this.databaseProvider.dialect()) {
@@ -378,8 +386,11 @@ public final class ServiceRegistry {
         this.economyPlayerSessionListener = new EconomyPlayerSessionListener(this.economyService);
         this.plugin.getServer().getPluginManager().registerEvents(this.economyPlayerSessionListener, this.plugin);
 
+        this.xpBottleRedeemListener = new XpBottleRedeemListener(this.xpBottleService);
+        this.plugin.getServer().getPluginManager().registerEvents(this.xpBottleRedeemListener, this.plugin);
+
         for (final Player onlinePlayer : this.plugin.getServer().getOnlinePlayers()) {
-           this.economyService.warmPlayerSession(onlinePlayer.getUniqueId(), onlinePlayer.getName());
+            this.economyService.warmPlayerSession(onlinePlayer.getUniqueId(), onlinePlayer.getName());
         }
 
         if (this.plugin.getServer().getPluginManager().isPluginEnabled("Vault")) {
@@ -471,9 +482,13 @@ public final class ServiceRegistry {
     }
 
     public void shutdown() {
-         if (this.economyPlayerSessionListener != null) {
-             HandlerList.unregisterAll(this.economyPlayerSessionListener);
+        if (this.economyPlayerSessionListener != null) {
+            HandlerList.unregisterAll(this.economyPlayerSessionListener);
             this.economyPlayerSessionListener = null;
+        }
+        if (this.xpBottleRedeemListener != null) {
+            HandlerList.unregisterAll(this.xpBottleRedeemListener);
+            this.xpBottleRedeemListener = null;
         }
         if (this.shopMenuListener != null) {
             HandlerList.unregisterAll(this.shopMenuListener);
@@ -531,5 +546,6 @@ public final class ServiceRegistry {
         this.economyGateway = null;
         this.storeService = null;
         this.storeProductsConfig = null;
+        this.xpBottleService = null;
     }
 }

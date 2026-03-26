@@ -15,6 +15,8 @@ import com.splatage.wild_economy.store.model.StorePurchaseResult;
 import com.splatage.wild_economy.store.model.StorePurchaseStatus;
 import com.splatage.wild_economy.store.repository.StoreEntitlementRepository;
 import com.splatage.wild_economy.store.repository.StorePurchaseRepository;
+import com.splatage.wild_economy.xp.service.XpBottleService;
+import com.splatage.wild_economy.xp.service.XpBottleWithdrawResult;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -30,6 +32,7 @@ public final class StoreServiceImpl implements StoreService {
     private final StorePurchaseRepository storePurchaseRepository;
     private final ProductActionExecutor productActionExecutor;
     private final TransactionRunner transactionRunner;
+    private final XpBottleService xpBottleService;
 
     public StoreServiceImpl(
         final StoreProductsConfig storeProductsConfig,
@@ -37,7 +40,8 @@ public final class StoreServiceImpl implements StoreService {
         final StoreEntitlementRepository storeEntitlementRepository,
         final StorePurchaseRepository storePurchaseRepository,
         final ProductActionExecutor productActionExecutor,
-        final TransactionRunner transactionRunner
+        final TransactionRunner transactionRunner,
+        final XpBottleService xpBottleService
     ) {
         this.storeProductsConfig = Objects.requireNonNull(storeProductsConfig, "storeProductsConfig");
         this.economyService = Objects.requireNonNull(economyService, "economyService");
@@ -45,6 +49,7 @@ public final class StoreServiceImpl implements StoreService {
         this.storePurchaseRepository = Objects.requireNonNull(storePurchaseRepository, "storePurchaseRepository");
         this.productActionExecutor = Objects.requireNonNull(productActionExecutor, "productActionExecutor");
         this.transactionRunner = Objects.requireNonNull(transactionRunner, "transactionRunner");
+        this.xpBottleService = Objects.requireNonNull(xpBottleService, "xpBottleService");
     }
 
     @Override
@@ -74,7 +79,11 @@ public final class StoreServiceImpl implements StoreService {
     public StorePurchaseResult purchase(final Player player, final String productId) {
         final StoreProduct product = this.storeProductsConfig.product(productId);
         if (product == null) {
-            return StorePurchaseResult.failure("Unknown store product: " + productId, null, this.economyService.getBalance(player.getUniqueId()));
+            return StorePurchaseResult.failure(
+                    "Unknown store product: " + productId,
+                    null,
+                    this.economyService.getBalance(player.getUniqueId())
+            );
         }
 
         if (product.type() == StoreProductType.PERMANENT_UNLOCK
@@ -84,6 +93,10 @@ public final class StoreServiceImpl implements StoreService {
                     product,
                     this.economyService.getBalance(player.getUniqueId())
             );
+        }
+
+        if (product.type() == StoreProductType.XP_WITHDRAWAL) {
+            return this.purchaseXpWithdrawal(player, product);
         }
 
         final EconomyMutationResult withdrawResult;
@@ -151,6 +164,27 @@ public final class StoreServiceImpl implements StoreService {
             return null;
         });
 
+        return StorePurchaseResult.success(product, this.economyService.getBalance(player.getUniqueId()));
+    }
+
+    private StorePurchaseResult purchaseXpWithdrawal(final Player player, final StoreProduct product) {
+        final XpBottleWithdrawResult xpResult = this.xpBottleService.withdrawToBottle(
+                player,
+                product.productId(),
+                product.displayName(),
+                product.xpCostPoints()
+        );
+
+        if (!xpResult.success()) {
+            this.recordPurchase(player.getUniqueId(), product, StorePurchaseStatus.FAILED, xpResult.message());
+            return StorePurchaseResult.failure(
+                    xpResult.message(),
+                    product,
+                    this.economyService.getBalance(player.getUniqueId())
+            );
+        }
+
+        this.recordPurchase(player.getUniqueId(), product, StorePurchaseStatus.SUCCESS, null);
         return StorePurchaseResult.success(product, this.economyService.getBalance(player.getUniqueId()));
     }
 
