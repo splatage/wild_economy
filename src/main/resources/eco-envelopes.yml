@@ -26,8 +26,8 @@ eco-envelopes:
   world_damage_unlimited_buy:
     buy-price-at-min-stock-multiplier: 1.20
     buy-price-at-max-stock-multiplier: 1.20
-    sell-price-at-min-stock-multiplier: 0.00
-    sell-price-at-max-stock-multiplier: 0.00
+    sell-price-at-min-stock-multiplier: 1.00
+    sell-price-at-max-stock-multiplier: 1.00
 
   disabled_placeholder:
     buy-price-at-min-stock-multiplier: 0.00

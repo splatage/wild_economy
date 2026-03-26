@@ -21,6 +21,7 @@ rules:
         - "minecraft:mycelium"
         - "minecraft:sand"
         - "minecraft:red_sand"
+        - "minecraft:packed_ice"
     set:
       policy: ALWAYS_AVAILABLE
       stock-profile: unlimited_buy_utility
