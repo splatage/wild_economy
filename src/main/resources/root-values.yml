@@ -392,6 +392,15 @@ items:
   minecraft:wither_skeleton_skull: '10362.69'
   minecraft:written_book: '9.53'
   minecraft:zombie_head: '5181.35'
+  minecraft:ancient_debris: 968.0
+  minecraft:bundle: 10.04
+  minecraft:firework_rocket: 11.12
+  minecraft:glowstone: 36.96
+  minecraft:nether_wart_block: 118.8
+  minecraft:netherite_ingot: 4807.64
+  minecraft:powdered_snow_bucket: 62.54
+  minecraft:scute: 1.1
+  minecraft:snout_banner_pattern: 5832.25
 layout:
   groups:
     woods:
@@ -466,6 +475,8 @@ layout:
       - minecraft:warped_roots
       - minecraft:warped_wart_block
       - minecraft:weeping_vines
+      - minecraft:glowstone
+      - minecraft:nether_wart_block
     end:
       generated-category: END
       item-keys:
@@ -497,6 +508,8 @@ layout:
       - minecraft:raw_copper
       - minecraft:raw_gold
       - minecraft:raw_iron
+      - minecraft:ancient_debris
+      - minecraft:netherite_ingot
     farming:
       generated-category: FARMING
       item-keys:
@@ -632,6 +645,7 @@ layout:
       - minecraft:wither_rose
       - minecraft:wither_skeleton_skull
       - minecraft:zombie_head
+      - minecraft:snout_banner_pattern
       item-key-patterns:
       - minecraft:*_tulip
       - minecraft:*_coral
@@ -736,6 +750,9 @@ layout:
       - minecraft:wayfinder_armor_trim_smithing_template
       - minecraft:wild_armor_trim_smithing_template
       - minecraft:written_book
+      - minecraft:bundle
+      - minecraft:scute
+      - minecraft:firework_rocket
     brewing:
       generated-category: BREWING
       item-keys:
@@ -764,6 +781,7 @@ layout:
       - minecraft:tadpole_bucket
       - minecraft:tropical_fish_bucket
       - minecraft:water_bucket
+      - minecraft:powdered_snow_bucket
     transport:
       generated-category: TRANSPORT
       item-keys:
