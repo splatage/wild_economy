@@ -20,16 +20,18 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
+
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
     compileOnly("me.clip:placeholderapi:2.12.2")
+
     compileOnly("org.xerial:sqlite-jdbc:3.51.3.0")
     compileOnly("com.mysql:mysql-connector-j:9.6.0")
     compileOnly("com.zaxxer:HikariCP:7.0.2")
 
-    testImplementation(platform("org.junit:junit-bom:6.0.3"))
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
+    testImplementation("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
 
     testRuntimeOnly("org.xerial:sqlite-jdbc:3.51.3.0")
     testRuntimeOnly("com.mysql:mysql-connector-j:9.6.0")
