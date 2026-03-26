@@ -117,6 +117,7 @@ import org.bukkit.command.PluginCommand;
 import org.bukkit.event.HandlerList;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.ServicePriority;
+import org.bukkit.plugin.RegisteredServiceProvider;
 
 public final class ServiceRegistry {
 
@@ -417,6 +418,7 @@ public final class ServiceRegistry {
                     this.plugin,
                     ServicePriority.Highest
             );
+            this.logActiveVaultEconomyProvider();
         }
 
         if (this.plugin.getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
@@ -430,6 +432,31 @@ public final class ServiceRegistry {
         }
 
         this.plugin.getServer().getPluginManager().registerEvents(this.adminMenuListener, this.plugin);
+    }
+
+    private void logActiveVaultEconomyProvider() {
+        final RegisteredServiceProvider<Economy> registration =
+                this.plugin.getServer().getServicesManager().getRegistration(Economy.class);
+
+        if (registration == null || registration.getProvider() == null) {
+            this.plugin.getLogger().info("Vault economy provider check: no active Economy provider is registered.");
+            return;
+        }
+
+        final Economy provider = registration.getProvider();
+        final String pluginName = registration.getPlugin() != null
+                ? registration.getPlugin().getName()
+                : "unknown";
+        final String providerClass = provider.getClass().getName();
+
+        this.plugin.getLogger().info(
+                "Vault economy provider check: active provider is "
+                        + providerClass
+                        + " from plugin "
+                        + pluginName
+                        + " at priority "
+                        + registration.getPriority()
+        );
     }
 
     public void registerCommands() {
