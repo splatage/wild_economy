@@ -31,6 +31,7 @@ final class CommonCraftingRecipeNormalizers {
         applyAnvil(recipesByOutput);
         applyBrewingStand(recipesByOutput);
         applyConcreteConversions(recipesByOutput);
+        applyCopperOxidationAndWaxingTransitions(recipesByOutput);
         applyBowlRecipes(recipesByOutput);
         applyBeetrootSoup(recipesByOutput);
         applyCampfireRecipes(recipesByOutput);
@@ -355,6 +356,79 @@ final class CommonCraftingRecipeNormalizers {
                 )
             );
         }
+    }
+
+
+    private static void applyCopperOxidationAndWaxingTransitions(final Map<String, List<RecipeDefinition>> recipesByOutput) {
+        final List<String> copperFamilyKeys = List.of(
+            "copper",
+            "chiseled_copper",
+            "cut_copper",
+            "cut_copper_slab",
+            "cut_copper_stairs",
+            "copper_bars",
+            "copper_chain",
+            "copper_chest",
+            "copper_door",
+            "copper_grate",
+            "copper_lantern",
+            "copper_trapdoor",
+            "lightning_rod"
+        );
+
+        for (final String baseKey : copperFamilyKeys) {
+            addOxidationTransition(recipesByOutput, baseKey, "exposed_" + baseKey, "normalized_exposed_" + baseKey + "_from_" + baseKey);
+            addOxidationTransition(recipesByOutput, "exposed_" + baseKey, "weathered_" + baseKey, "normalized_weathered_" + baseKey + "_from_exposed_" + baseKey);
+            addOxidationTransition(recipesByOutput, "weathered_" + baseKey, "oxidized_" + baseKey, "normalized_oxidized_" + baseKey + "_from_weathered_" + baseKey);
+
+            addWaxingTransition(recipesByOutput, baseKey, "waxed_" + baseKey, "normalized_waxed_" + baseKey + "_from_" + baseKey);
+            addWaxingTransition(recipesByOutput, "exposed_" + baseKey, "waxed_exposed_" + baseKey, "normalized_waxed_exposed_" + baseKey + "_from_exposed_" + baseKey);
+            addWaxingTransition(recipesByOutput, "weathered_" + baseKey, "waxed_weathered_" + baseKey, "normalized_waxed_weathered_" + baseKey + "_from_weathered_" + baseKey);
+            addWaxingTransition(recipesByOutput, "oxidized_" + baseKey, "waxed_oxidized_" + baseKey, "normalized_waxed_oxidized_" + baseKey + "_from_oxidized_" + baseKey);
+        }
+    }
+
+    private static void addOxidationTransition(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final String sourceKey,
+        final String targetKey,
+        final String recipeType
+    ) {
+        if (!hasMaterial(sourceKey) || !hasMaterial(targetKey) || hasRecipes(recipesByOutput, targetKey)) {
+            return;
+        }
+        addRecipe(
+            recipesByOutput,
+            new RecipeDefinition(
+                targetKey,
+                1,
+                recipeType,
+                List.of(new RecipeIngredient(sourceKey, 1))
+            )
+        );
+    }
+
+    private static void addWaxingTransition(
+        final Map<String, List<RecipeDefinition>> recipesByOutput,
+        final String sourceKey,
+        final String targetKey,
+        final String recipeType
+    ) {
+        if (!hasMaterial(sourceKey) || !hasMaterial(targetKey) || hasRecipes(recipesByOutput, targetKey) || !hasMaterial("honeycomb")) {
+            return;
+        }
+        addRecipe(
+            recipesByOutput,
+            new RecipeDefinition(
+                targetKey,
+                1,
+                recipeType,
+                List.of(
+                    new RecipeIngredient(sourceKey, 1),
+                    new RecipeIngredient("honeycomb", 1)
+                )
+            )
+        );
     }
 
     private static void applyBowlRecipes(final Map<String, List<RecipeDefinition>> recipesByOutput) {

@@ -117,6 +117,44 @@ final class UtilityRecipeFallbacksTest {
         assertEquals(new BigDecimal("16"), service.resolve("blue_concrete").derivedValue().stripTrailingZeros());
     }
 
+
+
+    @Test
+    void apply_unblocksCopperOxidationAndWaxingTransitions() {
+        final Map<String, List<RecipeDefinition>> recipesByOutput = new LinkedHashMap<>();
+        recipesByOutput.put(
+            "cut_copper",
+            List.of(new RecipeDefinition(
+                "cut_copper",
+                4,
+                "test_seed_cut_copper",
+                List.of(new RecipeIngredient("copper_ingot", 4))
+            ))
+        );
+
+        RecipeGraphFallbacks.apply(recipesByOutput);
+
+        final RootAnchoredDerivationService service = new RootAnchoredDerivationService(
+            new RecipeGraph(copyOf(recipesByOutput)),
+            rootValues(Map.of(
+                "copper_ingot", new BigDecimal("12.00"),
+                "honeycomb", new BigDecimal("6.00")
+            ))
+        );
+
+        assertTrue(service.resolve("exposed_cut_copper").resolved());
+        assertEquals(new BigDecimal("12"), service.resolve("exposed_cut_copper").derivedValue().stripTrailingZeros());
+
+        assertTrue(service.resolve("weathered_cut_copper").resolved());
+        assertEquals(new BigDecimal("12"), service.resolve("weathered_cut_copper").derivedValue().stripTrailingZeros());
+
+        assertTrue(service.resolve("oxidized_cut_copper").resolved());
+        assertEquals(new BigDecimal("12"), service.resolve("oxidized_cut_copper").derivedValue().stripTrailingZeros());
+
+        assertTrue(service.resolve("waxed_exposed_cut_copper").resolved());
+        assertEquals(new BigDecimal("18"), service.resolve("waxed_exposed_cut_copper").derivedValue().stripTrailingZeros());
+    }
+
     private static RootValueLookup rootValues(final Map<String, BigDecimal> values) {
         return itemKey -> Optional.ofNullable(values.get(itemKey));
     }
