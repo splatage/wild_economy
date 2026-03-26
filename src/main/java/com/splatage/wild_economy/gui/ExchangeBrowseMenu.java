@@ -17,10 +17,15 @@ import org.bukkit.inventory.meta.ItemMeta;
 public final class ExchangeBrowseMenu {
 
     private final ExchangeService exchangeService;
+    private final PlayerInfoItemFactory playerInfoItemFactory;
     private ShopMenuRouter shopMenuRouter;
 
-    public ExchangeBrowseMenu(final ExchangeService exchangeService) {
+    public ExchangeBrowseMenu(
+        final ExchangeService exchangeService,
+        final PlayerInfoItemFactory playerInfoItemFactory
+    ) {
         this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
+        this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -48,6 +53,7 @@ public final class ExchangeBrowseMenu {
         }
 
         inventory.setItem(45, this.button(Material.ARROW, "Back"));
+        inventory.setItem(48, this.playerInfoItemFactory.create(player));
         inventory.setItem(49, this.button(Material.BARRIER, "Close"));
         inventory.setItem(53, this.button(Material.ARROW, "Next"));
 

@@ -13,12 +13,16 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public final class ExchangeRootMenu {
-
+    private final PlayerInfoItemFactory playerInfoItemFactory;
     private final ExchangeService exchangeService;
     private ShopMenuRouter shopMenuRouter;
 
-    public ExchangeRootMenu(final ExchangeService exchangeService) {
+    public ExchangeRootMenu(
+       final ExchangeService exchangeService,
+       final PlayerInfoItemFactory playerInfoItemFactory
+    ) {
         this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
+        this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -29,6 +33,7 @@ public final class ExchangeRootMenu {
         final ShopMenuHolder holder = ShopMenuHolder.root();
         final Inventory inventory = holder.createInventory(27, "Shop");
 
+        inventory.setItem(4, this.playerInfoItemFactory.create(player));
         inventory.setItem(10, this.button(Material.BREAD, ItemCategory.FARMING_AND_FOOD.displayName()));
         inventory.setItem(11, this.button(Material.IRON_PICKAXE, ItemCategory.MINING_AND_MINERALS.displayName()));
         inventory.setItem(12, this.button(Material.BONE, ItemCategory.MOB_DROPS.displayName()));

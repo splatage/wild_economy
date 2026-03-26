@@ -19,10 +19,15 @@ public final class StoreCategoryMenu {
     private static final int PAGE_SIZE = 45;
 
     private final StoreService storeService;
+    private final PlayerInfoItemFactory playerInfoItemFactory;
     private ShopMenuRouter shopMenuRouter;
 
-    public StoreCategoryMenu(final StoreService storeService) {
+    public StoreCategoryMenu(
+        final StoreService storeService,
+        final PlayerInfoItemFactory playerInfoItemFactory
+    ) {
         this.storeService = Objects.requireNonNull(storeService, "storeService");
+        this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -46,6 +51,7 @@ public final class StoreCategoryMenu {
         }
 
         inventory.setItem(45, this.button(Material.ARROW, "Back"));
+        inventory.setItem(48, this.playerInfoItemFactory.create(player));
         inventory.setItem(49, this.button(Material.BARRIER, "Close"));
         inventory.setItem(53, this.button(Material.ARROW, "Next"));
 

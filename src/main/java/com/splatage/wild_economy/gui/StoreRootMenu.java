@@ -16,10 +16,15 @@ public final class StoreRootMenu {
     private static final int[] CATEGORY_SLOTS = {10, 12, 14, 16, 22, 24};
 
     private final StoreService storeService;
+    private final PlayerInfoItemFactory playerInfoItemFactory;
     private ShopMenuRouter shopMenuRouter;
 
-    public StoreRootMenu(final StoreService storeService) {
+    public StoreRootMenu(
+        final StoreService storeService,
+        final PlayerInfoItemFactory playerInfoItemFactory
+    ) {
         this.storeService = Objects.requireNonNull(storeService, "storeService");
+        this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -36,6 +41,7 @@ public final class StoreRootMenu {
             inventory.setItem(CATEGORY_SLOTS[index], this.button(this.resolveMaterial(category.iconKey()), category.displayName()));
         }
 
+        inventory.setItem(4, this.playerInfoItemFactory.create(player));
         inventory.setItem(18, this.button(Material.ARROW, "Back"));
         inventory.setItem(26, this.button(Material.BARRIER, "Close"));
 

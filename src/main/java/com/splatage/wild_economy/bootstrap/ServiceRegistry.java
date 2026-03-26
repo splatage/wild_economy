@@ -35,6 +35,8 @@ import com.splatage.wild_economy.economy.service.BaltopService;
 import com.splatage.wild_economy.economy.service.BaltopServiceImpl;
 import com.splatage.wild_economy.economy.service.EconomyService;
 import com.splatage.wild_economy.economy.service.EconomyServiceImpl;
+import com.splatage.wild_economy.gui.PlayerHeadCache;
+import com.splatage.wild_economy.gui.PlayerInfoItemFactory;
 import com.splatage.wild_economy.gui.StoreCategoryMenu;
 import com.splatage.wild_economy.gui.StoreProductDetailMenu;
 import com.splatage.wild_economy.gui.StoreRootMenu;
@@ -185,6 +187,14 @@ public final class ServiceRegistry {
             case MYSQL -> new MysqlEconomyNameCacheRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
         };
 
+        final PlayerHeadCache playerHeadCache = new PlayerHeadCache(this.plugin);
+        final PlayerInfoItemFactory playerInfoItemFactory = new PlayerInfoItemFactory(
+                playerHeadCache,
+                this.economyService,
+                this.xpBottleService,
+                this.economyConfig
+        );
+
         final BalanceCache balanceCache = new BalanceCache();
         this.baltopService = new BaltopServiceImpl(
                 economyAccountRepository,
@@ -319,13 +329,13 @@ public final class ServiceRegistry {
         this.exchangeService = new ExchangeServiceImpl(this.exchangeBrowseService, this.exchangeBuyService, this.exchangeSellService);
         this.foliaContainerSellCoordinator = new FoliaContainerSellCoordinator(this.platformExecutor, this.exchangeService, rawSellService);
 
-        final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService);
-        final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService);
-        final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService);
-        final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService, this.platformExecutor);
-        final StoreRootMenu storeRootMenu = new StoreRootMenu(this.storeService);
-        final StoreCategoryMenu storeCategoryMenu = new StoreCategoryMenu(this.storeService);
-        final StoreProductDetailMenu storeProductDetailMenu = new StoreProductDetailMenu(this.storeService, this.economyConfig);
+        final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService, playerInfoItemFactory);
+        final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService, playerInfoItemFactory);
+        final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService, playerInfoItemFactory);
+        final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService, this.platformExecutor, playerInfoItemFactory);
+        final StoreRootMenu storeRootMenu = new StoreRootMenu(this.storeService, playerInfoItemFactory);
+        final StoreCategoryMenu storeCategoryMenu = new StoreCategoryMenu(this.storeService, playerInfoItemFactory);
+        final StoreProductDetailMenu storeProductDetailMenu = new StoreProductDetailMenu(this.storeService, this.economyConfig, playerInfoItemFactory);
 
         this.shopMenuRouter = new ShopMenuRouter(
                 this.platformExecutor,

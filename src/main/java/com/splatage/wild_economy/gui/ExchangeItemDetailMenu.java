@@ -25,12 +25,18 @@ public final class ExchangeItemDetailMenu {
 
     private final ExchangeService exchangeService;
     private final PlatformExecutor platformExecutor;
+    private final PlayerInfoItemFactory playerInfoItemFactory;
 
     private ShopMenuRouter shopMenuRouter;
 
-    public ExchangeItemDetailMenu(final ExchangeService exchangeService, final PlatformExecutor platformExecutor) {
+    public ExchangeItemDetailMenu(
+        final ExchangeService exchangeService,
+        final PlatformExecutor platformExecutor,
+        final PlayerInfoItemFactory playerInfoItemFactory
+    ) {
         this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
         this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
+        this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -61,6 +67,7 @@ public final class ExchangeItemDetailMenu {
         );
 
         final Inventory inventory = holder.createInventory(27, "Buy - " + view.displayName());
+        inventory.setItem(4, this.playerInfoItemFactory.create(player));
         inventory.setItem(11, this.detailItem(view, amount));
         inventory.setItem(13, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 1", this.quoteLore(quotedUnitPrice, 1)));
         inventory.setItem(14, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 8", this.quoteLore(quotedUnitPrice, 8)));
