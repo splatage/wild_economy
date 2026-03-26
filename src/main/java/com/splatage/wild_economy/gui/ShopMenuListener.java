@@ -12,17 +12,26 @@ public final class ShopMenuListener implements Listener {
     private final ExchangeSubcategoryMenu exchangeSubcategoryMenu;
     private final ExchangeBrowseMenu exchangeBrowseMenu;
     private final ExchangeItemDetailMenu exchangeItemDetailMenu;
+    private final StoreRootMenu storeRootMenu;
+    private final StoreCategoryMenu storeCategoryMenu;
+    private final StoreProductDetailMenu storeProductDetailMenu;
 
     public ShopMenuListener(
         final ExchangeRootMenu exchangeRootMenu,
         final ExchangeSubcategoryMenu exchangeSubcategoryMenu,
         final ExchangeBrowseMenu exchangeBrowseMenu,
-        final ExchangeItemDetailMenu exchangeItemDetailMenu
+        final ExchangeItemDetailMenu exchangeItemDetailMenu,
+        final StoreRootMenu storeRootMenu,
+        final StoreCategoryMenu storeCategoryMenu,
+        final StoreProductDetailMenu storeProductDetailMenu
     ) {
         this.exchangeRootMenu = Objects.requireNonNull(exchangeRootMenu, "exchangeRootMenu");
         this.exchangeSubcategoryMenu = Objects.requireNonNull(exchangeSubcategoryMenu, "exchangeSubcategoryMenu");
         this.exchangeBrowseMenu = Objects.requireNonNull(exchangeBrowseMenu, "exchangeBrowseMenu");
         this.exchangeItemDetailMenu = Objects.requireNonNull(exchangeItemDetailMenu, "exchangeItemDetailMenu");
+        this.storeRootMenu = Objects.requireNonNull(storeRootMenu, "storeRootMenu");
+        this.storeCategoryMenu = Objects.requireNonNull(storeCategoryMenu, "storeCategoryMenu");
+        this.storeProductDetailMenu = Objects.requireNonNull(storeProductDetailMenu, "storeProductDetailMenu");
     }
 
     @EventHandler
@@ -53,6 +62,13 @@ public final class ShopMenuListener implements Listener {
                 }
             }
             case DETAIL -> this.exchangeItemDetailMenu.handleClick(event, holder);
+            case STORE_ROOT -> this.storeRootMenu.handleClick(event);
+            case STORE_CATEGORY -> {
+                if (holder.currentStoreCategoryId() != null) {
+                    this.storeCategoryMenu.handleClick(event, holder.currentStoreCategoryId(), holder.currentPage());
+                }
+            }
+            case STORE_DETAIL -> this.storeProductDetailMenu.handleClick(event, holder);
         }
     }
 
@@ -72,4 +88,3 @@ public final class ShopMenuListener implements Listener {
         }
     }
 }
-

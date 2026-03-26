@@ -17,19 +17,28 @@ public final class ShopMenuRouter {
     private final ExchangeSubcategoryMenu exchangeSubcategoryMenu;
     private final ExchangeBrowseMenu exchangeBrowseMenu;
     private final ExchangeItemDetailMenu exchangeItemDetailMenu;
+    private final StoreRootMenu storeRootMenu;
+    private final StoreCategoryMenu storeCategoryMenu;
+    private final StoreProductDetailMenu storeProductDetailMenu;
 
     public ShopMenuRouter(
         final PlatformExecutor platformExecutor,
         final ExchangeRootMenu exchangeRootMenu,
         final ExchangeSubcategoryMenu exchangeSubcategoryMenu,
         final ExchangeBrowseMenu exchangeBrowseMenu,
-        final ExchangeItemDetailMenu exchangeItemDetailMenu
+        final ExchangeItemDetailMenu exchangeItemDetailMenu,
+        final StoreRootMenu storeRootMenu,
+        final StoreCategoryMenu storeCategoryMenu,
+        final StoreProductDetailMenu storeProductDetailMenu
     ) {
         this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
         this.exchangeRootMenu = Objects.requireNonNull(exchangeRootMenu, "exchangeRootMenu");
         this.exchangeSubcategoryMenu = Objects.requireNonNull(exchangeSubcategoryMenu, "exchangeSubcategoryMenu");
         this.exchangeBrowseMenu = Objects.requireNonNull(exchangeBrowseMenu, "exchangeBrowseMenu");
         this.exchangeItemDetailMenu = Objects.requireNonNull(exchangeItemDetailMenu, "exchangeItemDetailMenu");
+        this.storeRootMenu = Objects.requireNonNull(storeRootMenu, "storeRootMenu");
+        this.storeCategoryMenu = Objects.requireNonNull(storeCategoryMenu, "storeCategoryMenu");
+        this.storeProductDetailMenu = Objects.requireNonNull(storeProductDetailMenu, "storeProductDetailMenu");
     }
 
     public void openRoot(final Player player) {
@@ -75,6 +84,18 @@ public final class ShopMenuRouter {
         );
     }
 
+    public void openStoreRoot(final Player player) {
+        this.platformExecutor.runOnPlayer(player, () -> this.storeRootMenu.open(player));
+    }
+
+    public void openStoreCategory(final Player player, final String categoryId, final int page) {
+        this.platformExecutor.runOnPlayer(player, () -> this.storeCategoryMenu.open(player, categoryId, page));
+    }
+
+    public void openStoreDetail(final Player player, final String categoryId, final int page, final String productId) {
+        this.platformExecutor.runOnPlayer(player, () -> this.storeProductDetailMenu.open(player, categoryId, page, productId));
+    }
+
     public void goBack(final Player player) {
         final ShopMenuHolder holder = this.currentHolder(player);
         if (holder == null) {
@@ -103,6 +124,15 @@ public final class ShopMenuRouter {
                         holder.currentPage(),
                         holder.viaSubcategory()
                     );
+                }
+            }
+            case STORE_ROOT -> this.openRoot(player);
+            case STORE_CATEGORY -> this.openStoreRoot(player);
+            case STORE_DETAIL -> {
+                if (holder.currentStoreCategoryId() == null) {
+                    this.openStoreRoot(player);
+                } else {
+                    this.openStoreCategory(player, holder.currentStoreCategoryId(), holder.currentPage());
                 }
             }
         }
@@ -134,4 +164,3 @@ public final class ShopMenuRouter {
         return null;
     }
 }
-

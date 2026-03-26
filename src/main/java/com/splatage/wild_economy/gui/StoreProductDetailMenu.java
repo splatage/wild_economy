@@ -1,0 +1,123 @@
+package com.splatage.wild_economy.gui;
+
+import com.splatage.wild_economy.config.EconomyConfig;
+import com.splatage.wild_economy.economy.EconomyFormatter;
+import com.splatage.wild_economy.store.model.StoreProduct;
+import com.splatage.wild_economy.store.model.StorePurchaseResult;
+import com.splatage.wild_economy.store.service.StoreService;
+import java.util.List;
+import java.util.Objects;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+
+public final class StoreProductDetailMenu {
+
+    private final StoreService storeService;
+    private final EconomyConfig economyConfig;
+    private ShopMenuRouter shopMenuRouter;
+
+    public StoreProductDetailMenu(final StoreService storeService, final EconomyConfig economyConfig) {
+        this.storeService = Objects.requireNonNull(storeService, "storeService");
+        this.economyConfig = Objects.requireNonNull(economyConfig, "economyConfig");
+    }
+
+    public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
+        this.shopMenuRouter = Objects.requireNonNull(shopMenuRouter, "shopMenuRouter");
+    }
+
+    public void open(final Player player, final String categoryId, final int page, final String productId) {
+        final StoreProduct product = this.resolveProduct(productId);
+        final ShopMenuHolder holder = ShopMenuHolder.storeDetail(categoryId, page, productId);
+        final Inventory inventory = holder.createInventory(27, "Store - " + product.displayName());
+
+        inventory.setItem(11, this.detailItem(player, product));
+        inventory.setItem(13, this.button(Material.GREEN_STAINED_GLASS_PANE, "Purchase", List.of(
+                "Price: " + EconomyFormatter.format(product.price(), this.economyConfig),
+                "Click to confirm purchase"
+        )));
+        inventory.setItem(18, this.button(Material.ARROW, "Back", List.of("Return to the product list")));
+        inventory.setItem(22, this.button(Material.BARRIER, "Close", List.of("Close the shop")));
+
+        player.openInventory(inventory);
+    }
+
+    public void handleClick(final InventoryClickEvent event, final ShopMenuHolder holder) {
+        event.setCancelled(true);
+
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+
+        final String categoryId = holder.currentStoreCategoryId();
+        final String productId = holder.currentStoreProductId();
+        if (categoryId == null || productId == null) {
+            return;
+        }
+
+        switch (event.getRawSlot()) {
+            case 13 -> {
+                final StorePurchaseResult result = this.storeService.purchase(player, productId);
+                player.sendMessage(result.success() ? "Purchase successful." : result.message());
+
+                if (result.product() != null) {
+                    this.open(player, categoryId, holder.currentPage(), productId);
+                }
+            }
+            case 18 -> this.shopMenuRouter.openStoreCategory(player, categoryId, holder.currentPage());
+            case 22 -> player.closeInventory();
+            default -> {
+            }
+        }
+    }
+
+    private ItemStack detailItem(final Player player, final StoreProduct product) {
+        final Material material = this.resolveMaterial(product.iconKey());
+        final ItemStack stack = new ItemStack(material);
+        final ItemMeta meta = stack.getItemMeta();
+
+        if (meta != null) {
+            final boolean owned = product.entitlementKey() != null
+                    && !product.entitlementKey().isBlank()
+                    && this.storeService.ownsEntitlement(player.getUniqueId(), product.entitlementKey());
+
+            meta.setDisplayName(product.displayName());
+            meta.setLore(List.of(
+                    "Price: " + EconomyFormatter.format(product.price(), this.economyConfig),
+                    "Type: " + product.type().name(),
+                    owned ? "Owned: Yes" : "Owned: No",
+                    product.requireConfirmation() ? "Confirmation: Required" : "Confirmation: Not required"
+            ));
+            stack.setItemMeta(meta);
+        }
+
+        return stack;
+    }
+
+    private ItemStack button(final Material material, final String name, final List<String> lore) {
+        final ItemStack stack = new ItemStack(material);
+        final ItemMeta meta = stack.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(name);
+            meta.setLore(lore);
+            stack.setItemMeta(meta);
+        }
+        return stack;
+    }
+
+    private StoreProduct resolveProduct(final String productId) {
+        return this.storeService.getCategories().stream()
+                .flatMap(category -> this.storeService.getProducts(category.categoryId()).stream())
+                .filter(product -> product.productId().equals(productId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Unknown store product: " + productId));
+    }
+
+    private Material resolveMaterial(final String iconKey) {
+        final Material material = Material.matchMaterial(iconKey);
+        return material == null ? Material.BARRIER : material;
+    }
+}

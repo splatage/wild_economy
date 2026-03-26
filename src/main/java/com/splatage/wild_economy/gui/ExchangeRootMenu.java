@@ -36,7 +36,8 @@ public final class ExchangeRootMenu {
         inventory.setItem(14, this.button(Material.REDSTONE, ItemCategory.REDSTONE_AND_UTILITY.displayName()));
         inventory.setItem(15, this.button(Material.DIAMOND_SWORD, ItemCategory.COMBAT_AND_ADVENTURE.displayName()));
         inventory.setItem(16, this.button(Material.CHEST, ItemCategory.MISC.displayName()));
-        inventory.setItem(22, this.button(Material.BARRIER, "Close"));
+        inventory.setItem(22, this.button(Material.NETHER_STAR, "Store"));
+        inventory.setItem(26, this.button(Material.BARRIER, "Close"));
 
         player.openInventory(inventory);
     }
@@ -55,7 +56,8 @@ public final class ExchangeRootMenu {
             case 14 -> this.openCategory(player, ItemCategory.REDSTONE_AND_UTILITY);
             case 15 -> this.openCategory(player, ItemCategory.COMBAT_AND_ADVENTURE);
             case 16 -> this.openCategory(player, ItemCategory.MISC);
-            case 22 -> player.closeInventory();
+            case 22 -> this.shopMenuRouter.openStoreRoot(player);
+            case 26 -> player.closeInventory();
             default -> {
             }
         }
@@ -85,4 +87,3 @@ public final class ExchangeRootMenu {
         return stack;
     }
 }
-

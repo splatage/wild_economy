@@ -35,6 +35,9 @@ import com.splatage.wild_economy.economy.service.BaltopService;
 import com.splatage.wild_economy.economy.service.BaltopServiceImpl;
 import com.splatage.wild_economy.economy.service.EconomyService;
 import com.splatage.wild_economy.economy.service.EconomyServiceImpl;
+import com.splatage.wild_economy.gui.StoreCategoryMenu;
+import com.splatage.wild_economy.gui.StoreProductDetailMenu;
+import com.splatage.wild_economy.gui.StoreRootMenu;
 import com.splatage.wild_economy.store.action.ProductActionExecutor;
 import com.splatage.wild_economy.store.action.SimpleProductActionExecutor;
 import com.splatage.wild_economy.store.repository.StoreEntitlementRepository;
@@ -312,12 +315,38 @@ public final class ServiceRegistry {
         final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService);
         final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService);
         final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService, this.platformExecutor);
-        this.shopMenuRouter = new ShopMenuRouter(this.platformExecutor, rootMenu, subcategoryMenu, browseMenu, itemDetailMenu);
+        final StoreRootMenu storeRootMenu = new StoreRootMenu(this.storeService);
+        final StoreCategoryMenu storeCategoryMenu = new StoreCategoryMenu(this.storeService);
+        final StoreProductDetailMenu storeProductDetailMenu = new StoreProductDetailMenu(this.storeService, this.economyConfig);
+
+        this.shopMenuRouter = new ShopMenuRouter(
+                this.platformExecutor,
+                rootMenu,
+                subcategoryMenu,
+                browseMenu,
+                itemDetailMenu,
+                storeRootMenu,
+                storeCategoryMenu,
+                storeProductDetailMenu
+        );
+
         rootMenu.setShopMenuRouter(this.shopMenuRouter);
         subcategoryMenu.setShopMenuRouter(this.shopMenuRouter);
         browseMenu.setShopMenuRouter(this.shopMenuRouter);
         itemDetailMenu.setShopMenuRouter(this.shopMenuRouter);
-        this.shopMenuListener = new ShopMenuListener(rootMenu, subcategoryMenu, browseMenu, itemDetailMenu);
+        storeRootMenu.setShopMenuRouter(this.shopMenuRouter);
+        storeCategoryMenu.setShopMenuRouter(this.shopMenuRouter);
+        storeProductDetailMenu.setShopMenuRouter(this.shopMenuRouter);
+
+        this.shopMenuListener = new ShopMenuListener(
+                rootMenu,
+                subcategoryMenu,
+                browseMenu,
+                itemDetailMenu,
+                storeRootMenu,
+                storeCategoryMenu,
+                storeProductDetailMenu
+        );
         this.plugin.getServer().getPluginManager().registerEvents(this.shopMenuListener, this.plugin);
 
         final AdminRootMenu adminRootMenu = new AdminRootMenu();

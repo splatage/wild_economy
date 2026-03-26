@@ -15,7 +15,10 @@ public final class ShopMenuHolder implements InventoryHolder {
         ROOT,
         SUBCATEGORY,
         BROWSE,
-        DETAIL
+        DETAIL,
+        STORE_ROOT,
+        STORE_CATEGORY,
+        STORE_DETAIL
     }
 
     private final ViewType viewType;
@@ -26,6 +29,8 @@ public final class ShopMenuHolder implements InventoryHolder {
     private final boolean viaSubcategory;
     private final BigDecimal quotedUnitPrice;
     private final long quotedAtMillis;
+    private final String currentStoreCategoryId;
+    private final String currentStoreProductId;
 
     private Inventory inventory;
 
@@ -37,7 +42,9 @@ public final class ShopMenuHolder implements InventoryHolder {
         final ItemKey currentItemKey,
         final boolean viaSubcategory,
         final BigDecimal quotedUnitPrice,
-        final long quotedAtMillis
+        final long quotedAtMillis,
+        final String currentStoreCategoryId,
+        final String currentStoreProductId
     ) {
         this.viewType = Objects.requireNonNull(viewType, "viewType");
         this.currentCategory = currentCategory;
@@ -47,10 +54,12 @@ public final class ShopMenuHolder implements InventoryHolder {
         this.viaSubcategory = viaSubcategory;
         this.quotedUnitPrice = quotedUnitPrice;
         this.quotedAtMillis = quotedAtMillis;
+        this.currentStoreCategoryId = currentStoreCategoryId;
+        this.currentStoreProductId = currentStoreProductId;
     }
 
     public static ShopMenuHolder root() {
-        return new ShopMenuHolder(ViewType.ROOT, null, null, 0, null, false, null, 0L);
+        return new ShopMenuHolder(ViewType.ROOT, null, null, 0, null, false, null, 0L, null, null);
     }
 
     public static ShopMenuHolder subcategory(final ItemCategory category) {
@@ -62,7 +71,9 @@ public final class ShopMenuHolder implements InventoryHolder {
             null,
             false,
             null,
-            0L
+            0L,
+            null,
+            null
         );
     }
 
@@ -80,7 +91,9 @@ public final class ShopMenuHolder implements InventoryHolder {
             null,
             viaSubcategory,
             null,
-            0L
+            0L,
+            null,
+            null
         );
     }
 
@@ -122,7 +135,47 @@ public final class ShopMenuHolder implements InventoryHolder {
             Objects.requireNonNull(itemKey, "itemKey"),
             viaSubcategory,
             quotedUnitPrice,
-            quotedAtMillis
+            quotedAtMillis,
+            null,
+            null
+        );
+    }
+
+    public static ShopMenuHolder storeRoot() {
+        return new ShopMenuHolder(ViewType.STORE_ROOT, null, null, 0, null, false, null, 0L, null, null);
+    }
+
+    public static ShopMenuHolder storeCategory(final String categoryId, final int page) {
+        return new ShopMenuHolder(
+            ViewType.STORE_CATEGORY,
+            null,
+            null,
+            page,
+            null,
+            false,
+            null,
+            0L,
+            Objects.requireNonNull(categoryId, "categoryId"),
+            null
+        );
+    }
+
+    public static ShopMenuHolder storeDetail(
+        final String categoryId,
+        final int page,
+        final String productId
+    ) {
+        return new ShopMenuHolder(
+            ViewType.STORE_DETAIL,
+            null,
+            null,
+            page,
+            null,
+            false,
+            null,
+            0L,
+            Objects.requireNonNull(categoryId, "categoryId"),
+            Objects.requireNonNull(productId, "productId")
         );
     }
 
@@ -170,5 +223,13 @@ public final class ShopMenuHolder implements InventoryHolder {
 
     public long quotedAtMillis() {
         return this.quotedAtMillis;
+    }
+
+    public String currentStoreCategoryId() {
+        return this.currentStoreCategoryId;
+    }
+
+    public String currentStoreProductId() {
+        return this.currentStoreProductId;
     }
 }
