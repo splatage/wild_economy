@@ -188,12 +188,6 @@ public final class ServiceRegistry {
         };
 
         final PlayerHeadCache playerHeadCache = new PlayerHeadCache(this.plugin);
-        final PlayerInfoItemFactory playerInfoItemFactory = new PlayerInfoItemFactory(
-                playerHeadCache,
-                this.economyService,
-                this.xpBottleService,
-                this.economyConfig
-        );
 
         final BalanceCache balanceCache = new BalanceCache();
         this.baltopService = new BaltopServiceImpl(
@@ -212,6 +206,13 @@ public final class ServiceRegistry {
         );
 
         this.xpBottleService = new XpBottleServiceImpl(this.plugin);
+
+        final PlayerInfoItemFactory playerInfoItemFactory = new PlayerInfoItemFactory(
+                playerHeadCache,
+                this.economyService,
+                this.xpBottleService,
+                this.economyConfig
+        );
 
         final StoreEntitlementRepository storeEntitlementRepository = switch (this.databaseProvider.dialect()) {
             case SQLITE -> new SqliteStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
