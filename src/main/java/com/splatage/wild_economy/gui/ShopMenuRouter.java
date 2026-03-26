@@ -12,6 +12,8 @@ import org.bukkit.inventory.InventoryHolder;
 
 public final class ShopMenuRouter {
 
+    private static final String XP_BOTTLES_CATEGORY_ID = "xp_bottles";
+
     private final PlatformExecutor platformExecutor;
     private final ExchangeRootMenu exchangeRootMenu;
     private final ExchangeSubcategoryMenu exchangeSubcategoryMenu;
@@ -20,6 +22,7 @@ public final class ShopMenuRouter {
     private final StoreRootMenu storeRootMenu;
     private final StoreCategoryMenu storeCategoryMenu;
     private final StoreProductDetailMenu storeProductDetailMenu;
+    private final XpBottleMenu xpBottleMenu;
 
     public ShopMenuRouter(
         final PlatformExecutor platformExecutor,
@@ -29,7 +32,8 @@ public final class ShopMenuRouter {
         final ExchangeItemDetailMenu exchangeItemDetailMenu,
         final StoreRootMenu storeRootMenu,
         final StoreCategoryMenu storeCategoryMenu,
-        final StoreProductDetailMenu storeProductDetailMenu
+        final StoreProductDetailMenu storeProductDetailMenu,
+        final XpBottleMenu xpBottleMenu
     ) {
         this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
         this.exchangeRootMenu = Objects.requireNonNull(exchangeRootMenu, "exchangeRootMenu");
@@ -39,6 +43,7 @@ public final class ShopMenuRouter {
         this.storeRootMenu = Objects.requireNonNull(storeRootMenu, "storeRootMenu");
         this.storeCategoryMenu = Objects.requireNonNull(storeCategoryMenu, "storeCategoryMenu");
         this.storeProductDetailMenu = Objects.requireNonNull(storeProductDetailMenu, "storeProductDetailMenu");
+        this.xpBottleMenu = Objects.requireNonNull(xpBottleMenu, "xpBottleMenu");
     }
 
     public void openRoot(final Player player) {
@@ -89,11 +94,19 @@ public final class ShopMenuRouter {
     }
 
     public void openStoreCategory(final Player player, final String categoryId, final int page) {
+        if (XP_BOTTLES_CATEGORY_ID.equals(categoryId)) {
+            this.openStoreXpBottles(player);
+            return;
+        }
         this.platformExecutor.runOnPlayer(player, () -> this.storeCategoryMenu.open(player, categoryId, page));
     }
 
     public void openStoreDetail(final Player player, final String categoryId, final int page, final String productId) {
         this.platformExecutor.runOnPlayer(player, () -> this.storeProductDetailMenu.open(player, categoryId, page, productId));
+    }
+
+    public void openStoreXpBottles(final Player player) {
+        this.platformExecutor.runOnPlayer(player, () -> this.xpBottleMenu.open(player));
     }
 
     public void goBack(final Player player) {
@@ -135,6 +148,7 @@ public final class ShopMenuRouter {
                     this.openStoreCategory(player, holder.currentStoreCategoryId(), holder.currentPage());
                 }
             }
+            case STORE_XP_BOTTLES -> this.openStoreRoot(player);
         }
     }
 

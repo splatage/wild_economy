@@ -40,6 +40,7 @@ import com.splatage.wild_economy.gui.PlayerInfoItemFactory;
 import com.splatage.wild_economy.gui.StoreCategoryMenu;
 import com.splatage.wild_economy.gui.StoreProductDetailMenu;
 import com.splatage.wild_economy.gui.StoreRootMenu;
+import com.splatage.wild_economy.gui.XpBottleMenu;
 import com.splatage.wild_economy.store.action.ProductActionExecutor;
 import com.splatage.wild_economy.store.action.SimpleProductActionExecutor;
 import com.splatage.wild_economy.store.repository.StoreEntitlementRepository;
@@ -337,6 +338,7 @@ public final class ServiceRegistry {
         final StoreRootMenu storeRootMenu = new StoreRootMenu(this.storeService, playerInfoItemFactory);
         final StoreCategoryMenu storeCategoryMenu = new StoreCategoryMenu(this.storeService, playerInfoItemFactory);
         final StoreProductDetailMenu storeProductDetailMenu = new StoreProductDetailMenu(this.storeService, this.economyConfig, playerInfoItemFactory);
+        final XpBottleMenu xpBottleMenu = new XpBottleMenu(this.storeService, playerInfoItemFactory);
 
         this.shopMenuRouter = new ShopMenuRouter(
                 this.platformExecutor,
@@ -346,7 +348,8 @@ public final class ServiceRegistry {
                 itemDetailMenu,
                 storeRootMenu,
                 storeCategoryMenu,
-                storeProductDetailMenu
+                storeProductDetailMenu,
+                xpBottleMenu
         );
 
         rootMenu.setShopMenuRouter(this.shopMenuRouter);
@@ -356,6 +359,7 @@ public final class ServiceRegistry {
         storeRootMenu.setShopMenuRouter(this.shopMenuRouter);
         storeCategoryMenu.setShopMenuRouter(this.shopMenuRouter);
         storeProductDetailMenu.setShopMenuRouter(this.shopMenuRouter);
+        xpBottleMenu.setShopMenuRouter(this.shopMenuRouter);
 
         this.shopMenuListener = new ShopMenuListener(
                 rootMenu,
@@ -364,7 +368,8 @@ public final class ServiceRegistry {
                 itemDetailMenu,
                 storeRootMenu,
                 storeCategoryMenu,
-                storeProductDetailMenu
+                storeProductDetailMenu,
+                xpBottleMenu
         );
         this.plugin.getServer().getPluginManager().registerEvents(this.shopMenuListener, this.plugin);
 

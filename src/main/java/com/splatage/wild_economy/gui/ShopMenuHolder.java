@@ -18,7 +18,8 @@ public final class ShopMenuHolder implements InventoryHolder {
         DETAIL,
         STORE_ROOT,
         STORE_CATEGORY,
-        STORE_DETAIL
+        STORE_DETAIL,
+        STORE_XP_BOTTLES
     }
 
     private final ViewType viewType;
@@ -176,6 +177,21 @@ public final class ShopMenuHolder implements InventoryHolder {
             0L,
             Objects.requireNonNull(categoryId, "categoryId"),
             Objects.requireNonNull(productId, "productId")
+        );
+    }
+
+    public static ShopMenuHolder storeXpBottles() {
+        return new ShopMenuHolder(
+            ViewType.STORE_XP_BOTTLES,
+            null,
+            null,
+            0,
+            null,
+            false,
+            null,
+            0L,
+            "xp_bottles",
+            null
         );
     }
 

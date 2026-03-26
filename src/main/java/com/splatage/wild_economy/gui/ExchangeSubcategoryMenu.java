@@ -14,7 +14,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public final class ExchangeSubcategoryMenu {
 
-    private static final int[] SUBCATEGORY_SLOTS = {11, 12, 13, 14, 15, 20, 21, 23, 24};
+    private static final int[] SUBCATEGORY_SLOTS = {11, 12, 13, 14, 15, 19, 20, 23, 24};
 
     private final ExchangeService exchangeService;
     private final PlayerInfoItemFactory playerInfoItemFactory;
@@ -36,7 +36,7 @@ public final class ExchangeSubcategoryMenu {
         final ShopMenuHolder holder = ShopMenuHolder.subcategory(category);
         final Inventory inventory = holder.createInventory(27, "Shop - " + category.displayName() + " Types");
 
-        inventory.setItem(4, this.playerInfoItemFactory.create(player));
+        inventory.setItem(21, this.playerInfoItemFactory.create(player));
         inventory.setItem(10, this.button(Material.CHEST, "All"));
 
         final List<GeneratedItemCategory> subcategories = this.exchangeService.listVisibleSubcategories(category);

@@ -13,8 +13,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public final class StoreRootMenu {
 
-    private static final int[] CATEGORY_SLOTS = {10, 12, 14, 16, 22, 24};
-
     private final StoreService storeService;
     private final PlayerInfoItemFactory playerInfoItemFactory;
     private ShopMenuRouter shopMenuRouter;
@@ -36,13 +34,18 @@ public final class StoreRootMenu {
         final Inventory inventory = holder.createInventory(27, "Shop - Store");
 
         final List<StoreCategory> categories = this.storeService.getCategories();
-        for (int index = 0; index < categories.size() && index < CATEGORY_SLOTS.length; index++) {
+        final int[] categorySlots = this.computeCenteredRowSlots(categories.size());
+
+        for (int index = 0; index < categories.size() && index < categorySlots.length; index++) {
             final StoreCategory category = categories.get(index);
-            inventory.setItem(CATEGORY_SLOTS[index], this.button(this.resolveMaterial(category.iconKey()), category.displayName()));
+            inventory.setItem(
+                    categorySlots[index],
+                    this.button(this.resolveMaterial(category.iconKey()), category.displayName())
+            );
         }
 
-        inventory.setItem(4, this.playerInfoItemFactory.create(player));
         inventory.setItem(18, this.button(Material.ARROW, "Back"));
+        inventory.setItem(21, this.playerInfoItemFactory.create(player));
         inventory.setItem(26, this.button(Material.BARRIER, "Close"));
 
         player.openInventory(inventory);
@@ -65,12 +68,31 @@ public final class StoreRootMenu {
         }
 
         final List<StoreCategory> categories = this.storeService.getCategories();
-        for (int index = 0; index < categories.size() && index < CATEGORY_SLOTS.length; index++) {
-            if (CATEGORY_SLOTS[index] == rawSlot) {
+        final int[] categorySlots = this.computeCenteredRowSlots(categories.size());
+
+        for (int index = 0; index < categories.size() && index < categorySlots.length; index++) {
+            if (categorySlots[index] == rawSlot) {
                 this.shopMenuRouter.openStoreCategory(player, categories.get(index).categoryId(), 0);
                 return;
             }
         }
+    }
+
+    private int[] computeCenteredRowSlots(final int categoryCount) {
+        final int safeCount = Math.max(0, Math.min(categoryCount, 7));
+        if (safeCount == 0) {
+            return new int[0];
+        }
+
+        final int rowStart = 9;
+        final int startOffset = (9 - safeCount) / 2;
+        final int[] slots = new int[safeCount];
+
+        for (int index = 0; index < safeCount; index++) {
+            slots[index] = rowStart + startOffset + index;
+        }
+
+        return slots;
     }
 
     private ItemStack button(final Material material, final String name) {

@@ -42,7 +42,7 @@ public final class StoreProductDetailMenu {
         final ShopMenuHolder holder = ShopMenuHolder.storeDetail(categoryId, page, productId);
         final Inventory inventory = holder.createInventory(27, "Store - " + product.displayName());
 
-        inventory.setItem(4, this.playerInfoItemFactory.create(player));
+        inventory.setItem(21, this.playerInfoItemFactory.create(player));
         inventory.setItem(11, this.detailItem(player, product));
         inventory.setItem(13, this.purchaseButton(product));
         inventory.setItem(18, this.button(Material.ARROW, "Back", List.of("Return to the product list")));

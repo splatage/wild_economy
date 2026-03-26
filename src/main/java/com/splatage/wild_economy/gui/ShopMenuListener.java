@@ -15,6 +15,7 @@ public final class ShopMenuListener implements Listener {
     private final StoreRootMenu storeRootMenu;
     private final StoreCategoryMenu storeCategoryMenu;
     private final StoreProductDetailMenu storeProductDetailMenu;
+    private final XpBottleMenu xpBottleMenu;
 
     public ShopMenuListener(
         final ExchangeRootMenu exchangeRootMenu,
@@ -23,7 +24,8 @@ public final class ShopMenuListener implements Listener {
         final ExchangeItemDetailMenu exchangeItemDetailMenu,
         final StoreRootMenu storeRootMenu,
         final StoreCategoryMenu storeCategoryMenu,
-        final StoreProductDetailMenu storeProductDetailMenu
+        final StoreProductDetailMenu storeProductDetailMenu,
+        final XpBottleMenu xpBottleMenu
     ) {
         this.exchangeRootMenu = Objects.requireNonNull(exchangeRootMenu, "exchangeRootMenu");
         this.exchangeSubcategoryMenu = Objects.requireNonNull(exchangeSubcategoryMenu, "exchangeSubcategoryMenu");
@@ -32,6 +34,7 @@ public final class ShopMenuListener implements Listener {
         this.storeRootMenu = Objects.requireNonNull(storeRootMenu, "storeRootMenu");
         this.storeCategoryMenu = Objects.requireNonNull(storeCategoryMenu, "storeCategoryMenu");
         this.storeProductDetailMenu = Objects.requireNonNull(storeProductDetailMenu, "storeProductDetailMenu");
+        this.xpBottleMenu = Objects.requireNonNull(xpBottleMenu, "xpBottleMenu");
     }
 
     @EventHandler
@@ -69,6 +72,7 @@ public final class ShopMenuListener implements Listener {
                 }
             }
             case STORE_DETAIL -> this.storeProductDetailMenu.handleClick(event, holder);
+            case STORE_XP_BOTTLES -> this.xpBottleMenu.handleClick(event);
         }
     }
 
