@@ -35,6 +35,7 @@ import com.splatage.wild_economy.economy.service.BaltopService;
 import com.splatage.wild_economy.economy.service.BaltopServiceImpl;
 import com.splatage.wild_economy.economy.service.EconomyService;
 import com.splatage.wild_economy.economy.service.EconomyServiceImpl;
+import com.splatage.wild_economy.gui.MenuHeadFactory;
 import com.splatage.wild_economy.gui.PlayerHeadCache;
 import com.splatage.wild_economy.gui.PlayerInfoItemFactory;
 import com.splatage.wild_economy.gui.StoreCategoryMenu;
@@ -214,6 +215,7 @@ public final class ServiceRegistry {
                 this.xpBottleService,
                 this.economyConfig
         );
+        final MenuHeadFactory menuHeadFactory = new MenuHeadFactory();
 
         final StoreEntitlementRepository storeEntitlementRepository = switch (this.databaseProvider.dialect()) {
             case SQLITE -> new SqliteStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
@@ -331,11 +333,11 @@ public final class ServiceRegistry {
         this.exchangeService = new ExchangeServiceImpl(this.exchangeBrowseService, this.exchangeBuyService, this.exchangeSellService);
         this.foliaContainerSellCoordinator = new FoliaContainerSellCoordinator(this.platformExecutor, this.exchangeService, rawSellService);
 
-        final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService, playerInfoItemFactory);
+        final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService, playerInfoItemFactory, menuHeadFactory);
         final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService, playerInfoItemFactory);
         final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService, playerInfoItemFactory);
         final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService, this.platformExecutor, playerInfoItemFactory);
-        final StoreRootMenu storeRootMenu = new StoreRootMenu(this.storeService, playerInfoItemFactory);
+        final StoreRootMenu storeRootMenu = new StoreRootMenu(this.storeService, playerInfoItemFactory, menuHeadFactory);
         final StoreCategoryMenu storeCategoryMenu = new StoreCategoryMenu(this.storeService, playerInfoItemFactory);
         final StoreProductDetailMenu storeProductDetailMenu = new StoreProductDetailMenu(this.storeService, this.economyConfig, playerInfoItemFactory);
         final XpBottleMenu xpBottleMenu = new XpBottleMenu(this.storeService, playerInfoItemFactory);

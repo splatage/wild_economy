@@ -18,14 +18,17 @@ public final class StoreRootMenu {
 
     private final StoreService storeService;
     private final PlayerInfoItemFactory playerInfoItemFactory;
+    private final MenuHeadFactory menuHeadFactory;
     private ShopMenuRouter shopMenuRouter;
 
     public StoreRootMenu(
         final StoreService storeService,
-        final PlayerInfoItemFactory playerInfoItemFactory
+        final PlayerInfoItemFactory playerInfoItemFactory,
+        final MenuHeadFactory menuHeadFactory
     ) {
         this.storeService = Objects.requireNonNull(storeService, "storeService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
+        this.menuHeadFactory = Objects.requireNonNull(menuHeadFactory, "menuHeadFactory");
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -44,10 +47,10 @@ public final class StoreRootMenu {
             );
         }
 
+        this.menuHeadFactory.placeWord(inventory, 2, "STORE");
         inventory.setItem(18, this.button(Material.ARROW, "Back"));
         inventory.setItem(21, this.playerInfoItemFactory.create(player));
         inventory.setItem(26, this.button(Material.BARRIER, "Close"));
-
         player.openInventory(inventory);
     }
 
