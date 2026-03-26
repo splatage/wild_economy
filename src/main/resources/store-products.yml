@@ -2,7 +2,7 @@ categories:
   ranks:
     display-name: "Ranks"
     icon: NETHER_STAR
-    slot: 10
+    slot: 11
 
   cosmetics:
     display-name: "Cosmetics"
@@ -12,17 +12,17 @@ categories:
   perks:
     display-name: "Perks"
     icon: BEACON
-    slot: 14
+    slot: 13
 
   tools:
     display-name: "Tools"
     icon: DIAMOND_PICKAXE
-    slot: 16
+    slot: 14
 
   xp_bottles:
     display-name: "XP Bottles"
     icon: EXPERIENCE_BOTTLE
-    slot: 22
+    slot: 15
 
 products:
   vip_rank:
