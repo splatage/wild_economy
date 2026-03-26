@@ -2,6 +2,7 @@ package com.splatage.wild_economy.gui;
 
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.service.StoreService;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import org.bukkit.Material;
@@ -12,6 +13,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public final class StoreRootMenu {
+
+    private static final int INVENTORY_SIZE = 27;
 
     private final StoreService storeService;
     private final PlayerInfoItemFactory playerInfoItemFactory;
@@ -31,15 +34,12 @@ public final class StoreRootMenu {
 
     public void open(final Player player) {
         final ShopMenuHolder holder = ShopMenuHolder.storeRoot();
-        final Inventory inventory = holder.createInventory(27, "Shop - Store");
+        final Inventory inventory = holder.createInventory(INVENTORY_SIZE, "Shop - Store");
 
-        final List<StoreCategory> categories = this.storeService.getCategories();
-        final int[] categorySlots = this.computeCenteredRowSlots(categories.size());
-
-        for (int index = 0; index < categories.size() && index < categorySlots.length; index++) {
-            final StoreCategory category = categories.get(index);
+        for (final StoreCategory category : this.sortedCategories()) {
+            this.validateSlot(category);
             inventory.setItem(
-                    categorySlots[index],
+                    category.slot(),
                     this.button(this.resolveMaterial(category.iconKey()), category.displayName())
             );
         }
@@ -67,32 +67,29 @@ public final class StoreRootMenu {
             return;
         }
 
-        final List<StoreCategory> categories = this.storeService.getCategories();
-        final int[] categorySlots = this.computeCenteredRowSlots(categories.size());
-
-        for (int index = 0; index < categories.size() && index < categorySlots.length; index++) {
-            if (categorySlots[index] == rawSlot) {
-                this.shopMenuRouter.openStoreCategory(player, categories.get(index).categoryId(), 0);
+        for (final StoreCategory category : this.sortedCategories()) {
+            this.validateSlot(category);
+            if (category.slot() == rawSlot) {
+                this.shopMenuRouter.openStoreCategory(player, category.categoryId(), 0);
                 return;
             }
         }
     }
 
-    private int[] computeCenteredRowSlots(final int categoryCount) {
-        final int safeCount = Math.max(0, Math.min(categoryCount, 7));
-        if (safeCount == 0) {
-            return new int[0];
+    private List<StoreCategory> sortedCategories() {
+        return this.storeService.getCategories().stream()
+                .sorted(Comparator.comparingInt(StoreCategory::slot))
+                .toList();
+    }
+
+    private void validateSlot(final StoreCategory category) {
+        if (category.slot() < 0 || category.slot() >= INVENTORY_SIZE) {
+            throw new IllegalStateException(
+                    "Store category '" + category.categoryId()
+                            + "' has slot " + category.slot()
+                            + " which is out of range for a 27-slot Store root menu"
+            );
         }
-
-        final int rowStart = 9;
-        final int startOffset = (9 - safeCount) / 2;
-        final int[] slots = new int[safeCount];
-
-        for (int index = 0; index < safeCount; index++) {
-            slots[index] = rowStart + startOffset + index;
-        }
-
-        return slots;
     }
 
     private ItemStack button(final Material material, final String name) {
