@@ -5,6 +5,7 @@ import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.SellAllResult;
 import com.splatage.wild_economy.exchange.domain.SellContainerResult;
 import com.splatage.wild_economy.exchange.domain.SellHandResult;
+import com.splatage.wild_economy.exchange.domain.SellPreviewResult;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
@@ -39,6 +40,11 @@ public final class ExchangeServiceImpl implements ExchangeService {
     @Override
     public SellContainerResult sellContainer(final UUID playerId) {
         return this.exchangeSellService.sellContainer(playerId);
+    }
+
+    @Override
+    public SellPreviewResult previewInventorySell(final UUID playerId) {
+        return this.exchangeSellService.previewInventorySell(playerId);
     }
 
     @Override

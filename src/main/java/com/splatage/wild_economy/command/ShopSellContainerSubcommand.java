@@ -50,7 +50,7 @@ public final class ShopSellContainerSubcommand implements CommandExecutor {
         }
 
         if (soldLines.size() > maxLines) {
-            player.sendMessage(" - ... and " + (soldLines.size() - maxLines) + " more stack(s)");
+            player.sendMessage(" - ... and " + (soldLines.size() - maxLines) + " more item type(s)");
         }
     }
 
@@ -66,7 +66,7 @@ public final class ShopSellContainerSubcommand implements CommandExecutor {
         }
 
         if (skippedDescriptions.size() > maxSkipped) {
-            player.sendMessage(" - ... and " + (skippedDescriptions.size() - maxSkipped) + " more skipped stack(s)");
+            player.sendMessage(" - ... and " + (skippedDescriptions.size() - maxSkipped) + " more skipped entries");
         }
     }
 }

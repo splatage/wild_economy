@@ -4,6 +4,7 @@ import com.splatage.wild_economy.exchange.domain.RejectionReason;
 import com.splatage.wild_economy.exchange.domain.SellAllResult;
 import com.splatage.wild_economy.exchange.domain.SellContainerResult;
 import com.splatage.wild_economy.exchange.domain.SellHandResult;
+import com.splatage.wild_economy.exchange.domain.SellPreviewResult;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
@@ -84,6 +85,20 @@ public final class FoliaSafeExchangeSellService implements ExchangeSellService {
         }
 
         return this.delegate.sellContainer(playerId);
+    }
+
+    @Override
+    public SellPreviewResult previewInventorySell(final UUID playerId) {
+        final Player player = Bukkit.getPlayer(playerId);
+        if (player == null) {
+            return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), "Player is not online");
+        }
+
+        if (!Bukkit.isOwnedByCurrentRegion(player)) {
+            return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), OFF_THREAD_MESSAGE);
+        }
+
+        return this.delegate.previewInventorySell(playerId);
     }
 
     private boolean isSupportedContainerTarget(final Block targetBlock) {

@@ -5,6 +5,7 @@ import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.SellAllResult;
 import com.splatage.wild_economy.exchange.domain.SellContainerResult;
 import com.splatage.wild_economy.exchange.domain.SellHandResult;
+import com.splatage.wild_economy.exchange.domain.SellPreviewResult;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -16,6 +17,8 @@ public interface ExchangeService {
     SellAllResult sellAll(UUID playerId);
 
     SellContainerResult sellContainer(UUID playerId);
+
+    SellPreviewResult previewInventorySell(UUID playerId);
 
     BuyResult buy(UUID playerId, ItemKey itemKey, int amount);
 

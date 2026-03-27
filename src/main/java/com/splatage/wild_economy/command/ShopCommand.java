@@ -37,7 +37,7 @@ public final class ShopCommand implements CommandExecutor {
             case "sellall" -> this.sellAllSubcommand.execute(sender);
             case "sellcontainer" -> this.sellContainerSubcommand.execute(sender);
             default -> {
-                sender.sendMessage("Unknown subcommand. Use /shop, /shop sellhand, /shop sellall, /shop sellcontainer, /sellhand, /sellall, or /sellcontainer.");
+                sender.sendMessage("Unknown subcommand. Use /shop, /shop sellhand, /shop sellall, /shop sellcontainer, /sell preview, /worth, /sellhand, /sellall, or /sellcontainer.");
                 yield true;
             }
         };

@@ -10,6 +10,8 @@ import com.splatage.wild_economy.exchange.domain.SellAllResult;
 import com.splatage.wild_economy.exchange.domain.SellContainerResult;
 import com.splatage.wild_economy.exchange.domain.SellHandResult;
 import com.splatage.wild_economy.exchange.domain.SellLineResult;
+import com.splatage.wild_economy.exchange.domain.SellPreviewLine;
+import com.splatage.wild_economy.exchange.domain.SellPreviewResult;
 import com.splatage.wild_economy.exchange.domain.SellQuote;
 import com.splatage.wild_economy.exchange.domain.StockSnapshot;
 import com.splatage.wild_economy.exchange.item.ItemValidationService;
@@ -98,50 +100,54 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
             return new SellHandResult(false, null, RejectionReason.INTERNAL_ERROR, "Player is not online");
         }
 
-        final ItemStack held = player.getInventory().getItemInMainHand();
-        final ValidationResult validation = this.itemValidationService.validateForSell(held);
-        if (!validation.valid()) {
-            return new SellHandResult(false, null, validation.rejectionReason(), validation.detail());
+        final HeldItemPlanning heldPlanning = this.planHeldItem(player.getInventory().getItemInMainHand());
+        if (!heldPlanning.success()) {
+            return new SellHandResult(false, null, heldPlanning.rejectionReason(), heldPlanning.message());
         }
 
-        final ItemKey itemKey = validation.itemKey();
-        final ExchangeCatalogEntry entry = this.exchangeCatalog.get(itemKey)
-            .orElseThrow(() -> new IllegalStateException("Missing catalog entry for " + itemKey.value()));
-
-        final int amount = held.getAmount();
-        final StockSnapshot stockSnapshot = this.stockService.getSnapshot(itemKey);
-        final SellQuote quote = this.pricingService.quoteSell(itemKey, amount, stockSnapshot);
-        if (quote.totalPrice().compareTo(BigDecimal.ZERO) <= 0) {
-            return new SellHandResult(false, null, RejectionReason.SELL_NOT_ALLOWED, "Sell value is zero");
-        }
-
-        final ItemStack restoreStack = held.clone();
+        final SalePlanning planning = heldPlanning.planning();
+        final ItemStack restoreStack = player.getInventory().getItemInMainHand().clone();
         player.getInventory().setItemInMainHand(null);
 
-        final EconomyResult payout = this.economyGateway.deposit(playerId, quote.totalPrice());
+        final EconomyResult payout = this.economyGateway.deposit(playerId, planning.totalEarned());
         if (!payout.success()) {
             player.getInventory().setItemInMainHand(restoreStack);
             return new SellHandResult(false, null, RejectionReason.INTERNAL_ERROR, payout.message());
         }
 
-        this.stockService.addStock(itemKey, amount);
-        this.transactionLogService.logSale(playerId, itemKey, amount, quote.effectiveUnitPrice(), quote.totalPrice());
-
-        final SellLineResult lineResult = new SellLineResult(
-            itemKey,
-            entry.displayName(),
-            amount,
-            quote.effectiveUnitPrice(),
-            quote.totalPrice(),
-            quote.tapered()
-        );
-
-        final String message = quote.tapered()
-            ? "Sold " + amount + "x " + entry.displayName() + " for " + quote.totalPrice()
+        final List<SellLineResult> soldLines = this.completePlannedSales(playerId, planning.plannedSales());
+        final SellLineResult lineResult = soldLines.getFirst();
+        final String message = lineResult.tapered()
+            ? "Sold " + lineResult.amountSold() + "x " + lineResult.displayName() + " for " + lineResult.totalEarned()
                 + " (reduced due to high stock)"
-            : "Sold " + amount + "x " + entry.displayName() + " for " + quote.totalPrice();
+            : "Sold " + lineResult.amountSold() + "x " + lineResult.displayName() + " for " + lineResult.totalEarned();
 
         return new SellHandResult(true, lineResult, null, message);
+    }
+
+    @Override
+    public SellPreviewResult previewInventorySell(final UUID playerId) {
+        final Player player = Bukkit.getPlayer(playerId);
+        if (player == null) {
+            return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), "Player is not online");
+        }
+
+        final SalePlanning planning = this.planSalesFromInventory(
+            player.getInventory(),
+            true,
+            "protected container item; use /sellcontainer"
+        );
+        if (planning.plannedSales().isEmpty()) {
+            return new SellPreviewResult(
+                false,
+                List.of(),
+                BigDecimal.ZERO,
+                planning.skippedDescriptions(),
+                "No sellable items found"
+            );
+        }
+
+        return this.toPreviewResult(planning);
     }
 
     @Override
@@ -450,6 +456,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
 
             final ValidationResult validation = this.itemValidationService.validateForSell(stack);
             if (!validation.valid()) {
+                skippedDescriptions.add(this.describeSkippedStack(stack, validation.detail()));
                 continue;
             }
 
@@ -478,7 +485,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
                 continue;
             }
 
-            plannedSales.add(accumulator.toPlannedSale(quote));
+            plannedSales.add(accumulator.toPlannedSale(quote, stockSnapshot));
             totalEarned = totalEarned.add(quote.totalPrice());
             taperedAny |= quote.tapered();
         }
@@ -489,6 +496,56 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
             totalEarned.setScale(2, RoundingMode.HALF_UP),
             taperedAny
         );
+    }
+
+    private HeldItemPlanning planHeldItem(final ItemStack held) {
+        final ValidationResult validation = this.itemValidationService.validateForSell(held);
+        if (!validation.valid()) {
+            return new HeldItemPlanning(null, validation.rejectionReason(), validation.detail());
+        }
+
+        final ItemKey itemKey = validation.itemKey();
+        final ExchangeCatalogEntry entry = this.exchangeCatalog.get(itemKey)
+            .orElseThrow(() -> new IllegalStateException("Missing catalog entry for " + itemKey.value()));
+
+        final int amount = held.getAmount();
+        final StockSnapshot stockSnapshot = this.stockService.getSnapshot(itemKey);
+        final SellQuote quote = this.pricingService.quoteSell(itemKey, amount, stockSnapshot);
+        if (quote.totalPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            return new HeldItemPlanning(null, RejectionReason.SELL_NOT_ALLOWED, "Sell value is zero");
+        }
+
+        return new HeldItemPlanning(
+            new SalePlanning(
+                List.of(new GroupedPlannedSale(itemKey, entry.displayName(), amount, quote, stockSnapshot, List.of())),
+                List.of(),
+                quote.totalPrice().setScale(2, RoundingMode.HALF_UP),
+                quote.tapered()
+            ),
+            null,
+            null
+        );
+    }
+
+    private SellPreviewResult toPreviewResult(final SalePlanning planning) {
+        final List<SellPreviewLine> lines = new ArrayList<>(planning.plannedSales().size());
+        for (final GroupedPlannedSale sale : planning.plannedSales()) {
+            lines.add(new SellPreviewLine(
+                sale.itemKey(),
+                sale.displayName(),
+                sale.amount(),
+                sale.quote().effectiveUnitPrice(),
+                sale.quote().totalPrice(),
+                sale.stockSnapshot().stockState(),
+                sale.quote().tapered()
+            ));
+        }
+        return new SellPreviewResult(true, List.copyOf(lines), planning.totalEarned(), planning.skippedDescriptions(), "Sell preview:");
+    }
+
+    private String describeSkippedStack(final ItemStack stack, final String reason) {
+        final String detail = reason == null || reason.isBlank() ? "not sellable" : reason;
+        return this.friendlyMaterialName(stack.getType()) + " x" + stack.getAmount() + " (" + detail + ")";
     }
 
     private void removePlannedItems(final Inventory inventory, final SalePlanning planning) {
@@ -584,8 +641,15 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         String displayName,
         int amount,
         SellQuote quote,
+        StockSnapshot stockSnapshot,
         List<InventoryRemoval> removals
     ) {
+    }
+
+    private record HeldItemPlanning(SalePlanning planning, RejectionReason rejectionReason, String message) {
+        private boolean success() {
+            return this.planning != null;
+        }
     }
 
     private record InventoryRemoval(int slot, ItemStack originalStack) {
@@ -625,12 +689,13 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
             return this.totalAmount;
         }
 
-        private GroupedPlannedSale toPlannedSale(final SellQuote quote) {
+        private GroupedPlannedSale toPlannedSale(final SellQuote quote, final StockSnapshot stockSnapshot) {
             return new GroupedPlannedSale(
                 this.itemKey,
                 this.displayName,
                 this.totalAmount,
                 quote,
+                stockSnapshot,
                 List.copyOf(this.removals)
             );
         }

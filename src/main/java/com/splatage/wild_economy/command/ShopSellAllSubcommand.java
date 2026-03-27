@@ -40,7 +40,7 @@ public final class ShopSellAllSubcommand implements CommandExecutor {
                 }
 
                 if (result.soldLines().size() > maxLines) {
-                    player.sendMessage(" - ... and " + (result.soldLines().size() - maxLines) + " more stack(s)");
+                    player.sendMessage(" - ... and " + (result.soldLines().size() - maxLines) + " more item type(s)");
                 }
             }
 
@@ -53,7 +53,7 @@ public final class ShopSellAllSubcommand implements CommandExecutor {
 
                 if (result.skippedDescriptions().size() > maxSkipped) {
                     player.sendMessage(
-                        " - ... and " + (result.skippedDescriptions().size() - maxSkipped) + " more skipped stack(s)"
+                        " - ... and " + (result.skippedDescriptions().size() - maxSkipped) + " more skipped entries"
                     );
                 }
             }

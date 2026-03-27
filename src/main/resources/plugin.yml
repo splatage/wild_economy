@@ -23,6 +23,16 @@ commands:
     aliases: [exchange]
     permission: wild_economy.shop
 
+  sell:
+    description: Preview the current Exchange sell value of your inventory.
+    usage: /sell preview
+    permission: wild_economy.shop.sell
+
+  worth:
+    description: Alias for /sell preview.
+    usage: /worth
+    permission: wild_economy.shop.sell
+
   sellhand:
     description: Sell the item in your hand to the Exchange.
     usage: /sellhand

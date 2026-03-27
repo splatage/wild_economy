@@ -5,12 +5,14 @@ import com.splatage.wild_economy.command.BalanceCommand;
 import com.splatage.wild_economy.command.BaltopCommand;
 import com.splatage.wild_economy.command.EcoCommand;
 import com.splatage.wild_economy.command.PayCommand;
+import com.splatage.wild_economy.command.SellCommand;
 import com.splatage.wild_economy.command.ShopAdminCommand;
 import com.splatage.wild_economy.command.ShopCommand;
 import com.splatage.wild_economy.command.ShopOpenSubcommand;
 import com.splatage.wild_economy.command.ShopSellAllSubcommand;
 import com.splatage.wild_economy.command.ShopSellContainerSubcommand;
 import com.splatage.wild_economy.command.ShopSellHandSubcommand;
+import com.splatage.wild_economy.command.ShopSellPreviewSubcommand;
 import com.splatage.wild_economy.config.ConfigLoader;
 import com.splatage.wild_economy.config.ConfigValidator;
 import com.splatage.wild_economy.config.DatabaseConfig;
@@ -478,10 +480,21 @@ public final class ServiceRegistry {
         final ShopSellHandSubcommand sellHandSubcommand = new ShopSellHandSubcommand(this.exchangeService, this.platformExecutor);
         final ShopSellAllSubcommand sellAllSubcommand = new ShopSellAllSubcommand(this.exchangeService, this.platformExecutor);
         final ShopSellContainerSubcommand sellContainerSubcommand = new ShopSellContainerSubcommand(this.foliaContainerSellCoordinator);
+        final ShopSellPreviewSubcommand sellPreviewSubcommand = new ShopSellPreviewSubcommand(this.exchangeService, this.platformExecutor);
 
         final PluginCommand shop = this.plugin.getCommand("shop");
         if (shop != null) {
             shop.setExecutor(new ShopCommand(openSubcommand, sellHandSubcommand, sellAllSubcommand, sellContainerSubcommand));
+        }
+
+        final PluginCommand sell = this.plugin.getCommand("sell");
+        if (sell != null) {
+            sell.setExecutor(new SellCommand(sellPreviewSubcommand));
+        }
+
+        final PluginCommand worth = this.plugin.getCommand("worth");
+        if (worth != null) {
+            worth.setExecutor(sellPreviewSubcommand);
         }
 
         final PluginCommand sellHand = this.plugin.getCommand("sellhand");
