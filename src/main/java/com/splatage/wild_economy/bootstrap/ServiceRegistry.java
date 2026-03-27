@@ -400,7 +400,7 @@ public final class ServiceRegistry {
                 adminItemInspectorMenu,
                 adminOverrideEditMenu
         );
-        this.economyPlayerSessionListener = new EconomyPlayerSessionListener(this.economyService);
+        this.economyPlayerSessionListener = new EconomyPlayerSessionListener(this.plugin, this.economyService);
         this.plugin.getServer().getPluginManager().registerEvents(this.economyPlayerSessionListener, this.plugin);
 
         this.xpBottleRedeemListener = new XpBottleRedeemListener(this.xpBottleService);
