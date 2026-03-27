@@ -42,6 +42,8 @@ public final class DatabaseProvider implements AutoCloseable {
             hikariConfig.setMaximumPoolSize(1);
             hikariConfig.setMinimumIdle(1);
             hikariConfig.setPoolName("wild-economy-sqlite");
+            hikariConfig.setInitializationFailTimeout(10_000L);
+            hikariConfig.setAutoCommit(false);
             hikariConfig.setConnectionTestQuery("SELECT 1");
         } else if ("mysql".equals(backend)) {
             this.dialect = DatabaseDialect.MYSQL;
@@ -57,6 +59,9 @@ public final class DatabaseProvider implements AutoCloseable {
             hikariConfig.setMaxLifetime(MYSQL_MAX_LIFETIME_MS);
             hikariConfig.setKeepaliveTime(MYSQL_KEEPALIVE_TIME_MS);
             hikariConfig.setPoolName("wild-economy-mysql");
+            hikariConfig.setInitializationFailTimeout(10_000L);
+            hikariConfig.setLeakDetectionThreshold(10_000L);
+            hikariConfig.setAutoCommit(false);
 
             hikariConfig.addDataSourceProperty("cachePrepStmts", true);
             hikariConfig.addDataSourceProperty("prepStmtCacheSize", MYSQL_PREP_STMT_CACHE_SIZE);
