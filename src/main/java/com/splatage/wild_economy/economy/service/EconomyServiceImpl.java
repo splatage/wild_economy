@@ -267,7 +267,7 @@ public final class EconomyServiceImpl implements EconomyService {
 
                 final MoneyAmount senderBalance = this.loadBalanceLocked(senderId, true);
                 if (senderBalance.minorUnits() < amount.minorUnits()) {
-                    return EconomyTransferResult.failure("Insufficient funds", senderBalance, this.loadBalanceLocked(recipientId, true));
+                    return EconomyTransferResult.failure("Insufficient funds", senderBalance, this.loadBalanceLocked(recipientId, false));
                 }
 
                 final MoneyAmount recipientBalance = this.loadBalanceLocked(recipientId, true);
