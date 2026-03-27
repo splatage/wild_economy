@@ -128,13 +128,13 @@ items:
   minecraft:dirt: 1.5
   minecraft:disc_fragment_5: 13
   minecraft:dragon_breath: 79
-  minecraft:dragon_egg: 10910
+  minecraft:dragon_egg: 1000000
   minecraft:dragon_head: 4365
   minecraft:dripstone_block: 2.5
   minecraft:dune_armor_trim_smithing_template: 8045
   minecraft:echo_shard: 84
   minecraft:egg: 1.5
-  minecraft:elytra: 3000
+  minecraft:elytra: 30000
   minecraft:emerald: 75
   minecraft:emerald_ore: 75
   minecraft:enchanted_book: 250
@@ -183,7 +183,7 @@ items:
   minecraft:heart_of_the_sea: 40
   minecraft:heart_pottery_sherd: 515
   minecraft:heartbreak_pottery_sherd: 515
-  minecraft:heavy_core: 135
+  minecraft:heavy_core: 30000
   minecraft:honey_bottle: 4.0
   minecraft:honeycomb: 6.0
   minecraft:horn_coral: 2.0
@@ -253,7 +253,7 @@ items:
   minecraft:nether_gold_ore: 18
   minecraft:nether_quartz_ore: 8.0
   minecraft:nether_sprouts: 1.0
-  minecraft:nether_star: 13955
+  minecraft:nether_star: 25000
   minecraft:nether_wart: 5.0
   minecraft:nether_wart_block: 120
   minecraft:netherite_ingot: 4810
@@ -265,7 +265,7 @@ items:
   minecraft:obsidian: 32
   minecraft:ochre_froglight: 16
   minecraft:ominous_bottle: 34
-  minecraft:ominous_trial_key: 725
+  minecraft:ominous_trial_key: 1500
   minecraft:open_eyeblossom: 3.18
   minecraft:orange_tulip: 2.0
   minecraft:oxeye_daisy: 2.0
@@ -385,9 +385,9 @@ items:
   minecraft:tipped_arrow: 14
   minecraft:torchflower: 2.0
   minecraft:torchflower_seeds: 1.0
-  minecraft:totem_of_undying: 7480
+  minecraft:totem_of_undying: 500
   minecraft:trial_key: 455
-  minecraft:trident: 300
+  minecraft:trident: 1500
   minecraft:tropical_fish: 4.0
   minecraft:tropical_fish_bucket: 75
   minecraft:tube_coral: 2.0
@@ -416,7 +416,7 @@ items:
   minecraft:wild_armor_trim_smithing_template: 8045
   minecraft:wildflowers: 1.0
   minecraft:wither_rose: 25
-  minecraft:wither_skeleton_skull: 10365
+  minecraft:wither_skeleton_skull: 20000
   minecraft:written_book: 9.53
   minecraft:zombie_head: 5180
 layout:
