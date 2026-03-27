@@ -358,18 +358,19 @@ final class CommonCraftingRecipeNormalizers {
         }
     }
 
-
     private static void applyCopperOxidationAndWaxingTransitions(final Map<String, List<RecipeDefinition>> recipesByOutput) {
         final List<String> copperFamilyKeys = List.of(
-            "copper",
+            "copper_block",
             "chiseled_copper",
             "cut_copper",
             "cut_copper_slab",
             "cut_copper_stairs",
             "copper_bars",
+            "copper_bulb",
             "copper_chain",
             "copper_chest",
             "copper_door",
+            "copper_golem_statue",
             "copper_grate",
             "copper_lantern",
             "copper_trapdoor",
@@ -377,15 +378,24 @@ final class CommonCraftingRecipeNormalizers {
         );
 
         for (final String baseKey : copperFamilyKeys) {
-            addOxidationTransition(recipesByOutput, baseKey, "exposed_" + baseKey, "normalized_exposed_" + baseKey + "_from_" + baseKey);
-            addOxidationTransition(recipesByOutput, "exposed_" + baseKey, "weathered_" + baseKey, "normalized_weathered_" + baseKey + "_from_exposed_" + baseKey);
-            addOxidationTransition(recipesByOutput, "weathered_" + baseKey, "oxidized_" + baseKey, "normalized_oxidized_" + baseKey + "_from_weathered_" + baseKey);
+            addOxidationTransition(recipesByOutput, baseKey, oxidationTargetFor(baseKey, "exposed_"), "normalized_exposed_" + baseKey + "_from_" + baseKey);
+            addOxidationTransition(recipesByOutput, oxidationTargetFor(baseKey, "exposed_"), oxidationTargetFor(baseKey, "weathered_"), "normalized_weathered_" + baseKey + "_from_exposed_" + baseKey);
+            addOxidationTransition(recipesByOutput, oxidationTargetFor(baseKey, "weathered_"), oxidationTargetFor(baseKey, "oxidized_"), "normalized_oxidized_" + baseKey + "_from_weathered_" + baseKey);
 
             addWaxingTransition(recipesByOutput, baseKey, "waxed_" + baseKey, "normalized_waxed_" + baseKey + "_from_" + baseKey);
-            addWaxingTransition(recipesByOutput, "exposed_" + baseKey, "waxed_exposed_" + baseKey, "normalized_waxed_exposed_" + baseKey + "_from_exposed_" + baseKey);
-            addWaxingTransition(recipesByOutput, "weathered_" + baseKey, "waxed_weathered_" + baseKey, "normalized_waxed_weathered_" + baseKey + "_from_weathered_" + baseKey);
-            addWaxingTransition(recipesByOutput, "oxidized_" + baseKey, "waxed_oxidized_" + baseKey, "normalized_waxed_oxidized_" + baseKey + "_from_oxidized_" + baseKey);
+            addWaxingTransition(recipesByOutput, oxidationTargetFor(baseKey, "exposed_"), "waxed_" + oxidationTargetFor(baseKey, "exposed_"), "normalized_waxed_exposed_" + baseKey + "_from_exposed_" + baseKey);
+            addWaxingTransition(recipesByOutput, oxidationTargetFor(baseKey, "weathered_"), "waxed_" + oxidationTargetFor(baseKey, "weathered_"), "normalized_waxed_weathered_" + baseKey + "_from_weathered_" + baseKey);
+            addWaxingTransition(recipesByOutput, oxidationTargetFor(baseKey, "oxidized_"), "waxed_" + oxidationTargetFor(baseKey, "oxidized_"), "normalized_waxed_oxidized_" + baseKey + "_from_oxidized_" + baseKey);
         }
+    }
+
+    private static String oxidationTargetFor(final String baseKey, final String prefix) {
+        if ("copper_block".equals(baseKey)) {
+            return prefix.equals("exposed_") ? "exposed_copper"
+                : prefix.equals("weathered_") ? "weathered_copper"
+                : "oxidized_copper";
+        }
+        return prefix + baseKey;
     }
 
     private static void addOxidationTransition(

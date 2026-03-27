@@ -2,7 +2,6 @@ package com.splatage.wild_economy.catalog.recipe;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -10,7 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import org.bukkit.Bukkit;
 import org.bukkit.Keyed;
 import org.bukkit.Material;
@@ -27,21 +25,10 @@ public final class BukkitRecipeGraphBuilder {
     private static final int MAX_COMBINATIONS_PER_RECIPE = 144;
     private static final int MAX_DROPPED_RECIPE_LOG_LINES = 25;
 
-    private static final Set<String> TARGET_DIAGNOSTIC_OUTPUTS = Set.of(
-        "clock",
-        "compass",
-        "carrot_on_a_stick",
-        "copper_axe",
-        "copper_pickaxe",
-        "crossbow"
-    );
-
     private final List<DroppedRecipeExpansion> droppedRecipeExpansions = new ArrayList<>();
-    private final Map<String, List<String>> extractionDiagnostics = new LinkedHashMap<>();
 
     public RecipeGraph build() {
         this.droppedRecipeExpansions.clear();
-        this.extractionDiagnostics.clear();
 
         final Map<String, List<RecipeDefinition>> recipesByOutput = new LinkedHashMap<>();
         final Iterator<Recipe> iterator = Bukkit.getServer().recipeIterator();
@@ -54,22 +41,17 @@ public final class BukkitRecipeGraphBuilder {
             }
 
             final String outputKey = this.normalizeMaterialKey(result.getType());
-            this.recordDiagnostic(outputKey, "saw recipe class=" + recipe.getClass().getName());
-
             final int outputAmount = Math.max(1, result.getAmount());
             final List<RecipeDefinition> extracted = this.extractRecipeDefinitions(recipe, outputKey, outputAmount);
             if (extracted.isEmpty()) {
-                this.recordDiagnostic(outputKey, "extraction returned empty");
                 continue;
             }
 
-            this.recordDiagnostic(outputKey, "extracted definitions=" + extracted.size());
             recipesByOutput.computeIfAbsent(outputKey, ignored -> new ArrayList<>()).addAll(extracted);
         }
 
         RecipeGraphFallbacks.apply(recipesByOutput);
         this.logDroppedRecipeExpansions();
-        this.logTargetDiagnostics(recipesByOutput);
 
         final Map<String, List<RecipeDefinition>> frozen = new LinkedHashMap<>();
         for (final Map.Entry<String, List<RecipeDefinition>> entry : recipesByOutput.entrySet()) {
@@ -85,15 +67,12 @@ public final class BukkitRecipeGraphBuilder {
         final int outputAmount
     ) {
         if (recipe instanceof ShapedRecipe shapedRecipe) {
-            this.recordDiagnostic(outputKey, "using shaped extraction");
             return this.extractShapedRecipes(shapedRecipe, outputKey, outputAmount, this.describeRecipeType(recipe, "shaped"));
         }
         if (recipe instanceof ShapelessRecipe shapelessRecipe) {
-            this.recordDiagnostic(outputKey, "using shapeless extraction");
             return this.extractShapelessRecipes(shapelessRecipe, outputKey, outputAmount, this.describeRecipeType(recipe, "shapeless"));
         }
         if (recipe instanceof StonecuttingRecipe stonecuttingRecipe) {
-            this.recordDiagnostic(outputKey, "using stonecutting extraction");
             return this.extractSingleInputRecipe(
                 outputKey,
                 outputAmount,
@@ -102,7 +81,6 @@ public final class BukkitRecipeGraphBuilder {
             );
         }
         if (recipe instanceof CookingRecipe<?> cookingRecipe) {
-            this.recordDiagnostic(outputKey, "using cooking extraction");
             return this.extractSingleInputRecipe(
                 outputKey,
                 outputAmount,
@@ -113,17 +91,14 @@ public final class BukkitRecipeGraphBuilder {
 
         final List<RecipeDefinition> smithingLike = this.extractSmithingLikeRecipeByReflection(recipe, outputKey, outputAmount);
         if (!smithingLike.isEmpty()) {
-            this.recordDiagnostic(outputKey, "using reflected smithing-like extraction");
             return smithingLike;
         }
 
         final List<RecipeDefinition> reflectedSingleInput = this.extractSingleInputRecipeByReflection(recipe, outputKey, outputAmount);
         if (!reflectedSingleInput.isEmpty()) {
-            this.recordDiagnostic(outputKey, "using reflected single-input extraction");
             return reflectedSingleInput;
         }
 
-        this.recordDiagnostic(outputKey, "no extraction path matched");
         return Collections.emptyList();
     }
 
@@ -157,16 +132,8 @@ public final class BukkitRecipeGraphBuilder {
 
                 if (options.isEmpty()) {
                     if (choiceValue == null && ingredientValue == null) {
-                        this.recordDiagnostic(outputKey, "shaped extraction: treating key '" + key + "' as empty slot");
                         continue;
                     }
-
-                    this.recordDiagnostic(outputKey, "shaped extraction failed: empty options for key '" + key + "'");
-                    this.recordDiagnostic(outputKey, "shape=" + Arrays.toString(recipe.getShape()));
-                    this.recordDiagnostic(outputKey, "choiceMap keys=" + choiceMap.keySet());
-                    this.recordDiagnostic(outputKey, "ingredientMap keys=" + ingredientMap.keySet());
-                    this.recordDiagnostic(outputKey, "choiceMap[" + key + "]=" + this.describeDebugObject(choiceValue));
-                    this.recordDiagnostic(outputKey, "ingredientMap[" + key + "]=" + this.describeDebugObject(ingredientValue));
                     return Collections.emptyList();
                 }
 
@@ -197,7 +164,6 @@ public final class BukkitRecipeGraphBuilder {
                 options = this.resolveChoiceOptions(ingredientList.get(i));
             }
             if (options.isEmpty()) {
-                this.recordDiagnostic(outputKey, "shapeless extraction failed: empty options at slot " + i);
                 return Collections.emptyList();
             }
             slotOptions.add(options);
@@ -214,7 +180,6 @@ public final class BukkitRecipeGraphBuilder {
     ) {
         final List<String> options = this.resolveChoiceOptions(inputChoice);
         if (options.isEmpty()) {
-            this.recordDiagnostic(outputKey, "single-input extraction failed: empty options");
             return Collections.emptyList();
         }
 
@@ -248,7 +213,6 @@ public final class BukkitRecipeGraphBuilder {
         final Object input = this.invokeNoArg(recipe, "getInput");
         final List<String> options = this.resolveChoiceOptions(input);
         if (options.isEmpty()) {
-            this.recordDiagnostic(outputKey, "reflected single-input extraction failed: empty options");
             return Collections.emptyList();
         }
 
@@ -275,7 +239,6 @@ public final class BukkitRecipeGraphBuilder {
         if (baseChoice != null) {
             final List<String> baseOptions = this.resolveChoiceOptions(baseChoice);
             if (baseOptions.isEmpty()) {
-                this.recordDiagnostic(outputKey, "smithing-like extraction failed: empty base options");
                 return Collections.emptyList();
             }
             slotOptions.add(baseOptions);
@@ -285,7 +248,6 @@ public final class BukkitRecipeGraphBuilder {
         if (additionChoice != null) {
             final List<String> additionOptions = this.resolveChoiceOptions(additionChoice);
             if (additionOptions.isEmpty()) {
-                this.recordDiagnostic(outputKey, "smithing-like extraction failed: empty addition options");
                 return Collections.emptyList();
             }
             slotOptions.add(additionOptions);
@@ -295,7 +257,6 @@ public final class BukkitRecipeGraphBuilder {
         if (templateChoice != null) {
             final List<String> templateOptions = this.resolveChoiceOptions(templateChoice);
             if (templateOptions.isEmpty()) {
-                this.recordDiagnostic(outputKey, "smithing-like extraction failed: empty template options");
                 return Collections.emptyList();
             }
             slotOptions.add(templateOptions);
@@ -413,34 +374,6 @@ public final class BukkitRecipeGraphBuilder {
         return material.name().toLowerCase(Locale.ROOT);
     }
 
-    private String describeDebugObject(final Object value) {
-        if (value == null) {
-            return "null";
-        }
-
-        if (value instanceof RecipeChoice.MaterialChoice materialChoice) {
-            return value.getClass().getName() + "{choices=" + materialChoice.getChoices() + "}";
-        }
-
-        if (value instanceof RecipeChoice.ExactChoice exactChoice) {
-            final List<String> renderedChoices = new ArrayList<>();
-            for (final ItemStack itemStack : exactChoice.getChoices()) {
-                if (itemStack == null) {
-                    renderedChoices.add("null");
-                } else {
-                    renderedChoices.add(itemStack.getType() + "x" + itemStack.getAmount());
-                }
-            }
-            return value.getClass().getName() + "{choices=" + renderedChoices + "}";
-        }
-
-        if (value instanceof ItemStack itemStack) {
-            return value.getClass().getName() + "{type=" + itemStack.getType() + ", amount=" + itemStack.getAmount() + "}";
-        }
-
-        return value.getClass().getName() + "{value=" + value + "}";
-    }
-
     private List<RecipeDefinition> expandRecipes(
         final String outputKey,
         final int outputAmount,
@@ -462,11 +395,6 @@ public final class BukkitRecipeGraphBuilder {
                     combinations,
                     groupedOptions.stream().map(grouped -> grouped.options().size()).toList()
                 ));
-                this.recordDiagnostic(
-                    outputKey,
-                    "dropped by combination cap; combinations=" + combinations
-                        + ", option-sizes=" + groupedOptions.stream().map(grouped -> grouped.options().size()).toList()
-                );
                 return Collections.emptyList();
             }
         }
@@ -570,33 +498,6 @@ public final class BukkitRecipeGraphBuilder {
         if (this.droppedRecipeExpansions.size() > MAX_DROPPED_RECIPE_LOG_LINES) {
             Bukkit.getLogger().warning("[wild_economy] Additional dropped recipe expansions omitted from log: "
                 + (this.droppedRecipeExpansions.size() - MAX_DROPPED_RECIPE_LOG_LINES));
-        }
-    }
-
-    private void recordDiagnostic(final String outputKey, final String message) {
-        if (!TARGET_DIAGNOSTIC_OUTPUTS.contains(outputKey)) {
-            return;
-        }
-        this.extractionDiagnostics.computeIfAbsent(outputKey, ignored -> new ArrayList<>()).add(message);
-    }
-
-    private void logTargetDiagnostics(final Map<String, List<RecipeDefinition>> recipesByOutput) {
-        for (final String outputKey : TARGET_DIAGNOSTIC_OUTPUTS) {
-            final List<String> messages = this.extractionDiagnostics.get(outputKey);
-            if (messages == null || messages.isEmpty()) {
-                Bukkit.getLogger().info("[wild_economy] Recipe extraction diagnostic for '" + outputKey
-                    + "': no recipe activity recorded.");
-            } else {
-                for (final String message : messages) {
-                    Bukkit.getLogger().info("[wild_economy] Recipe extraction diagnostic for '" + outputKey
-                        + "': " + message);
-                }
-            }
-
-            final List<RecipeDefinition> definitions = recipesByOutput.get(outputKey);
-            final int count = definitions == null ? 0 : definitions.size();
-            Bukkit.getLogger().info("[wild_economy] Recipe extraction diagnostic for '" + outputKey
-                + "': final definitions in graph=" + count);
         }
     }
 
