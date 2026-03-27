@@ -1,21 +1,21 @@
 eco-envelopes:
   exchange_default:
-    buy-price-at-min-stock-multiplier: 1.5
+    buy-price-at-min-stock-multiplier: 1.2
     buy-price-at-max-stock-multiplier: 1.0
     sell-price-at-min-stock-multiplier: 1.0
     sell-price-at-max-stock-multiplier: 0.5
 
   high_volume_bulk:
-    buy-price-at-min-stock-multiplier: 1.5
+    buy-price-at-min-stock-multiplier: 1.2
     buy-price-at-max-stock-multiplier: 1.0
     sell-price-at-min-stock-multiplier: 1.0
     sell-price-at-max-stock-multiplier: 0.2
 
   ore_precious:
-    buy-price-at-min-stock-multiplier: 1.5
+    buy-price-at-min-stock-multiplier: 1.2
     buy-price-at-max-stock-multiplier: 1.0
     sell-price-at-min-stock-multiplier: 1.0
-    sell-price-at-max-stock-multiplier: 0.75
+    sell-price-at-max-stock-multiplier: 0.9
 
   sell_only_cleanup:
     buy-price-at-min-stock-multiplier: 0.00
@@ -24,28 +24,28 @@ eco-envelopes:
     sell-price-at-max-stock-multiplier: 1.0
 
   world_damage_unlimited_buy:
-    buy-price-at-min-stock-multiplier: 1.5
-    buy-price-at-max-stock-multiplier: 1.5
+    buy-price-at-min-stock-multiplier: 1.2
+    buy-price-at-max-stock-multiplier: 1.2
     sell-price-at-min-stock-multiplier: 1.0
     sell-price-at-max-stock-multiplier: 1.0
 
   farm_bulk_aggressive:
-    buy-price-at-min-stock-multiplier: 1.5
+    buy-price-at-min-stock-multiplier: 1.2
     buy-price-at-max-stock-multiplier: 0.5
     sell-price-at-min-stock-multiplier: 1.0
-    sell-price-at-max-stock-multiplier: 0.15
+    sell-price-at-max-stock-multiplier: 0.2
 
   progression_guarded:
-    buy-price-at-min-stock-multiplier: 1.5
-    buy-price-at-max-stock-multiplier: 1.5
-    sell-price-at-min-stock-multiplier: 1.0
-    sell-price-at-max-stock-multiplier: 0.9
+    buy-price-at-min-stock-multiplier: 1.2
+    buy-price-at-max-stock-multiplier: 1.1
+    sell-price-at-min-stock-multiplier: 1.1
+    sell-price-at-max-stock-multiplier: 1.0
 
   loot_prestige:
     buy-price-at-min-stock-multiplier: 1.2
     buy-price-at-max-stock-multiplier: 1.0
-    sell-price-at-min-stock-multiplier: 1.0
-    sell-price-at-max-stock-multiplier: 0.2
+    sell-price-at-min-stock-multiplier: 1.1
+    sell-price-at-max-stock-multiplier: 0.9
 
   disabled_placeholder:
     buy-price-at-min-stock-multiplier: 0.00
