@@ -314,7 +314,7 @@ public final class EconomyServiceImpl implements EconomyService {
     private MoneyAmount loadBalanceLocked(final UUID playerId, final boolean forceRefresh) {
         final long now = this.now();
         final BalanceCache.CachedBalance cachedBalance = this.balanceCache.get(playerId).orElse(null);
-        if (cachedBalance != null && !forceRefresh && !this.isStale(cachedBalance, now)) {
+        if (cachedBalance != null && !forceRefresh) {
             return cachedBalance.balance();
         }
 
