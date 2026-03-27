@@ -34,8 +34,21 @@ public final class StockTurnoverServiceImpl implements StockTurnoverService {
                 continue;
             }
 
+            final long currentStock = this.stockService.getSnapshot(entry.itemKey()).stockCount();
+            final long lowStockThreshold = Math.max(0L, entry.eco().minStockInclusive());
+
+            if (currentStock <= lowStockThreshold) {
+                continue;
+            }
+
+            final long maxRemovable = currentStock - lowStockThreshold;
             final int requestedRemoval = (int) Math.min(Integer.MAX_VALUE, turnover);
-            final int actualRemoved = this.stockService.consumeUpTo(entry.itemKey(), requestedRemoval);
+            final int cappedRemoval = (int) Math.min((long) requestedRemoval, maxRemovable);
+            if (cappedRemoval <= 0) {
+                continue;
+            }
+
+            final int actualRemoved = this.stockService.consumeUpTo(entry.itemKey(), cappedRemoval);
             if (actualRemoved <= 0) {
                 continue;
             }
