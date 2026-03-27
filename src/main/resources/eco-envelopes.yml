@@ -1,51 +1,51 @@
 eco-envelopes:
   exchange_default:
-    buy-price-at-min-stock-multiplier: 1.50
-    buy-price-at-max-stock-multiplier: 1.50
-    sell-price-at-min-stock-multiplier: 1.00
-    sell-price-at-max-stock-multiplier: 0.20
+    buy-price-at-min-stock-multiplier: 150.00
+    buy-price-at-max-stock-multiplier: 100.00
+    sell-price-at-min-stock-multiplier: 100.00
+    sell-price-at-max-stock-multiplier: 50.00
 
   high_volume_bulk:
-    buy-price-at-min-stock-multiplier: 1.60
-    buy-price-at-max-stock-multiplier: 1.60
-    sell-price-at-min-stock-multiplier: 1.00
-    sell-price-at-max-stock-multiplier: 0.15
+    buy-price-at-min-stock-multiplier: 150.00
+    buy-price-at-max-stock-multiplier: 100.00
+    sell-price-at-min-stock-multiplier: 100.00
+    sell-price-at-max-stock-multiplier: 20.00
 
   ore_precious:
-    buy-price-at-min-stock-multiplier: 1.35
-    buy-price-at-max-stock-multiplier: 1.35
-    sell-price-at-min-stock-multiplier: 0.90
-    sell-price-at-max-stock-multiplier: 0.225
+    buy-price-at-min-stock-multiplier: 150.00
+    buy-price-at-max-stock-multiplier: 100.00
+    sell-price-at-min-stock-multiplier: 100.00
+    sell-price-at-max-stock-multiplier: 75.00
 
   sell_only_cleanup:
     buy-price-at-min-stock-multiplier: 0.00
     buy-price-at-max-stock-multiplier: 0.00
-    sell-price-at-min-stock-multiplier: 0.45
-    sell-price-at-max-stock-multiplier: 0.45
+    sell-price-at-min-stock-multiplier: 100.00
+    sell-price-at-max-stock-multiplier: 100.00
 
   world_damage_unlimited_buy:
-    buy-price-at-min-stock-multiplier: 1.20
-    buy-price-at-max-stock-multiplier: 1.20
-    sell-price-at-min-stock-multiplier: 1.00
-    sell-price-at-max-stock-multiplier: 1.00
+    buy-price-at-min-stock-multiplier: 150.00
+    buy-price-at-max-stock-multiplier: 150.00
+    sell-price-at-min-stock-multiplier: 100.00
+    sell-price-at-max-stock-multiplier: 100.00
 
   farm_bulk_aggressive:
-    buy-price-at-min-stock-multiplier: 1.60
-    buy-price-at-max-stock-multiplier: 1.60
-    sell-price-at-min-stock-multiplier: 0.90
-    sell-price-at-max-stock-multiplier: 0.08
+    buy-price-at-min-stock-multiplier: 150.00
+    buy-price-at-max-stock-multiplier: 50.00
+    sell-price-at-min-stock-multiplier: 100.00
+    sell-price-at-max-stock-multiplier: 15.00
 
   progression_guarded:
-    buy-price-at-min-stock-multiplier: 2.25
-    buy-price-at-max-stock-multiplier: 2.25
-    sell-price-at-min-stock-multiplier: 0.80
-    sell-price-at-max-stock-multiplier: 0.05
+    buy-price-at-min-stock-multiplier: 150.00
+    buy-price-at-max-stock-multiplier: 150.00
+    sell-price-at-min-stock-multiplier: 100.00
+    sell-price-at-max-stock-multiplier: 90.00
 
   loot_prestige:
-    buy-price-at-min-stock-multiplier: 2.75
-    buy-price-at-max-stock-multiplier: 2.75
-    sell-price-at-min-stock-multiplier: 0.90
-    sell-price-at-max-stock-multiplier: 0.10
+    buy-price-at-min-stock-multiplier: 120.00
+    buy-price-at-max-stock-multiplier: 100.00
+    sell-price-at-min-stock-multiplier: 100.00
+    sell-price-at-max-stock-multiplier: 20.00
 
   disabled_placeholder:
     buy-price-at-min-stock-multiplier: 0.00
