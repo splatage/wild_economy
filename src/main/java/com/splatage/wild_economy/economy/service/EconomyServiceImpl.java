@@ -150,6 +150,11 @@ public final class EconomyServiceImpl implements EconomyService {
             return EconomyMutationResult.failure("Withdraw amount must be positive", this.getBalance(playerId));
         }
 
+        final BalanceCache.CachedBalance cachedBalance = this.balanceCache.get(playerId).orElse(null);
+        if (cachedBalance != null && cachedBalance.balance().minorUnits() < amount.minorUnits()) {
+            return EconomyMutationResult.failure("Insufficient funds", cachedBalance.balance());
+        }
+
         final Object lock = this.lockFor(playerId);
         synchronized (lock) {
             final long now = this.now();
@@ -240,6 +245,14 @@ public final class EconomyServiceImpl implements EconomyService {
                     this.getBalance(senderId),
                     this.getBalance(recipientId)
             );
+        }
+
+        final BalanceCache.CachedBalance cachedSenderBalance = this.balanceCache.get(senderId).orElse(null);
+        if (cachedSenderBalance != null && cachedSenderBalance.balance().minorUnits() < amount.minorUnits()) {
+            final MoneyAmount recipientBalance = this.balanceCache.get(recipientId)
+                    .map(BalanceCache.CachedBalance::balance)
+                    .orElseGet(() -> this.getBalance(recipientId));
+            return EconomyTransferResult.failure("Insufficient funds", cachedSenderBalance.balance(), recipientBalance);
         }
 
         final UUID first = this.order(senderId, recipientId) <= 0 ? senderId : recipientId;
