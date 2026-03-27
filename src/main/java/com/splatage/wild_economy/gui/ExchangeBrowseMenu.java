@@ -1,10 +1,9 @@
 package com.splatage.wild_economy.gui;
 
-import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
-import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.service.ExchangeCatalogView;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
+import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
 import java.util.List;
 import java.util.Objects;
 import org.bukkit.Material;
@@ -18,14 +17,17 @@ public final class ExchangeBrowseMenu {
 
     private final ExchangeService exchangeService;
     private final PlayerInfoItemFactory playerInfoItemFactory;
+    private final LayoutBlueprint layoutBlueprint;
     private ShopMenuRouter shopMenuRouter;
 
     public ExchangeBrowseMenu(
         final ExchangeService exchangeService,
-        final PlayerInfoItemFactory playerInfoItemFactory
+        final PlayerInfoItemFactory playerInfoItemFactory,
+        final LayoutBlueprint layoutBlueprint
     ) {
         this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
+        this.layoutBlueprint = Objects.requireNonNull(layoutBlueprint, "layoutBlueprint");
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -34,14 +36,14 @@ public final class ExchangeBrowseMenu {
 
     public void open(
         final Player player,
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory,
+        final String layoutGroupKey,
+        final String layoutChildKey,
         final int page,
         final boolean viaSubcategory
     ) {
-        final ShopMenuHolder holder = ShopMenuHolder.browse(category, generatedCategory, page, viaSubcategory);
-        final Inventory inventory = holder.createInventory(54, this.title(category, generatedCategory));
-        final List<ExchangeCatalogView> entries = this.exchangeService.browseCategory(category, generatedCategory, page, 45);
+        final ShopMenuHolder holder = ShopMenuHolder.browse(layoutGroupKey, layoutChildKey, page, viaSubcategory);
+        final Inventory inventory = holder.createInventory(54, this.title(layoutGroupKey, layoutChildKey));
+        final List<ExchangeCatalogView> entries = this.exchangeService.browseLayout(layoutGroupKey, layoutChildKey, page, 45);
 
         int slot = 0;
         for (final ExchangeCatalogView view : entries) {
@@ -62,8 +64,8 @@ public final class ExchangeBrowseMenu {
 
     public void handleClick(
         final InventoryClickEvent event,
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory,
+        final String layoutGroupKey,
+        final String layoutChildKey,
         final int page,
         final boolean viaSubcategory
     ) {
@@ -87,23 +89,30 @@ public final class ExchangeBrowseMenu {
         switch (slot) {
             case 45 -> {
                 if (viaSubcategory) {
-                    this.shopMenuRouter.openSubcategory(player, category);
+                    this.shopMenuRouter.openSubcategory(player, layoutGroupKey);
                 } else {
                     this.shopMenuRouter.openRoot(player);
                 }
             }
             case 49 -> player.closeInventory();
-            case 53 -> this.shopMenuRouter.openBrowse(player, category, generatedCategory, page + 1, viaSubcategory);
+            case 53 -> this.shopMenuRouter.openBrowse(player, layoutGroupKey, layoutChildKey, page + 1, viaSubcategory);
             default -> {
             }
         }
     }
 
-    private String title(final ItemCategory category, final GeneratedItemCategory generatedCategory) {
-        if (generatedCategory == null) {
-            return "Shop - " + category.displayName();
+    private String title(final String layoutGroupKey, final String layoutChildKey) {
+        final String groupLabel = this.layoutBlueprint.group(layoutGroupKey)
+            .map(group -> group.label())
+            .orElse(layoutGroupKey == null ? "Shop" : layoutGroupKey);
+        if (layoutChildKey == null || layoutChildKey.isBlank()) {
+            return "Shop - " + groupLabel;
         }
-        return "Shop - " + category.displayName() + " / " + generatedCategory.displayName();
+        final String childLabel = this.layoutBlueprint.group(layoutGroupKey)
+            .flatMap(group -> group.child(layoutChildKey))
+            .map(child -> child.label())
+            .orElse(layoutChildKey);
+        return "Shop - " + groupLabel + " / " + childLabel;
     }
 
     private ItemStack catalogItem(final ExchangeCatalogView view) {
@@ -144,4 +153,3 @@ public final class ExchangeBrowseMenu {
         return new ItemKey("minecraft:" + material.name().toLowerCase());
     }
 }
-

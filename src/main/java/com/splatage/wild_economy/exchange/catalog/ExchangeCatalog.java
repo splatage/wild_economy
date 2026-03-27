@@ -28,6 +28,8 @@ public final class ExchangeCatalog {
     private final Map<ItemCategory, List<ExchangeCatalogEntry>> entriesByCategory;
     private final Map<ItemCategory, Map<GeneratedItemCategory, List<ExchangeCatalogEntry>>> entriesByCategoryAndGeneratedCategory;
     private final Map<ItemCategory, List<GeneratedItemCategory>> generatedSubcategoriesByCategory;
+    private final Map<String, List<ExchangeCatalogEntry>> entriesByLayoutGroup;
+    private final Map<String, Map<String, List<ExchangeCatalogEntry>>> entriesByLayoutGroupAndChild;
 
     public ExchangeCatalog(final Map<ItemKey, ExchangeCatalogEntry> entries) {
         Objects.requireNonNull(entries, "entries");
@@ -41,6 +43,8 @@ public final class ExchangeCatalog {
         final Map<ItemCategory, List<ExchangeCatalogEntry>> categoryIndex = new EnumMap<>(ItemCategory.class);
         final Map<ItemCategory, Map<GeneratedItemCategory, List<ExchangeCatalogEntry>>> subcategoryIndex =
             new EnumMap<>(ItemCategory.class);
+        final Map<String, List<ExchangeCatalogEntry>> layoutGroupIndex = new LinkedHashMap<>();
+        final Map<String, Map<String, List<ExchangeCatalogEntry>>> layoutChildIndex = new LinkedHashMap<>();
 
         for (final ExchangeCatalogEntry entry : sortedEntries) {
             categoryIndex.computeIfAbsent(entry.category(), ignored -> new ArrayList<>()).add(entry);
@@ -51,11 +55,23 @@ public final class ExchangeCatalog {
                     .computeIfAbsent(entry.generatedCategory(), ignored -> new ArrayList<>())
                     .add(entry);
             }
+
+            if (entry.layoutGroupKey() != null && !entry.layoutGroupKey().isBlank()) {
+                layoutGroupIndex.computeIfAbsent(entry.layoutGroupKey(), ignored -> new ArrayList<>()).add(entry);
+                if (entry.layoutChildKey() != null && !entry.layoutChildKey().isBlank()) {
+                    layoutChildIndex
+                        .computeIfAbsent(entry.layoutGroupKey(), ignored -> new LinkedHashMap<>())
+                        .computeIfAbsent(entry.layoutChildKey(), ignored -> new ArrayList<>())
+                        .add(entry);
+                }
+            }
         }
 
         this.entriesByCategory = freezeCategoryIndex(categoryIndex);
         this.entriesByCategoryAndGeneratedCategory = freezeSubcategoryIndex(subcategoryIndex);
         this.generatedSubcategoriesByCategory = buildGeneratedSubcategoryIndex(this.entriesByCategoryAndGeneratedCategory);
+        this.entriesByLayoutGroup = freezeLayoutGroupIndex(layoutGroupIndex);
+        this.entriesByLayoutGroupAndChild = freezeLayoutChildIndex(layoutChildIndex);
     }
 
     public Optional<ExchangeCatalogEntry> get(final ItemKey itemKey) {
@@ -89,6 +105,24 @@ public final class ExchangeCatalog {
 
     public List<GeneratedItemCategory> generatedSubcategories(final ItemCategory category) {
         return this.generatedSubcategoriesByCategory.getOrDefault(category, List.of());
+    }
+
+    public List<ExchangeCatalogEntry> byLayoutGroup(final String layoutGroupKey) {
+        if (layoutGroupKey == null || layoutGroupKey.isBlank()) {
+            return List.of();
+        }
+        return this.entriesByLayoutGroup.getOrDefault(layoutGroupKey, List.of());
+    }
+
+    public List<ExchangeCatalogEntry> byLayoutGroupAndChild(final String layoutGroupKey, final String layoutChildKey) {
+        if (layoutChildKey == null || layoutChildKey.isBlank()) {
+            return this.byLayoutGroup(layoutGroupKey);
+        }
+        final Map<String, List<ExchangeCatalogEntry>> byChild = this.entriesByLayoutGroupAndChild.get(layoutGroupKey);
+        if (byChild == null) {
+            return List.of();
+        }
+        return byChild.getOrDefault(layoutChildKey, List.of());
     }
 
     private static int compareEntriesByReverseItemKeySegments(
@@ -196,5 +230,29 @@ public final class ExchangeCatalog {
         }
 
         return Collections.unmodifiableMap(new LinkedHashMap<>(result));
+    }
+
+    private static Map<String, List<ExchangeCatalogEntry>> freezeLayoutGroupIndex(
+        final Map<String, List<ExchangeCatalogEntry>> layoutGroupIndex
+    ) {
+        final Map<String, List<ExchangeCatalogEntry>> frozen = new LinkedHashMap<>();
+        for (final Map.Entry<String, List<ExchangeCatalogEntry>> entry : layoutGroupIndex.entrySet()) {
+            frozen.put(entry.getKey(), List.copyOf(entry.getValue()));
+        }
+        return Collections.unmodifiableMap(frozen);
+    }
+
+    private static Map<String, Map<String, List<ExchangeCatalogEntry>>> freezeLayoutChildIndex(
+        final Map<String, Map<String, List<ExchangeCatalogEntry>>> layoutChildIndex
+    ) {
+        final Map<String, Map<String, List<ExchangeCatalogEntry>>> frozen = new LinkedHashMap<>();
+        for (final Map.Entry<String, Map<String, List<ExchangeCatalogEntry>>> groupEntry : layoutChildIndex.entrySet()) {
+            final Map<String, List<ExchangeCatalogEntry>> innerFrozen = new LinkedHashMap<>();
+            for (final Map.Entry<String, List<ExchangeCatalogEntry>> childEntry : groupEntry.getValue().entrySet()) {
+                innerFrozen.put(childEntry.getKey(), List.copyOf(childEntry.getValue()));
+            }
+            frozen.put(groupEntry.getKey(), Collections.unmodifiableMap(innerFrozen));
+        }
+        return Collections.unmodifiableMap(frozen);
     }
 }

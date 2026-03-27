@@ -1,8 +1,6 @@
 package com.splatage.wild_economy.exchange.service;
 
 import com.splatage.wild_economy.exchange.domain.BuyResult;
-import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
-import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.SellAllResult;
 import com.splatage.wild_economy.exchange.domain.SellContainerResult;
@@ -23,16 +21,16 @@ public interface ExchangeService {
 
     BuyResult buyQuoted(UUID playerId, ItemKey itemKey, int amount, BigDecimal quotedUnitPrice);
 
-    List<ExchangeCatalogView> browseCategory(
-        ItemCategory category,
-        GeneratedItemCategory generatedCategory,
+    List<ExchangeCatalogView> browseLayout(
+        String layoutGroupKey,
+        String layoutChildKey,
         int page,
         int pageSize
     );
 
-    int countVisibleItems(ItemCategory category, GeneratedItemCategory generatedCategory);
+    int countVisibleItems(String layoutGroupKey, String layoutChildKey);
 
-    List<GeneratedItemCategory> listVisibleSubcategories(ItemCategory category);
+    List<String> listVisibleChildKeys(String layoutGroupKey);
 
     ExchangeItemView getItemView(ItemKey itemKey);
 }

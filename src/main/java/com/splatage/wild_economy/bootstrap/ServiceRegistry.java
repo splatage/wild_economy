@@ -105,6 +105,10 @@ import com.splatage.wild_economy.gui.admin.AdminOverrideEditMenu;
 import com.splatage.wild_economy.gui.admin.AdminReviewBucketMenu;
 import com.splatage.wild_economy.gui.admin.AdminRootMenu;
 import com.splatage.wild_economy.gui.admin.AdminRuleImpactMenu;
+import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
+import com.splatage.wild_economy.gui.layout.LayoutBlueprintLoader;
+import com.splatage.wild_economy.gui.layout.LayoutIconResolver;
+import com.splatage.wild_economy.gui.layout.LayoutPlacementResolver;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
 import com.splatage.wild_economy.persistence.MigrationDomain;
 import com.splatage.wild_economy.persistence.MigrationManager;
@@ -129,6 +133,7 @@ public final class ServiceRegistry {
     private ExchangeItemsConfig exchangeItemsConfig;
     private DatabaseProvider databaseProvider;
     private ExchangeCatalog exchangeCatalog;
+    private LayoutBlueprint layoutBlueprint;
     private ItemNormalizer itemNormalizer;
     private ItemValidationService itemValidationService;
     private ExchangeStockRepository exchangeStockRepository;
@@ -269,7 +274,15 @@ public final class ServiceRegistry {
             case MYSQL -> new MysqlExchangeTransactionRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
         }
 ;
-        final CatalogLoader catalogLoader = new CatalogLoader();
+        try {
+            this.layoutBlueprint = new LayoutBlueprintLoader().load(
+                    this.plugin.getDataFolder().toPath().resolve("layout.yml").toFile()
+            );
+        } catch (final java.io.IOException exception) {
+            throw new IllegalStateException("Failed to load layout.yml", exception);
+        }
+
+        final CatalogLoader catalogLoader = new CatalogLoader(new LayoutPlacementResolver(this.layoutBlueprint));
         this.exchangeCatalog = Objects.requireNonNull(
                 catalogLoader.load(this.exchangeItemsConfig),
                 "exchangeCatalog"
@@ -306,7 +319,7 @@ public final class ServiceRegistry {
         );
 
         this.stockTurnoverService = new StockTurnoverServiceImpl(this.exchangeCatalog, this.stockService, this.transactionLogService);
-        this.exchangeBrowseService = new ExchangeBrowseServiceImpl(this.exchangeCatalog, this.stockService);
+        this.exchangeBrowseService = new ExchangeBrowseServiceImpl(this.exchangeCatalog, this.stockService, this.layoutBlueprint);
 
         final ExchangeBuyService rawBuyService = new ExchangeBuyServiceImpl(
                 this.exchangeCatalog,
@@ -332,9 +345,10 @@ public final class ServiceRegistry {
         this.exchangeService = new ExchangeServiceImpl(this.exchangeBrowseService, this.exchangeBuyService, this.exchangeSellService);
         this.foliaContainerSellCoordinator = new FoliaContainerSellCoordinator(this.platformExecutor, this.exchangeService, rawSellService);
 
-        final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService, playerInfoItemFactory);
-        final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService, playerInfoItemFactory);
-        final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService, playerInfoItemFactory);
+        final LayoutIconResolver layoutIconResolver = new LayoutIconResolver();
+        final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService, playerInfoItemFactory, this.layoutBlueprint, layoutIconResolver);
+        final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService, playerInfoItemFactory, this.layoutBlueprint, layoutIconResolver);
+        final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService, playerInfoItemFactory, this.layoutBlueprint);
         final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService, this.platformExecutor, playerInfoItemFactory);
         final StoreRootMenu storeRootMenu = new StoreRootMenu(this.storeService, playerInfoItemFactory);
         final StoreCategoryMenu storeCategoryMenu = new StoreCategoryMenu(this.storeService, playerInfoItemFactory);

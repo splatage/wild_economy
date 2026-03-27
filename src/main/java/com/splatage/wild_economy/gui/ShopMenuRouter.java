@@ -1,7 +1,5 @@
 package com.splatage.wild_economy.gui;
 
-import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
-import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.util.Objects;
@@ -50,28 +48,27 @@ public final class ShopMenuRouter {
         this.platformExecutor.runOnPlayer(player, () -> this.exchangeRootMenu.open(player));
     }
 
-    public void openSubcategory(final Player player, final ItemCategory category) {
-        this.platformExecutor.runOnPlayer(player, () -> this.exchangeSubcategoryMenu.open(player, category));
+    public void openSubcategory(final Player player, final String layoutGroupKey) {
+        this.platformExecutor.runOnPlayer(player, () -> this.exchangeSubcategoryMenu.open(player, layoutGroupKey));
     }
 
     public void openBrowse(
         final Player player,
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory,
+        final String layoutGroupKey,
+        final String layoutChildKey,
         final int page,
         final boolean viaSubcategory
     ) {
         this.platformExecutor.runOnPlayer(
             player,
-            () -> this.exchangeBrowseMenu.open(player, category, generatedCategory, page, viaSubcategory)
+            () -> this.exchangeBrowseMenu.open(player, layoutGroupKey, layoutChildKey, page, viaSubcategory)
         );
     }
 
     public void openDetail(final Player player, final ItemKey itemKey) {
         final ShopMenuHolder previous = this.currentHolder(player);
-        final ItemCategory category = previous == null ? null : previous.currentCategory();
-        final GeneratedItemCategory generatedCategory =
-            previous == null ? null : previous.currentGeneratedCategory();
+        final String layoutGroupKey = previous == null ? null : previous.currentLayoutGroupKey();
+        final String layoutChildKey = previous == null ? null : previous.currentLayoutChildKey();
         final int page = previous == null ? 0 : previous.currentPage();
         final boolean viaSubcategory = previous != null && previous.viaSubcategory();
 
@@ -81,8 +78,8 @@ public final class ShopMenuRouter {
                 player,
                 itemKey,
                 1,
-                category,
-                generatedCategory,
+                layoutGroupKey,
+                layoutChildKey,
                 page,
                 viaSubcategory
             )
@@ -120,20 +117,20 @@ public final class ShopMenuRouter {
             case ROOT -> this.openRoot(player);
             case SUBCATEGORY -> this.openRoot(player);
             case BROWSE -> {
-                if (holder.viaSubcategory() && holder.currentCategory() != null) {
-                    this.openSubcategory(player, holder.currentCategory());
+                if (holder.viaSubcategory() && holder.currentLayoutGroupKey() != null) {
+                    this.openSubcategory(player, holder.currentLayoutGroupKey());
                 } else {
                     this.openRoot(player);
                 }
             }
             case DETAIL -> {
-                if (holder.currentCategory() == null) {
+                if (holder.currentLayoutGroupKey() == null) {
                     this.openRoot(player);
                 } else {
                     this.openBrowse(
                         player,
-                        holder.currentCategory(),
-                        holder.currentGeneratedCategory(),
+                        holder.currentLayoutGroupKey(),
+                        holder.currentLayoutChildKey(),
                         holder.currentPage(),
                         holder.viaSubcategory()
                     );

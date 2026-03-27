@@ -49,16 +49,16 @@ public final class ShopMenuListener implements Listener {
         switch (holder.viewType()) {
             case ROOT -> this.exchangeRootMenu.handleClick(event);
             case SUBCATEGORY -> {
-                if (holder.currentCategory() != null) {
-                    this.exchangeSubcategoryMenu.handleClick(event, holder.currentCategory());
+                if (holder.currentLayoutGroupKey() != null) {
+                    this.exchangeSubcategoryMenu.handleClick(event, holder.currentLayoutGroupKey());
                 }
             }
             case BROWSE -> {
-                if (holder.currentCategory() != null) {
+                if (holder.currentLayoutGroupKey() != null) {
                     this.exchangeBrowseMenu.handleClick(
                         event,
-                        holder.currentCategory(),
-                        holder.currentGeneratedCategory(),
+                        holder.currentLayoutGroupKey(),
+                        holder.currentLayoutChildKey(),
                         holder.currentPage(),
                         holder.viaSubcategory()
                     );

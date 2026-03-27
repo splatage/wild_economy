@@ -2,13 +2,13 @@ package com.splatage.wild_economy.exchange.service;
 
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalog;
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalogEntry;
-import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
-import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
 import com.splatage.wild_economy.exchange.domain.StockSnapshot;
 import com.splatage.wild_economy.exchange.domain.StockState;
 import com.splatage.wild_economy.exchange.stock.StockService;
+import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
+import com.splatage.wild_economy.gui.layout.LayoutChildDefinition;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -19,23 +19,26 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
 
     private final ExchangeCatalog exchangeCatalog;
     private final StockService stockService;
+    private final LayoutBlueprint layoutBlueprint;
 
     public ExchangeBrowseServiceImpl(
         final ExchangeCatalog exchangeCatalog,
-        final StockService stockService
+        final StockService stockService,
+        final LayoutBlueprint layoutBlueprint
     ) {
         this.exchangeCatalog = Objects.requireNonNull(exchangeCatalog, "exchangeCatalog");
         this.stockService = Objects.requireNonNull(stockService, "stockService");
+        this.layoutBlueprint = Objects.requireNonNull(layoutBlueprint, "layoutBlueprint");
     }
 
     @Override
-    public List<ExchangeCatalogView> browseCategory(
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory,
+    public List<ExchangeCatalogView> browseLayout(
+        final String layoutGroupKey,
+        final String layoutChildKey,
         final int page,
         final int pageSize
     ) {
-        final List<ExchangeCatalogEntry> indexedEntries = this.indexedEntries(category, generatedCategory);
+        final List<ExchangeCatalogEntry> indexedEntries = this.indexedEntries(layoutGroupKey, layoutChildKey);
         if (indexedEntries.isEmpty()) {
             return List.of();
         }
@@ -74,11 +77,11 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
 
     @Override
     public int countVisibleItems(
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory
+        final String layoutGroupKey,
+        final String layoutChildKey
     ) {
         int count = 0;
-        for (final ExchangeCatalogEntry entry : this.indexedEntries(category, generatedCategory)) {
+        for (final ExchangeCatalogEntry entry : this.indexedEntries(layoutGroupKey, layoutChildKey)) {
             final StockSnapshot snapshot = this.stockService.getSnapshot(entry.itemKey());
             if (this.isPurchasableNow(entry, snapshot)) {
                 count++;
@@ -88,19 +91,19 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
     }
 
     @Override
-    public List<GeneratedItemCategory> listVisibleSubcategories(final ItemCategory category) {
-        final List<GeneratedItemCategory> indexedSubcategories = this.exchangeCatalog.generatedSubcategories(category);
-        if (indexedSubcategories.isEmpty()) {
+    public List<String> listVisibleChildKeys(final String layoutGroupKey) {
+        final List<LayoutChildDefinition> children = this.layoutBlueprint.orderedChildren(layoutGroupKey);
+        if (children.isEmpty()) {
             return List.of();
         }
 
-        final List<GeneratedItemCategory> visibleSubcategories = new ArrayList<>();
-        for (final GeneratedItemCategory generatedCategory : indexedSubcategories) {
-            if (this.hasVisibleEntries(category, generatedCategory)) {
-                visibleSubcategories.add(generatedCategory);
+        final List<String> visibleChildren = new ArrayList<>();
+        for (final LayoutChildDefinition child : children) {
+            if (this.hasVisibleEntries(layoutGroupKey, child.key())) {
+                visibleChildren.add(child.key());
             }
         }
-        return List.copyOf(visibleSubcategories);
+        return List.copyOf(visibleChildren);
     }
 
     @Override
@@ -121,19 +124,19 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
     }
 
     private List<ExchangeCatalogEntry> indexedEntries(
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory
+        final String layoutGroupKey,
+        final String layoutChildKey
     ) {
-        return generatedCategory == null
-            ? this.exchangeCatalog.byCategory(category)
-            : this.exchangeCatalog.byCategoryAndGeneratedCategory(category, generatedCategory);
+        return layoutChildKey == null
+            ? this.exchangeCatalog.byLayoutGroup(layoutGroupKey)
+            : this.exchangeCatalog.byLayoutGroupAndChild(layoutGroupKey, layoutChildKey);
     }
 
     private boolean hasVisibleEntries(
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory
+        final String layoutGroupKey,
+        final String layoutChildKey
     ) {
-        for (final ExchangeCatalogEntry entry : this.exchangeCatalog.byCategoryAndGeneratedCategory(category, generatedCategory)) {
+        for (final ExchangeCatalogEntry entry : this.exchangeCatalog.byLayoutGroupAndChild(layoutGroupKey, layoutChildKey)) {
             final StockSnapshot snapshot = this.stockService.getSnapshot(entry.itemKey());
             if (this.isPurchasableNow(entry, snapshot)) {
                 return true;
@@ -154,6 +157,7 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
         }
         return snapshot.stockState() != StockState.OUT_OF_STOCK;
     }
+
     private BigDecimal resolveCurrentBuyPrice(
         final ExchangeCatalogEntry entry,
         final StockSnapshot snapshot

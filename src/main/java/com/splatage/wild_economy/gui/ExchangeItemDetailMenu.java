@@ -1,8 +1,6 @@
 package com.splatage.wild_economy.gui;
 
 import com.splatage.wild_economy.exchange.domain.BuyResult;
-import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
-import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.service.ExchangeItemView;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
@@ -47,8 +45,8 @@ public final class ExchangeItemDetailMenu {
         final Player player,
         final ItemKey itemKey,
         final int amount,
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory,
+        final String layoutGroupKey,
+        final String layoutChildKey,
         final int page,
         final boolean viaSubcategory
     ) {
@@ -57,8 +55,8 @@ public final class ExchangeItemDetailMenu {
         final long quotedAtMillis = System.currentTimeMillis();
 
         final ShopMenuHolder holder = ShopMenuHolder.detail(
-            category,
-            generatedCategory,
+            layoutGroupKey,
+            layoutChildKey,
             page,
             itemKey,
             viaSubcategory,
@@ -118,8 +116,8 @@ public final class ExchangeItemDetailMenu {
                 player,
                 itemKey,
                 1,
-                holder.currentCategory(),
-                holder.currentGeneratedCategory(),
+                holder.currentLayoutGroupKey(),
+                holder.currentLayoutChildKey(),
                 holder.currentPage(),
                 holder.viaSubcategory()
             );
@@ -141,8 +139,8 @@ public final class ExchangeItemDetailMenu {
                     player,
                     itemKey,
                     1,
-                    holder.currentCategory(),
-                    holder.currentGeneratedCategory(),
+                    holder.currentLayoutGroupKey(),
+                    holder.currentLayoutChildKey(),
                     holder.currentPage(),
                     holder.viaSubcategory()
                 );

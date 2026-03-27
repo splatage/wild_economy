@@ -1,16 +1,14 @@
 package com.splatage.wild_economy.exchange.service;
 
-import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
-import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import java.util.List;
 
 public interface ExchangeBrowseService {
-    List<ExchangeCatalogView> browseCategory(ItemCategory category, GeneratedItemCategory generatedCategory, int page, int pageSize);
+    List<ExchangeCatalogView> browseLayout(String layoutGroupKey, String layoutChildKey, int page, int pageSize);
 
-    int countVisibleItems(ItemCategory category, GeneratedItemCategory generatedCategory);
+    int countVisibleItems(String layoutGroupKey, String layoutChildKey);
 
-    List<GeneratedItemCategory> listVisibleSubcategories(ItemCategory category);
+    List<String> listVisibleChildKeys(String layoutGroupKey);
 
     ExchangeItemView getItemView(ItemKey itemKey);
 }

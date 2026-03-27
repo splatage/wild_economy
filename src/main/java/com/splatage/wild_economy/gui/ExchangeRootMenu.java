@@ -1,8 +1,10 @@
 package com.splatage.wild_economy.gui;
 
-import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
-import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
+import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
+import com.splatage.wild_economy.gui.layout.LayoutGroupDefinition;
+import com.splatage.wild_economy.gui.layout.LayoutIconResolver;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.bukkit.Material;
@@ -13,16 +15,24 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public final class ExchangeRootMenu {
+    private static final int[] GROUP_SLOTS = {10, 11, 12, 13, 14, 15, 16};
+
     private final PlayerInfoItemFactory playerInfoItemFactory;
     private final ExchangeService exchangeService;
+    private final LayoutBlueprint layoutBlueprint;
+    private final LayoutIconResolver layoutIconResolver;
     private ShopMenuRouter shopMenuRouter;
 
     public ExchangeRootMenu(
        final ExchangeService exchangeService,
-       final PlayerInfoItemFactory playerInfoItemFactory
+       final PlayerInfoItemFactory playerInfoItemFactory,
+       final LayoutBlueprint layoutBlueprint,
+       final LayoutIconResolver layoutIconResolver
     ) {
         this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
+        this.layoutBlueprint = Objects.requireNonNull(layoutBlueprint, "layoutBlueprint");
+        this.layoutIconResolver = Objects.requireNonNull(layoutIconResolver, "layoutIconResolver");
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -34,13 +44,16 @@ public final class ExchangeRootMenu {
         final Inventory inventory = holder.createInventory(27, "Shop");
 
         inventory.setItem(21, this.playerInfoItemFactory.create(player));
-        inventory.setItem(10, this.button(Material.BREAD, ItemCategory.FARMING_AND_FOOD.displayName()));
-        inventory.setItem(11, this.button(Material.IRON_PICKAXE, ItemCategory.MINING_AND_MINERALS.displayName()));
-        inventory.setItem(12, this.button(Material.BONE, ItemCategory.MOB_DROPS.displayName()));
-        inventory.setItem(13, this.button(Material.BRICKS, ItemCategory.BUILDING_MATERIALS.displayName()));
-        inventory.setItem(14, this.button(Material.REDSTONE, ItemCategory.REDSTONE_AND_UTILITY.displayName()));
-        inventory.setItem(15, this.button(Material.DIAMOND_SWORD, ItemCategory.COMBAT_AND_ADVENTURE.displayName()));
-        inventory.setItem(16, this.button(Material.CHEST, ItemCategory.MISC.displayName()));
+
+        final List<LayoutGroupDefinition> groups = this.visibleGroups();
+        for (int i = 0; i < groups.size() && i < GROUP_SLOTS.length; i++) {
+            final LayoutGroupDefinition group = groups.get(i);
+            inventory.setItem(
+                GROUP_SLOTS[i],
+                this.button(this.layoutIconResolver.resolveGroupIcon(group), group.label())
+            );
+        }
+
         inventory.setItem(22, this.button(Material.NETHER_STAR, "Store"));
         inventory.setItem(26, this.button(Material.BARRIER, "Close"));
 
@@ -53,14 +66,15 @@ public final class ExchangeRootMenu {
             return;
         }
 
+        final List<LayoutGroupDefinition> groups = this.visibleGroups();
+        for (int i = 0; i < groups.size() && i < GROUP_SLOTS.length; i++) {
+            if (event.getRawSlot() == GROUP_SLOTS[i]) {
+                this.openGroup(player, groups.get(i).key());
+                return;
+            }
+        }
+
         switch (event.getRawSlot()) {
-            case 10 -> this.openCategory(player, ItemCategory.FARMING_AND_FOOD);
-            case 11 -> this.openCategory(player, ItemCategory.MINING_AND_MINERALS);
-            case 12 -> this.openCategory(player, ItemCategory.MOB_DROPS);
-            case 13 -> this.openCategory(player, ItemCategory.BUILDING_MATERIALS);
-            case 14 -> this.openCategory(player, ItemCategory.REDSTONE_AND_UTILITY);
-            case 15 -> this.openCategory(player, ItemCategory.COMBAT_AND_ADVENTURE);
-            case 16 -> this.openCategory(player, ItemCategory.MISC);
             case 22 -> this.shopMenuRouter.openStoreRoot(player);
             case 26 -> player.closeInventory();
             default -> {
@@ -68,16 +82,26 @@ public final class ExchangeRootMenu {
         }
     }
 
-    private void openCategory(final Player player, final ItemCategory category) {
-        final int visibleCount = this.exchangeService.countVisibleItems(category, null);
-        final List<GeneratedItemCategory> subcategories = this.exchangeService.listVisibleSubcategories(category);
+    private void openGroup(final Player player, final String layoutGroupKey) {
+        final int visibleCount = this.exchangeService.countVisibleItems(layoutGroupKey, null);
+        final List<String> visibleChildren = this.exchangeService.listVisibleChildKeys(layoutGroupKey);
 
-        if (visibleCount > 45 && subcategories.size() > 1) {
-            this.shopMenuRouter.openSubcategory(player, category);
+        if (visibleCount > 45 && visibleChildren.size() > 1) {
+            this.shopMenuRouter.openSubcategory(player, layoutGroupKey);
             return;
         }
 
-        this.shopMenuRouter.openBrowse(player, category, null, 0, false);
+        this.shopMenuRouter.openBrowse(player, layoutGroupKey, null, 0, false);
+    }
+
+    private List<LayoutGroupDefinition> visibleGroups() {
+        final List<LayoutGroupDefinition> groups = new ArrayList<>();
+        for (final LayoutGroupDefinition group : this.layoutBlueprint.orderedGroups()) {
+            if (this.exchangeService.countVisibleItems(group.key(), null) > 0) {
+                groups.add(group);
+            }
+        }
+        return List.copyOf(groups);
     }
 
     private ItemStack button(final Material material, final String name) {

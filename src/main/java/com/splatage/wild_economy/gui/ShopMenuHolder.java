@@ -1,7 +1,5 @@
 package com.splatage.wild_economy.gui;
 
-import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
-import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import java.math.BigDecimal;
 import java.util.Objects;
@@ -23,8 +21,8 @@ public final class ShopMenuHolder implements InventoryHolder {
     }
 
     private final ViewType viewType;
-    private final ItemCategory currentCategory;
-    private final GeneratedItemCategory currentGeneratedCategory;
+    private final String currentLayoutGroupKey;
+    private final String currentLayoutChildKey;
     private final int currentPage;
     private final ItemKey currentItemKey;
     private final boolean viaSubcategory;
@@ -37,8 +35,8 @@ public final class ShopMenuHolder implements InventoryHolder {
 
     private ShopMenuHolder(
         final ViewType viewType,
-        final ItemCategory currentCategory,
-        final GeneratedItemCategory currentGeneratedCategory,
+        final String currentLayoutGroupKey,
+        final String currentLayoutChildKey,
         final int currentPage,
         final ItemKey currentItemKey,
         final boolean viaSubcategory,
@@ -48,8 +46,8 @@ public final class ShopMenuHolder implements InventoryHolder {
         final String currentStoreProductId
     ) {
         this.viewType = Objects.requireNonNull(viewType, "viewType");
-        this.currentCategory = currentCategory;
-        this.currentGeneratedCategory = currentGeneratedCategory;
+        this.currentLayoutGroupKey = currentLayoutGroupKey;
+        this.currentLayoutChildKey = currentLayoutChildKey;
         this.currentPage = currentPage;
         this.currentItemKey = currentItemKey;
         this.viaSubcategory = viaSubcategory;
@@ -63,10 +61,10 @@ public final class ShopMenuHolder implements InventoryHolder {
         return new ShopMenuHolder(ViewType.ROOT, null, null, 0, null, false, null, 0L, null, null);
     }
 
-    public static ShopMenuHolder subcategory(final ItemCategory category) {
+    public static ShopMenuHolder subcategory(final String layoutGroupKey) {
         return new ShopMenuHolder(
             ViewType.SUBCATEGORY,
-            Objects.requireNonNull(category, "category"),
+            Objects.requireNonNull(layoutGroupKey, "layoutGroupKey"),
             null,
             0,
             null,
@@ -79,15 +77,15 @@ public final class ShopMenuHolder implements InventoryHolder {
     }
 
     public static ShopMenuHolder browse(
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory,
+        final String layoutGroupKey,
+        final String layoutChildKey,
         final int page,
         final boolean viaSubcategory
     ) {
         return new ShopMenuHolder(
             ViewType.BROWSE,
-            Objects.requireNonNull(category, "category"),
-            generatedCategory,
+            Objects.requireNonNull(layoutGroupKey, "layoutGroupKey"),
+            layoutChildKey,
             page,
             null,
             viaSubcategory,
@@ -99,29 +97,29 @@ public final class ShopMenuHolder implements InventoryHolder {
     }
 
     public static ShopMenuHolder detail(
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory,
+        final String layoutGroupKey,
+        final String layoutChildKey,
         final int page,
         final ItemKey itemKey,
         final boolean viaSubcategory
     ) {
-        return detail(category, generatedCategory, page, itemKey, viaSubcategory, null, 0L);
+        return detail(layoutGroupKey, layoutChildKey, page, itemKey, viaSubcategory, null, 0L);
     }
 
     public static ShopMenuHolder detail(
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory,
+        final String layoutGroupKey,
+        final String layoutChildKey,
         final int page,
         final ItemKey itemKey,
         final boolean viaSubcategory,
         final BigDecimal quotedUnitPrice
     ) {
-        return detail(category, generatedCategory, page, itemKey, viaSubcategory, quotedUnitPrice, 0L);
+        return detail(layoutGroupKey, layoutChildKey, page, itemKey, viaSubcategory, quotedUnitPrice, 0L);
     }
 
     public static ShopMenuHolder detail(
-        final ItemCategory category,
-        final GeneratedItemCategory generatedCategory,
+        final String layoutGroupKey,
+        final String layoutChildKey,
         final int page,
         final ItemKey itemKey,
         final boolean viaSubcategory,
@@ -130,8 +128,8 @@ public final class ShopMenuHolder implements InventoryHolder {
     ) {
         return new ShopMenuHolder(
             ViewType.DETAIL,
-            category,
-            generatedCategory,
+            layoutGroupKey,
+            layoutChildKey,
             page,
             Objects.requireNonNull(itemKey, "itemKey"),
             viaSubcategory,
@@ -213,12 +211,12 @@ public final class ShopMenuHolder implements InventoryHolder {
         return this.viewType;
     }
 
-    public ItemCategory currentCategory() {
-        return this.currentCategory;
+    public String currentLayoutGroupKey() {
+        return this.currentLayoutGroupKey;
     }
 
-    public GeneratedItemCategory currentGeneratedCategory() {
-        return this.currentGeneratedCategory;
+    public String currentLayoutChildKey() {
+        return this.currentLayoutChildKey;
     }
 
     public int currentPage() {
