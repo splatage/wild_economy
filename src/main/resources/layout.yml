@@ -179,6 +179,13 @@ layout:
           - green_terracotta
           - red_terracotta
           - black_terracotta
+          - chiseled_*stone
+          - smooth_*stone
+          - polished_*stone
+          - cut_*stone
+          - '*_bricks'
+          - 'polished*e'
+
         WOOD:
           label: Wood
           note: Limited to shallow / first-level derivation
@@ -195,7 +202,12 @@ layout:
         CONTRUCTION:
           label: Contruction
           note: Deeper crafting-chain building outputs
+          icon: 'glass'
           item-key-patterns:
+          - chiseled_*
+          - smooth_*
+          - polished_*
+          - cut_*
           - '*_slab'
           - '*_stairs'
           - '*_wall'
@@ -203,17 +215,12 @@ layout:
           - '*_trapdoor'
           - '*_fence'
           - '*_fence_gate'
-          - '*_pane'
           - '*_bars'
           - '*_grate'
           - '*_bricks'
           - brick
           - bricks
           - '*_pillar'
-          - cut_*
-          - chiseled_*
-          - smooth_*
-          - polished_*
           - stone_bricks
           - deepslate_bricks
           - deepslate_tiles
@@ -227,6 +234,7 @@ layout:
           label: Other building
           note: Deeper crafting-chain building outputs
           item-key-patterns:
+          - '*_pane'
           - glass
           - tinted_glass
           - '*_concrete'
@@ -388,7 +396,7 @@ layout:
           - end_rod
           - candle
           - '*_candle'
-          - lantern
+          - '*lantern'
           - soul_lantern
           - torch
           - soul_torch
@@ -396,19 +404,37 @@ layout:
           - '*_head'
           - '*_skull'
           - dragon_head
+        SOUNDS:
+          label: Sound
+          icon: music_disc_blocks
+          item-key-patterns:
+          - music*
+          - disc*
+          - goat_horn_*
+          - goat_horn
+        STORAGE:
+          label: Storage
+          icon: shulker_box
+          item-key-patterns:
+          - '*shulker_box'
+          - '*bundle'
+          - '*chest'
+          - '*shelf'
+        DYE:
+          label: Dyes
+          icon: white_dye
+          item-key-patterns:
+          - '*dye'
+
         OTHER:
           label: Other
           item-key-patterns:
-          - bundle
           - echo_shard
           - nautilus_shell
           - heart_of_the_sea
-          - disc_fragment_5
-          - music_disc_*
           - trial_key
           - ominous_trial_key
           - heavy_core
-          - goat_horn
           - name_tag
           - nether_star
           - dragon_egg

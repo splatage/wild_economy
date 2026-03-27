@@ -149,23 +149,56 @@ public final class ExchangeCatalog {
         final String[] leftSegments = leftPath.split("_");
         final String[] rightSegments = rightPath.split("_");
 
-        int leftIndex = leftSegments.length - 1;
-        int rightIndex = rightSegments.length - 1;
+        int leftIndex = previousSortableSegmentIndex(leftSegments, leftSegments.length - 1);
+        int rightIndex = previousSortableSegmentIndex(rightSegments, rightSegments.length - 1);
 
         while (leftIndex >= 0 && rightIndex >= 0) {
             final int comparison = leftSegments[leftIndex].compareToIgnoreCase(rightSegments[rightIndex]);
             if (comparison != 0) {
                 return comparison;
             }
-            leftIndex--;
-            rightIndex--;
+            leftIndex = previousSortableSegmentIndex(leftSegments, leftIndex - 1);
+            rightIndex = previousSortableSegmentIndex(rightSegments, rightIndex - 1);
         }
 
         if (leftIndex < 0 && rightIndex < 0) {
             return 0;
         }
 
-        return Integer.compare(leftSegments.length, rightSegments.length);
+        return Integer.compare(countSortableSegments(leftSegments), countSortableSegments(rightSegments));
+    }
+
+    private static int previousSortableSegmentIndex(final String[] segments, final int startInclusive) {
+        int index = startInclusive;
+        while (index >= 0) {
+            if (!isNumericSegment(segments[index])) {
+                return index;
+            }
+            index--;
+        }
+        return -1;
+    }
+
+    private static int countSortableSegments(final String[] segments) {
+        int count = 0;
+        for (final String segment : segments) {
+            if (!isNumericSegment(segment)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static boolean isNumericSegment(final String segment) {
+        if (segment == null || segment.isBlank()) {
+            return false;
+        }
+        for (int i = 0; i < segment.length(); i++) {
+            if (!Character.isDigit(segment.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static String extractNamespace(final String itemKey) {
