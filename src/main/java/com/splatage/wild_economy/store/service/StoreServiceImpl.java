@@ -77,21 +77,22 @@ public final class StoreServiceImpl implements StoreService {
 
     @Override
     public StorePurchaseResult purchase(final Player player, final String productId) {
+        final UUID playerId = player.getUniqueId();
         final StoreProduct product = this.storeProductsConfig.product(productId);
         if (product == null) {
             return StorePurchaseResult.failure(
                     "Unknown store product: " + productId,
                     null,
-                    this.economyService.getBalance(player.getUniqueId())
+                    this.economyService.getBalance(playerId)
             );
         }
 
         if (product.type() == StoreProductType.PERMANENT_UNLOCK
-                && this.ownsEntitlement(player.getUniqueId(), product.entitlementKey())) {
+                && this.ownsEntitlement(playerId, product.entitlementKey())) {
             return StorePurchaseResult.failure(
                     "You already own this unlock.",
                     product,
-                    this.economyService.getBalance(player.getUniqueId())
+                    this.economyService.getBalance(playerId)
             );
         }
 
@@ -102,14 +103,14 @@ public final class StoreServiceImpl implements StoreService {
         final EconomyMutationResult withdrawResult;
         if (product.price().isPositive()) {
             withdrawResult = this.economyService.withdraw(
-                    player.getUniqueId(),
+                    playerId,
                     product.price(),
                     EconomyReason.STORE_PURCHASE,
                     "store",
                     product.productId()
             );
             if (!withdrawResult.success()) {
-                this.recordPurchase(player.getUniqueId(), product, StorePurchaseStatus.FAILED, withdrawResult.message());
+                this.recordPurchase(playerId, product, StorePurchaseStatus.FAILED, withdrawResult.message());
                 return StorePurchaseResult.failure(
                         withdrawResult.message(),
                         product,
@@ -117,25 +118,28 @@ public final class StoreServiceImpl implements StoreService {
                 );
             }
         } else {
-            withdrawResult = EconomyMutationResult.success(this.economyService.getBalance(player.getUniqueId()));
+            withdrawResult = EconomyMutationResult.success(this.economyService.getBalance(playerId));
         }
 
         final StoreActionExecutionResult actionResult = this.productActionExecutor.execute(player, product);
         if (!actionResult.success()) {
+            final MoneyAmount refundedBalance;
             if (product.price().isPositive()) {
-                this.economyService.deposit(
-                        player.getUniqueId(),
+                refundedBalance = this.economyService.deposit(
+                        playerId,
                         product.price(),
                         EconomyReason.STORE_REFUND,
                         "store-refund",
                         product.productId()
-                );
+                ).resultingBalance();
+            } else {
+                refundedBalance = withdrawResult.resultingBalance();
             }
-            this.recordPurchase(player.getUniqueId(), product, StorePurchaseStatus.REFUNDED, actionResult.message());
+            this.recordPurchase(playerId, product, StorePurchaseStatus.REFUNDED, actionResult.message());
             return StorePurchaseResult.failure(
                     actionResult.message(),
                     product,
-                    this.economyService.getBalance(player.getUniqueId())
+                    refundedBalance
             );
         }
 
@@ -144,7 +148,7 @@ public final class StoreServiceImpl implements StoreService {
             if (product.type() == StoreProductType.PERMANENT_UNLOCK) {
                 this.storeEntitlementRepository.upsert(
                         connection,
-                        player.getUniqueId(),
+                        playerId,
                         product.entitlementKey(),
                         product.productId(),
                         now
@@ -152,7 +156,7 @@ public final class StoreServiceImpl implements StoreService {
             }
             this.storePurchaseRepository.insert(
                     connection,
-                    player.getUniqueId(),
+                    playerId,
                     product.productId(),
                     product.type(),
                     product.price(),
@@ -164,7 +168,7 @@ public final class StoreServiceImpl implements StoreService {
             return null;
         });
 
-        return StorePurchaseResult.success(product, this.economyService.getBalance(player.getUniqueId()));
+        return StorePurchaseResult.success(product, withdrawResult.resultingBalance());
     }
 
     private StorePurchaseResult purchaseXpWithdrawal(final Player player, final StoreProduct product) {
@@ -211,3 +215,4 @@ public final class StoreServiceImpl implements StoreService {
         });
     }
 }
+
