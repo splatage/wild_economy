@@ -101,6 +101,26 @@ public final class FoliaSafeExchangeSellService implements ExchangeSellService {
         return this.delegate.previewInventorySell(playerId);
     }
 
+
+    @Override
+    public SellPreviewResult previewContainerSell(final UUID playerId) {
+        final Player player = Bukkit.getPlayer(playerId);
+        if (player == null) {
+            return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), "Player is not online");
+        }
+
+        if (!Bukkit.isOwnedByCurrentRegion(player)) {
+            return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), OFF_THREAD_MESSAGE);
+        }
+
+        final Block targetBlock = player.getTargetBlockExact(CONTAINER_TARGET_RANGE);
+        if (this.isSupportedContainerTarget(targetBlock) && !Bukkit.isOwnedByCurrentRegion(targetBlock.getLocation())) {
+            return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), CROSS_REGION_CONTAINER_MESSAGE);
+        }
+
+        return this.delegate.previewContainerSell(playerId);
+    }
+
     private boolean isSupportedContainerTarget(final Block targetBlock) {
         if (targetBlock == null) {
             return false;

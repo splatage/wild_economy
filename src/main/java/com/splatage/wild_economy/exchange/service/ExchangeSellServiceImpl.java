@@ -147,7 +147,43 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
             );
         }
 
-        return this.toPreviewResult(planning);
+        return this.toPreviewResult(planning, "Sell preview:");
+    }
+
+    @Override
+    public SellPreviewResult previewContainerSell(final UUID playerId) {
+        final Player player = Bukkit.getPlayer(playerId);
+        if (player == null) {
+            return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), "Player is not online");
+        }
+
+        final Block targetBlock = player.getTargetBlockExact(CONTAINER_TARGET_RANGE);
+        final SupportedContainerTarget blockTarget = this.resolveSupportedBlockTarget(targetBlock);
+        if (blockTarget != null) {
+            if (this.isLocked(blockTarget.state())) {
+                return this.containerPreviewFailure(blockTarget.description(), LOCKED_CONTAINER_MESSAGE);
+            }
+
+            final ContainerAccessResult accessResult = this.canAccessPlacedContainer(player, blockTarget.block());
+            if (!accessResult.allowed()) {
+                return this.containerPreviewFailure(blockTarget.description(), accessResult.message());
+            }
+
+            return this.previewFromInventoryTarget(blockTarget.inventory(), blockTarget.description());
+        }
+
+        final ItemStack held = player.getInventory().getItemInMainHand();
+        if (this.isHeldShulkerItem(held)) {
+            return this.previewFromHeldShulker(held);
+        }
+
+        return new SellPreviewResult(
+            false,
+            List.of(),
+            BigDecimal.ZERO,
+            List.of(),
+            "No supported container found. Look at a chest, barrel, or shulker, or hold a shulker box."
+        );
     }
 
     @Override
@@ -274,6 +310,58 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         }
 
         return this.sellFromInventoryTarget(playerId, blockTarget.inventory(), blockTarget.description());
+    }
+
+    private SellPreviewResult previewFromInventoryTarget(final Inventory inventory, final String targetDescription) {
+        final SalePlanning planning = this.planSalesFromInventory(inventory, true, "nested container not supported");
+        if (planning.plannedSales().isEmpty()) {
+            return new SellPreviewResult(
+                false,
+                List.of(),
+                BigDecimal.ZERO,
+                planning.skippedDescriptions(),
+                "No sellable items found in " + targetDescription + "."
+            );
+        }
+
+        return this.toPreviewResult(planning, "Sell preview for " + targetDescription + ":");
+    }
+
+    private SellPreviewResult previewFromHeldShulker(final ItemStack heldShulker) {
+        final BlockStateMeta blockStateMeta = (BlockStateMeta) heldShulker.getItemMeta();
+        if (blockStateMeta == null || !(blockStateMeta.getBlockState() instanceof ShulkerBox shulkerBox)) {
+            return new SellPreviewResult(
+                false,
+                List.of(),
+                BigDecimal.ZERO,
+                List.of(),
+                "Held shulker box is not readable."
+            );
+        }
+
+        final SalePlanning planning = this.planSalesFromInventory(
+            shulkerBox.getInventory(),
+            true,
+            "nested container not supported"
+        );
+        if (planning.plannedSales().isEmpty()) {
+            return new SellPreviewResult(
+                false,
+                List.of(),
+                BigDecimal.ZERO,
+                planning.skippedDescriptions(),
+                "No sellable items found in held shulker box."
+            );
+        }
+
+        return this.toPreviewResult(planning, "Sell preview for held shulker box:");
+    }
+
+    private SellPreviewResult containerPreviewFailure(final String targetDescription, final String message) {
+        final String prefix = targetDescription == null || targetDescription.isBlank()
+            ? "Container preview unavailable"
+            : "Container preview unavailable for " + targetDescription;
+        return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), prefix + ": " + message);
     }
 
     private SellContainerResult sellFromInventoryTarget(
@@ -527,7 +615,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         );
     }
 
-    private SellPreviewResult toPreviewResult(final SalePlanning planning) {
+    private SellPreviewResult toPreviewResult(final SalePlanning planning, final String message) {
         final List<SellPreviewLine> lines = new ArrayList<>(planning.plannedSales().size());
         for (final GroupedPlannedSale sale : planning.plannedSales()) {
             lines.add(new SellPreviewLine(
@@ -540,7 +628,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
                 sale.quote().tapered()
             ));
         }
-        return new SellPreviewResult(true, List.copyOf(lines), planning.totalEarned(), planning.skippedDescriptions(), "Sell preview:");
+        return new SellPreviewResult(true, List.copyOf(lines), planning.totalEarned(), planning.skippedDescriptions(), message);
     }
 
     private String describeSkippedStack(final ItemStack stack, final String reason) {

@@ -19,18 +19,18 @@ libraries:
 commands:
   shop:
     description: Open the shop or use sell commands.
-    usage: /shop [sellhand|sellall|sellcontainer]
+    usage: /shop [sellhand|sellall|sellcontainer] or /sell preview [container]
     aliases: [exchange]
     permission: wild_economy.shop
 
   sell:
     description: Preview the current Exchange sell value of your inventory.
-    usage: /sell preview
+    usage: /sell preview [container]
     permission: wild_economy.shop.sell
 
   worth:
     description: Alias for /sell preview.
-    usage: /worth
+    usage: /worth [container]
     permission: wild_economy.shop.sell
 
   sellhand:

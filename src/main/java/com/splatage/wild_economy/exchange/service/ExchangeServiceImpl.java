@@ -48,6 +48,11 @@ public final class ExchangeServiceImpl implements ExchangeService {
     }
 
     @Override
+    public SellPreviewResult previewContainerSell(final UUID playerId) {
+        return this.exchangeSellService.previewContainerSell(playerId);
+    }
+
+    @Override
     public BuyResult buy(final UUID playerId, final ItemKey itemKey, final int amount) {
         return this.exchangeBuyService.buy(playerId, itemKey, amount);
     }

@@ -17,15 +17,15 @@ public final class SellCommand implements CommandExecutor {
     @Override
     public boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
         if (args.length == 0) {
-            sender.sendMessage("Usage: /sell preview");
+            sender.sendMessage("Usage: /sell preview [container]");
             return true;
         }
 
         final String subcommand = args[0].toLowerCase(Locale.ROOT);
         return switch (subcommand) {
-            case "preview" -> this.sellPreviewSubcommand.execute(sender);
+            case "preview" -> this.sellPreviewSubcommand.execute(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
             default -> {
-                sender.sendMessage("Unknown subcommand. Use /sell preview.");
+                sender.sendMessage("Unknown subcommand. Use /sell preview [container].");
                 yield true;
             }
         };

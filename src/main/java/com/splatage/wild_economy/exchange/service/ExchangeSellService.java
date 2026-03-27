@@ -15,4 +15,6 @@ public interface ExchangeSellService {
     SellContainerResult sellContainer(UUID playerId);
 
     SellPreviewResult previewInventorySell(UUID playerId);
+
+    SellPreviewResult previewContainerSell(UUID playerId);
 }

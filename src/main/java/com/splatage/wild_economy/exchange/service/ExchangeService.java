@@ -20,6 +20,8 @@ public interface ExchangeService {
 
     SellPreviewResult previewInventorySell(UUID playerId);
 
+    SellPreviewResult previewContainerSell(UUID playerId);
+
     BuyResult buy(UUID playerId, ItemKey itemKey, int amount);
 
     BuyResult buyQuoted(UUID playerId, ItemKey itemKey, int amount, BigDecimal quotedUnitPrice);
