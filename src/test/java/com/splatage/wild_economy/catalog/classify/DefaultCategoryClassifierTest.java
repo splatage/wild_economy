@@ -4,21 +4,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.splatage.wild_economy.catalog.model.CatalogCategory;
 import com.splatage.wild_economy.catalog.model.ItemFacts;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 final class DefaultCategoryClassifierTest {
 
     @Test
-    void classify_prefersLayoutHintBeforeFallbackHeuristics() {
-        final ItemFacts facts = new ItemFacts(null, "bone", true, false, true, 64, false, false, true);
+    void classify_usesFallbackHeuristicsWithoutLayoutHints() {
+        final DefaultCategoryClassifier classifier = new DefaultCategoryClassifier();
 
-        final DefaultCategoryClassifier fallbackClassifier = new DefaultCategoryClassifier();
-        assertEquals(CatalogCategory.MOB_DROPS, fallbackClassifier.classify(facts));
-
-        final DefaultCategoryClassifier hintedClassifier = new DefaultCategoryClassifier(
-            itemKey -> "bone".equals(itemKey) ? Optional.of(CatalogCategory.REDSTONE) : Optional.empty()
+        assertEquals(
+            CatalogCategory.MOB_DROPS,
+            classifier.classify(new ItemFacts(null, "bone", true, false, true, 64, false, false, true))
         );
-        assertEquals(CatalogCategory.REDSTONE, hintedClassifier.classify(facts));
+        assertEquals(
+            CatalogCategory.WOODS,
+            classifier.classify(new ItemFacts(null, "oak_log", true, true, true, 64, true, false, false))
+        );
     }
 }

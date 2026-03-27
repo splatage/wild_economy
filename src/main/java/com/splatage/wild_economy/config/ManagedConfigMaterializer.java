@@ -33,6 +33,10 @@ public final class ManagedConfigMaterializer {
             "Review root values, then run /shopadmin catalog validate before applying generated catalog changes."
         ),
         new ManagedConfigFile(
+            "layout.yml",
+            "Review GUI browse structure in layout.yml; this file is consumed directly by the GUI rather than the catalog generator."
+        ),
+        new ManagedConfigFile(
             "messages.yml",
             "Review custom messages, then run /shopadmin reload after any edits."
         ),

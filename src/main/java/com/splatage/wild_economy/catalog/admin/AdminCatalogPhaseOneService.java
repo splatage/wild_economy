@@ -60,7 +60,7 @@ public final class AdminCatalogPhaseOneService {
         final RecipeGraph recipeGraph = new BukkitRecipeGraphBuilder().build();
         final RootAnchoredDerivationService derivationService = new RootAnchoredDerivationService(recipeGraph, rootValues);
         final BukkitMaterialScanner materialScanner = new BukkitMaterialScanner(rootValues);
-        final DefaultCategoryClassifier classifier = new DefaultCategoryClassifier(rootValues);
+        final DefaultCategoryClassifier classifier = new DefaultCategoryClassifier();
         final DefaultPolicySuggestionService basePolicyService = new DefaultPolicySuggestionService(DEFAULT_MAX_AUTO_INCLUSION_DEPTH);
 
         final List<AdminCatalogPolicyRule> rules = this.loadPolicyRules(new File(dataFolder, "policy-rules.yml"));

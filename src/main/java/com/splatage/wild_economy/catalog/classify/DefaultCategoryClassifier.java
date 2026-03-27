@@ -2,13 +2,9 @@ package com.splatage.wild_economy.catalog.classify;
 
 import com.splatage.wild_economy.catalog.model.CatalogCategory;
 import com.splatage.wild_economy.catalog.model.ItemFacts;
-import com.splatage.wild_economy.catalog.rootvalue.CategoryHintLookup;
-import java.util.Objects;
 import java.util.Set;
 
 public final class DefaultCategoryClassifier implements CategoryClassifier {
-
-    private final CategoryHintLookup categoryHintLookup;
 
     private static final Set<String> FOOD_EXACT = Set.of(
         "apple",
@@ -81,22 +77,11 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
         "warped"
     );
 
-
     public DefaultCategoryClassifier() {
-        this(itemKey -> java.util.Optional.empty());
-    }
-
-    public DefaultCategoryClassifier(final CategoryHintLookup categoryHintLookup) {
-        this.categoryHintLookup = Objects.requireNonNull(categoryHintLookup, "categoryHintLookup");
     }
 
     @Override
     public CatalogCategory classify(final ItemFacts facts) {
-        final CatalogCategory categoryHint = this.categoryHintLookup.findCategoryHint(facts.key()).orElse(null);
-        if (categoryHint != null) {
-            return categoryHint;
-        }
-
         final String key = facts.key();
 
         if (isWood(key)) {
