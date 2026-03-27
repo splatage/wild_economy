@@ -4,7 +4,16 @@ plugins {
 }
 
 group = "com.splatage"
-version = "0.1.0-SNAPSHOT"
+
+val baseVersion = "0.1"
+val buildNumber = System.getenv("BUILD_NUMBER")
+val releaseBuild = System.getenv("RELEASE") == "true"
+
+version = when {
+    releaseBuild && !buildNumber.isNullOrBlank() -> "${baseVersion}.${buildNumber}"
+    !buildNumber.isNullOrBlank() -> "${baseVersion}.${buildNumber}-SNAPSHOT"
+    else -> "${baseVersion}.0-SNAPSHOT"
+}
 
 java {
     toolchain {
