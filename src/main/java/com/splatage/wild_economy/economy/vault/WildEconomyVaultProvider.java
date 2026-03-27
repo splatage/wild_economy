@@ -99,7 +99,7 @@ public final class WildEconomyVaultProvider extends AbstractEconomy {
             return 0.0D;
         }
         return this.economyService
-                .getBalanceForSensitiveOperation(player.getUniqueId())
+                .getBalance(player.getUniqueId())
                 .toMajor(this.economyConfig.fractionalDigits())
                 .doubleValue();
     }
