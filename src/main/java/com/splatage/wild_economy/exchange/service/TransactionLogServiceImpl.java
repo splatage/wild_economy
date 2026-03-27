@@ -108,16 +108,26 @@ public final class TransactionLogServiceImpl implements TransactionLogService {
         final BigDecimal totalValue
     ) {
         try {
-            this.executor.submit(() -> this.transactionRepository.insert(
-                type,
-                playerId,
-                itemKey.value(),
-                amount,
-                unitPrice,
-                totalValue,
-                Instant.now(),
-                null
-            ));
+            this.executor.submit(() -> {
+                try {
+                    this.transactionRepository.insert(
+                        type,
+                        playerId,
+                        itemKey.value(),
+                        amount,
+                        unitPrice,
+                        totalValue,
+                        Instant.now(),
+                        null
+                    );
+                } catch (final RuntimeException exception) {
+                    this.logger.log(
+                        Level.WARNING,
+                        "Failed to persist transaction log entry for " + type + " on " + itemKey.value() + ".",
+                        exception
+                    );
+                }
+            });
         } catch (final RejectedExecutionException exception) {
             this.logger.log(
                 Level.WARNING,
