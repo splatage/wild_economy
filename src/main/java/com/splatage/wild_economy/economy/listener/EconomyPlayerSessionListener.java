@@ -24,15 +24,25 @@ public final class EconomyPlayerSessionListener implements Listener {
     public void onPlayerJoin(final PlayerJoinEvent event) {
         final UUID playerId = event.getPlayer().getUniqueId();
         final String playerName = event.getPlayer().getName();
-        this.plugin.getServer().getAsyncScheduler().runNow(this.plugin, task ->
-                this.economyService.warmPlayerSession(playerId, playerName));
+        this.plugin.getServer().getAsyncScheduler().runNow(this.plugin, task -> {
+                try {
+                    this.economyService.warmPlayerSession(playerId, playerName);
+                } catch (final Exception ex) {
+                    this.plugin.getLogger().severe("Failed to warm economy session for " + playerName + ": " + ex.getMessage());
+                }
+            });
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit(final PlayerQuitEvent event) {
         final UUID playerId = event.getPlayer().getUniqueId();
         final String playerName = event.getPlayer().getName();
-        this.plugin.getServer().getAsyncScheduler().runNow(this.plugin, task ->
-                this.economyService.flushPlayerSession(playerId, playerName));
+        this.plugin.getServer().getAsyncScheduler().runNow(this.plugin, task -> {
+                try {
+                    this.economyService.flushPlayerSession(playerId, playerName);
+                } catch (final Exception ex) {
+                    this.plugin.getLogger().severe("Failed to flush economy session for " + playerName + ": " + ex.getMessage());
+                }
+            });
     }
 }
