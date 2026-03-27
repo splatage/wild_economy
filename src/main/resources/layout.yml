@@ -192,8 +192,8 @@ layout:
           - stripped_*_stem
           - stripped_*_hyphae
           - '*_planks'
-        OTHER_BUILDING:
-          label: Other building
+        CONTRUCTION:
+          label: Contruction
           note: Deeper crafting-chain building outputs
           item-key-patterns:
           - '*_slab'
@@ -209,17 +209,6 @@ layout:
           - '*_bricks'
           - brick
           - bricks
-          - glass
-          - tinted_glass
-          - '*_concrete'
-          - '*_concrete_powder'
-          - '*_glazed_terracotta'
-          - '*_wool'
-          - '*_carpet'
-          - '*_stained_glass'
-          - '*_stained_glass_pane'
-          - '*_tile'
-          - '*_tiles'
           - '*_pillar'
           - cut_*
           - chiseled_*
@@ -231,10 +220,25 @@ layout:
           - nether_bricks
           - red_nether_bricks
           - mud_bricks
-          - packed_mud
           - purpur_block
           - purpur_pillar
           - bamboo_mosaic
+        OTHER_BUILDING:
+          label: Other building
+          note: Deeper crafting-chain building outputs
+          item-key-patterns:
+          - glass
+          - tinted_glass
+          - '*_concrete'
+          - '*_concrete_powder'
+          - '*_glazed_terracotta'
+          - '*_wool'
+          - '*_carpet'
+          - '*_stained_glass'
+          - '*_stained_glass_pane'
+          - '*_tile'
+          - '*_tiles'
+          - packed_mud
           - bookshelf
     REDSTONE_UTILITIES:
       label: Redstone / Utilities

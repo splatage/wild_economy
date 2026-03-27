@@ -44,7 +44,6 @@ public final class StoreRootMenu {
             );
         }
 
-        inventory.setItem(18, this.button(Material.ARROW, "Back"));
         inventory.setItem(21, this.playerInfoItemFactory.create(player));
         inventory.setItem(26, this.button(Material.BARRIER, "Close"));
 
@@ -58,12 +57,8 @@ public final class StoreRootMenu {
         }
 
         final int rawSlot = event.getRawSlot();
-        if (rawSlot == 18) {
-            this.shopMenuRouter.openRoot(player);
-            return;
-        }
         if (rawSlot == 26) {
-            player.closeInventory();
+            this.shopMenuRouter.goBack(player);
             return;
         }
 

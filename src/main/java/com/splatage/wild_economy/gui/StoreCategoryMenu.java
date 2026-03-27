@@ -50,10 +50,14 @@ public final class StoreCategoryMenu {
             inventory.setItem(slot, this.productItem(player, products.get(index)));
         }
 
-        inventory.setItem(45, this.button(Material.ARROW, "Back"));
+        if (page > 0) {
+            inventory.setItem(45, this.button(Material.ARROW, "Previous"));
+        }
         inventory.setItem(48, this.playerInfoItemFactory.create(player));
-        inventory.setItem(49, this.button(Material.BARRIER, "Close"));
-        inventory.setItem(53, this.button(Material.ARROW, "Next"));
+        inventory.setItem(49, this.button(Material.BARRIER, "Back"));
+        if ((page + 1) * PAGE_SIZE < products.size()) {
+            inventory.setItem(53, this.button(Material.ARROW, "Next"));
+        }
 
         player.openInventory(inventory);
     }
@@ -75,8 +79,12 @@ public final class StoreCategoryMenu {
         }
 
         switch (rawSlot) {
-            case 45 -> this.shopMenuRouter.openStoreRoot(player);
-            case 49 -> player.closeInventory();
+            case 45 -> {
+                if (page > 0) {
+                    this.shopMenuRouter.openStoreCategory(player, categoryId, page - 1);
+                }
+            }
+            case 49 -> this.shopMenuRouter.goBack(player);
             case 53 -> {
                 final List<StoreProduct> products = this.storeService.getProducts(categoryId);
                 final int nextStart = (page + 1) * PAGE_SIZE;

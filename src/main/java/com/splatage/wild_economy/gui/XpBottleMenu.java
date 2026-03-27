@@ -42,9 +42,8 @@ public final class XpBottleMenu {
         inventory.setItem(13, this.purchaseItem(this.productByIndex(0)));
         inventory.setItem(14, this.purchaseItem(this.productByIndex(1)));
         inventory.setItem(15, this.purchaseItem(this.productByIndex(2)));
-        inventory.setItem(18, this.button(Material.ARROW, "Back", List.of("Return to the Store")));
         inventory.setItem(21, this.playerInfoItemFactory.create(player));
-        inventory.setItem(22, this.button(Material.BARRIER, "Close", List.of("Close the shop")));
+        inventory.setItem(22, this.button(Material.BARRIER, "Back", List.of("Return to the Store")));
 
         player.openInventory(inventory);
     }
@@ -60,8 +59,7 @@ public final class XpBottleMenu {
             case 13 -> this.purchase(player, this.productByIndex(0));
             case 14 -> this.purchase(player, this.productByIndex(1));
             case 15 -> this.purchase(player, this.productByIndex(2));
-            case 18 -> this.shopMenuRouter.openStoreRoot(player);
-            case 22 -> player.closeInventory();
+            case 22 -> this.shopMenuRouter.goBack(player);
             default -> {
             }
         }

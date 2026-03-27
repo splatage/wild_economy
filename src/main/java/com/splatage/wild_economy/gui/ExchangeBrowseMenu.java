@@ -44,6 +44,7 @@ public final class ExchangeBrowseMenu {
         final ShopMenuHolder holder = ShopMenuHolder.browse(layoutGroupKey, layoutChildKey, page, viaSubcategory);
         final Inventory inventory = holder.createInventory(54, this.title(layoutGroupKey, layoutChildKey));
         final List<ExchangeCatalogView> entries = this.exchangeService.browseLayout(layoutGroupKey, layoutChildKey, page, 45);
+        final int totalVisible = this.exchangeService.countVisibleItems(layoutGroupKey, layoutChildKey);
 
         int slot = 0;
         for (final ExchangeCatalogView view : entries) {
@@ -54,10 +55,14 @@ public final class ExchangeBrowseMenu {
             slot++;
         }
 
-        inventory.setItem(45, this.button(Material.ARROW, "Back"));
+        if (page > 0) {
+            inventory.setItem(45, this.button(Material.ARROW, "Previous"));
+        }
         inventory.setItem(48, this.playerInfoItemFactory.create(player));
-        inventory.setItem(49, this.button(Material.BARRIER, "Close"));
-        inventory.setItem(53, this.button(Material.ARROW, "Next"));
+        inventory.setItem(49, this.button(Material.BARRIER, "Back"));
+        if ((page + 1) * 45 < totalVisible) {
+            inventory.setItem(53, this.button(Material.ARROW, "Next"));
+        }
 
         player.openInventory(inventory);
     }
@@ -88,14 +93,17 @@ public final class ExchangeBrowseMenu {
 
         switch (slot) {
             case 45 -> {
-                if (viaSubcategory) {
-                    this.shopMenuRouter.openSubcategory(player, layoutGroupKey);
-                } else {
-                    this.shopMenuRouter.openRoot(player);
+                if (page > 0) {
+                    this.shopMenuRouter.openBrowse(player, layoutGroupKey, layoutChildKey, page - 1, viaSubcategory);
                 }
             }
-            case 49 -> player.closeInventory();
-            case 53 -> this.shopMenuRouter.openBrowse(player, layoutGroupKey, layoutChildKey, page + 1, viaSubcategory);
+            case 49 -> this.shopMenuRouter.goBack(player);
+            case 53 -> {
+                final int totalVisible = this.exchangeService.countVisibleItems(layoutGroupKey, layoutChildKey);
+                if ((page + 1) * 45 < totalVisible) {
+                    this.shopMenuRouter.openBrowse(player, layoutGroupKey, layoutChildKey, page + 1, viaSubcategory);
+                }
+            }
             default -> {
             }
         }

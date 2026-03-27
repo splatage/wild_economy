@@ -70,8 +70,7 @@ public final class ExchangeItemDetailMenu {
         inventory.setItem(13, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 1", this.quoteLore(quotedUnitPrice, 1)));
         inventory.setItem(14, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 8", this.quoteLore(quotedUnitPrice, 8)));
         inventory.setItem(15, this.button(Material.GREEN_STAINED_GLASS_PANE, "Buy 64", this.quoteLore(quotedUnitPrice, 64)));
-        inventory.setItem(18, this.button(Material.ARROW, "Back", List.of("Return to the previous menu")));
-        inventory.setItem(22, this.button(Material.BARRIER, "Close", List.of("Close the shop")));
+        inventory.setItem(22, this.button(Material.BARRIER, "Back", List.of("Return to the previous menu")));
 
         player.openInventory(inventory);
     }
@@ -89,13 +88,8 @@ public final class ExchangeItemDetailMenu {
         }
 
         final int slot = event.getRawSlot();
-        if (slot == 18) {
-            this.shopMenuRouter.goBack(player);
-            return;
-        }
-
         if (slot == 22) {
-            player.closeInventory();
+            this.shopMenuRouter.goBack(player);
             return;
         }
 

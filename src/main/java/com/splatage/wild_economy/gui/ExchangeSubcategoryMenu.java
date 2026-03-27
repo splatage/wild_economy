@@ -60,8 +60,7 @@ public final class ExchangeSubcategoryMenu {
             );
         }
 
-        inventory.setItem(18, this.button(Material.ARROW, "Back"));
-        inventory.setItem(22, this.button(Material.BARRIER, "Close"));
+        inventory.setItem(22, this.button(Material.BARRIER, "Back"));
 
         player.openInventory(inventory);
     }
@@ -78,13 +77,8 @@ public final class ExchangeSubcategoryMenu {
             return;
         }
 
-        if (rawSlot == 18) {
-            this.shopMenuRouter.openRoot(player);
-            return;
-        }
-
         if (rawSlot == 22) {
-            player.closeInventory();
+            this.shopMenuRouter.goBack(player);
             return;
         }
 

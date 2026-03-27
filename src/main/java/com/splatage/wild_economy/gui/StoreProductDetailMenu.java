@@ -45,8 +45,7 @@ public final class StoreProductDetailMenu {
         inventory.setItem(21, this.playerInfoItemFactory.create(player));
         inventory.setItem(11, this.detailItem(player, product));
         inventory.setItem(13, this.purchaseButton(product));
-        inventory.setItem(18, this.button(Material.ARROW, "Back", List.of("Return to the product list")));
-        inventory.setItem(22, this.button(Material.BARRIER, "Close", List.of("Close the shop")));
+        inventory.setItem(22, this.button(Material.BARRIER, "Back", List.of("Return to the product list")));
 
         player.openInventory(inventory);
     }
@@ -73,8 +72,7 @@ public final class StoreProductDetailMenu {
                     this.open(player, categoryId, holder.currentPage(), productId);
                 }
             }
-            case 18 -> this.shopMenuRouter.openStoreCategory(player, categoryId, holder.currentPage());
-            case 22 -> player.closeInventory();
+            case 22 -> this.shopMenuRouter.goBack(player);
             default -> {
             }
         }
