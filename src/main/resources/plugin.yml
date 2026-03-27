@@ -69,6 +69,11 @@ commands:
     usage: /eco <balance|give|take|set|reset>
     permission: wild_economy.admin.eco
 
+  shoptop:
+    description: View top suppliers.
+    usage: /shoptop [alltime|player <name> [alltime]]
+    permission: wild_economy.shop.top
+
   shopadmin:
     description: Admin commands for wild_economy.
     usage: /shopadmin
@@ -89,6 +94,10 @@ permissions:
 
   wild_economy.shop.buy:
     description: Allows buying from the Exchange.
+    default: true
+
+  wild_economy.shop.top:
+    description: Allows viewing supplier leaderboards.
     default: true
 
   wild_economy.balance:
