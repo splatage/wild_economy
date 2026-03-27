@@ -17,6 +17,7 @@ import com.splatage.wild_economy.exchange.domain.StockSnapshot;
 import com.splatage.wild_economy.exchange.item.ItemValidationService;
 import com.splatage.wild_economy.exchange.item.ValidationResult;
 import com.splatage.wild_economy.exchange.pricing.PricingService;
+import com.splatage.wild_economy.exchange.supplier.SupplierStatsService;
 import com.splatage.wild_economy.exchange.stock.StockService;
 import com.splatage.wild_economy.integration.protection.ContainerAccessResult;
 import com.splatage.wild_economy.integration.protection.ContainerAccessService;
@@ -54,6 +55,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
     private final PricingService pricingService;
     private final EconomyGateway economyGateway;
     private final TransactionLogService transactionLogService;
+    private final SupplierStatsService supplierStatsService;
     private final ContainerAccessService containerAccessService;
 
     public ExchangeSellServiceImpl(
@@ -62,7 +64,8 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         final StockService stockService,
         final PricingService pricingService,
         final EconomyGateway economyGateway,
-        final TransactionLogService transactionLogService
+        final TransactionLogService transactionLogService,
+        final SupplierStatsService supplierStatsService
     ) {
         this(
             exchangeCatalog,
@@ -71,6 +74,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
             pricingService,
             economyGateway,
             transactionLogService,
+            supplierStatsService,
             ContainerAccessServices.createDefault()
         );
     }
@@ -82,6 +86,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         final PricingService pricingService,
         final EconomyGateway economyGateway,
         final TransactionLogService transactionLogService,
+        final SupplierStatsService supplierStatsService,
         final ContainerAccessService containerAccessService
     ) {
         this.exchangeCatalog = Objects.requireNonNull(exchangeCatalog, "exchangeCatalog");
@@ -90,6 +95,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
         this.pricingService = Objects.requireNonNull(pricingService, "pricingService");
         this.economyGateway = Objects.requireNonNull(economyGateway, "economyGateway");
         this.transactionLogService = Objects.requireNonNull(transactionLogService, "transactionLogService");
+        this.supplierStatsService = Objects.requireNonNull(supplierStatsService, "supplierStatsService");
         this.containerAccessService = Objects.requireNonNull(containerAccessService, "containerAccessService");
     }
 
@@ -509,6 +515,7 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
                 sale.quote().effectiveUnitPrice(),
                 sale.quote().totalPrice()
             );
+            this.supplierStatsService.recordSale(playerId, sale.itemKey(), sale.amount());
             soldLines.add(new SellLineResult(
                 sale.itemKey(),
                 sale.displayName(),

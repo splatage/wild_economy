@@ -13,6 +13,7 @@ import com.splatage.wild_economy.command.ShopSellAllSubcommand;
 import com.splatage.wild_economy.command.ShopSellContainerSubcommand;
 import com.splatage.wild_economy.command.ShopSellHandSubcommand;
 import com.splatage.wild_economy.command.ShopSellPreviewSubcommand;
+import com.splatage.wild_economy.command.ShopTopSubcommand;
 import com.splatage.wild_economy.config.ConfigLoader;
 import com.splatage.wild_economy.config.ConfigValidator;
 import com.splatage.wild_economy.config.DatabaseConfig;
@@ -69,13 +70,16 @@ import com.splatage.wild_economy.exchange.pricing.PricingService;
 import com.splatage.wild_economy.exchange.pricing.PricingServiceImpl;
 import com.splatage.wild_economy.exchange.repository.ExchangeStockRepository;
 import com.splatage.wild_economy.exchange.repository.ExchangeTransactionRepository;
+import com.splatage.wild_economy.exchange.repository.SupplierStatsRepository;
 import com.splatage.wild_economy.exchange.repository.SchemaVersionRepository;
 import com.splatage.wild_economy.exchange.repository.mysql.MysqlExchangeStockRepository;
 import com.splatage.wild_economy.exchange.repository.mysql.MysqlExchangeTransactionRepository;
 import com.splatage.wild_economy.exchange.repository.mysql.MysqlSchemaVersionRepository;
+import com.splatage.wild_economy.exchange.repository.mysql.MysqlSupplierStatsRepository;
 import com.splatage.wild_economy.exchange.repository.sqlite.SqliteExchangeStockRepository;
 import com.splatage.wild_economy.exchange.repository.sqlite.SqliteExchangeTransactionRepository;
 import com.splatage.wild_economy.exchange.repository.sqlite.SqliteSchemaVersionRepository;
+import com.splatage.wild_economy.exchange.repository.sqlite.SqliteSupplierStatsRepository;
 import com.splatage.wild_economy.exchange.service.ExchangeBrowseService;
 import com.splatage.wild_economy.exchange.service.ExchangeBrowseServiceImpl;
 import com.splatage.wild_economy.exchange.service.ExchangeBuyService;
@@ -93,6 +97,8 @@ import com.splatage.wild_economy.exchange.stock.StockService;
 import com.splatage.wild_economy.exchange.stock.StockServiceImpl;
 import com.splatage.wild_economy.exchange.stock.StockStateResolver;
 import com.splatage.wild_economy.exchange.stock.StockTurnoverService;
+import com.splatage.wild_economy.exchange.supplier.SupplierStatsServiceImpl;
+import com.splatage.wild_economy.exchange.supplier.SupplierStatsService;
 import com.splatage.wild_economy.exchange.stock.StockTurnoverServiceImpl;
 import com.splatage.wild_economy.gui.ExchangeBrowseMenu;
 import com.splatage.wild_economy.gui.ExchangeItemDetailMenu;
@@ -163,6 +169,7 @@ public final class ServiceRegistry {
     private WildEconomyVaultProvider vaultEconomyProvider;
     private WildEconomyExpansion placeholderExpansion;
     private XpBottleService xpBottleService;
+    private SupplierStatsService supplierStatsService;
     private XpBottleRedeemListener xpBottleRedeemListener;
 
     public ServiceRegistry(final WildEconomyPlugin plugin) {
@@ -276,6 +283,10 @@ public final class ServiceRegistry {
             case MYSQL -> new MysqlExchangeTransactionRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
         }
 ;
+        final SupplierStatsRepository supplierStatsRepository = switch (this.databaseProvider.dialect()) {
+            case SQLITE -> new SqliteSupplierStatsRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
+            case MYSQL -> new MysqlSupplierStatsRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
+        };
         try {
             this.layoutBlueprint = new LayoutBlueprintLoader().load(
                     this.plugin.getDataFolder().toPath().resolve("layout.yml").toFile()
@@ -319,6 +330,14 @@ public final class ServiceRegistry {
                 this.databaseProvider.dialect(),
                 this.databaseConfig.mysqlMaximumPoolSize()
         );
+        this.supplierStatsService = new SupplierStatsServiceImpl(
+                supplierStatsRepository,
+                economyNameCacheRepository,
+                this.exchangeCatalog,
+                this.plugin.getLogger(),
+                this.databaseProvider.dialect(),
+                this.databaseConfig.mysqlMaximumPoolSize()
+        );
 
         this.stockTurnoverService = new StockTurnoverServiceImpl(this.exchangeCatalog, this.stockService, this.transactionLogService);
         this.exchangeBrowseService = new ExchangeBrowseServiceImpl(this.exchangeCatalog, this.stockService, this.layoutBlueprint);
@@ -339,7 +358,8 @@ public final class ServiceRegistry {
                 this.stockService,
                 this.pricingService,
                 this.economyGateway,
-                this.transactionLogService
+                this.transactionLogService,
+                this.supplierStatsService
         );
 
         this.exchangeBuyService = new FoliaSafeExchangeBuyService(rawBuyService);
@@ -481,10 +501,11 @@ public final class ServiceRegistry {
         final ShopSellAllSubcommand sellAllSubcommand = new ShopSellAllSubcommand(this.exchangeService, this.platformExecutor);
         final ShopSellContainerSubcommand sellContainerSubcommand = new ShopSellContainerSubcommand(this.foliaContainerSellCoordinator);
         final ShopSellPreviewSubcommand sellPreviewSubcommand = new ShopSellPreviewSubcommand(this.exchangeService, this.platformExecutor);
+        final ShopTopSubcommand shopTopSubcommand = new ShopTopSubcommand(this.supplierStatsService);
 
         final PluginCommand shop = this.plugin.getCommand("shop");
         if (shop != null) {
-            shop.setExecutor(new ShopCommand(openSubcommand, sellHandSubcommand, sellAllSubcommand, sellContainerSubcommand));
+            shop.setExecutor(new ShopCommand(openSubcommand, sellHandSubcommand, sellAllSubcommand, sellContainerSubcommand, shopTopSubcommand));
         }
 
         final PluginCommand sell = this.plugin.getCommand("sell");
@@ -510,6 +531,11 @@ public final class ServiceRegistry {
         final PluginCommand sellContainer = this.plugin.getCommand("sellcontainer");
         if (sellContainer != null) {
             sellContainer.setExecutor(sellContainerSubcommand);
+        }
+
+        final PluginCommand shoptop = this.plugin.getCommand("shoptop");
+        if (shoptop != null) {
+            shoptop.setExecutor(shopTopSubcommand);
         }
 
         final PluginCommand shopAdmin = this.plugin.getCommand("shopadmin");
@@ -586,6 +612,10 @@ public final class ServiceRegistry {
         if (this.transactionLogService != null) {
             this.transactionLogService.shutdown();
             this.transactionLogService = null;
+        }
+        if (this.supplierStatsService != null) {
+            this.supplierStatsService.shutdown();
+            this.supplierStatsService = null;
         }
         if (this.stockService != null) {
             this.stockService.shutdown();

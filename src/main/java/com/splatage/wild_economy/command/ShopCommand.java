@@ -12,17 +12,20 @@ public final class ShopCommand implements CommandExecutor {
     private final ShopSellHandSubcommand sellHandSubcommand;
     private final ShopSellAllSubcommand sellAllSubcommand;
     private final ShopSellContainerSubcommand sellContainerSubcommand;
+    private final ShopTopSubcommand shopTopSubcommand;
 
     public ShopCommand(
         final ShopOpenSubcommand openSubcommand,
         final ShopSellHandSubcommand sellHandSubcommand,
         final ShopSellAllSubcommand sellAllSubcommand,
-        final ShopSellContainerSubcommand sellContainerSubcommand
+        final ShopSellContainerSubcommand sellContainerSubcommand,
+        final ShopTopSubcommand shopTopSubcommand
     ) {
         this.openSubcommand = Objects.requireNonNull(openSubcommand, "openSubcommand");
         this.sellHandSubcommand = Objects.requireNonNull(sellHandSubcommand, "sellHandSubcommand");
         this.sellAllSubcommand = Objects.requireNonNull(sellAllSubcommand, "sellAllSubcommand");
         this.sellContainerSubcommand = Objects.requireNonNull(sellContainerSubcommand, "sellContainerSubcommand");
+        this.shopTopSubcommand = Objects.requireNonNull(shopTopSubcommand, "shopTopSubcommand");
     }
 
     @Override
@@ -32,12 +35,16 @@ public final class ShopCommand implements CommandExecutor {
         }
 
         final String subcommand = args[0].toLowerCase(Locale.ROOT);
+        if (subcommand.equals("top")) {
+            return this.shopTopSubcommand.execute(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
+        }
+
         return switch (subcommand) {
             case "sellhand" -> this.sellHandSubcommand.execute(sender);
             case "sellall" -> this.sellAllSubcommand.execute(sender);
             case "sellcontainer" -> this.sellContainerSubcommand.execute(sender);
             default -> {
-                sender.sendMessage("Unknown subcommand. Use /shop, /shop sellhand, /shop sellall, /shop sellcontainer, /sell preview, /worth, /sellhand, /sellall, or /sellcontainer.");
+                sender.sendMessage("Unknown subcommand. Use /shop, /shop sellhand, /shop sellall, /shop top, /shop sellcontainer, /sell preview, /worth, /sellhand, /sellall, /sellcontainer, or /shoptop.");
                 yield true;
             }
         };
