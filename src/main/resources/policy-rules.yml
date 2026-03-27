@@ -28,83 +28,6 @@ rules:
       eco-envelope: world_damage_unlimited_buy
       note: "Unlimited-buy landscape-protection material."
 
-  - id: progression-guarded
-    match:
-      item-keys:
-        - "minecraft:ancient_debris"
-        - "minecraft:beacon"
-        - "minecraft:diamond"
-        - "minecraft:diamond_block"
-        - "minecraft:elytra"
-        - "minecraft:enchanted_book"
-        - "minecraft:netherite_ingot"
-        - "minecraft:netherite_upgrade_smithing_template"
-        - "minecraft:ominous_trial_key"
-        - "minecraft:shulker_box"
-        - "minecraft:shulker_shell"
-        - "minecraft:totem_of_undying"
-        - "minecraft:trial_key"
-      item-key-patterns:
-        - "minecraft:diamond_*"
-        - "minecraft:netherite_*"
-    set:
-      policy: EXCHANGE
-      stock-profile: progression_guarded
-      eco-envelope: progression_guarded
-      note: "High-progression items stay expensive to buy and taper hard on sell."
-
-  - id: prestige-loot
-    match:
-      item-key-patterns:
-        - "minecraft:*_armor_trim_smithing_template"
-        - "minecraft:music_disc_*"
-        - "minecraft:*_banner_pattern"
-      item-keys:
-        - "minecraft:disc_fragment_5"
-        - "minecraft:dragon_egg"
-        - "minecraft:dragon_head"
-    set:
-      policy: EXCHANGE
-      stock-profile: loot_prestige
-      eco-envelope: loot_prestige
-      note: "Rare exploration and prestige loot uses a premium market envelope."
-
-  - id: farm-bulk-aggressive
-    match:
-      item-keys:
-        - "minecraft:arrow"
-        - "minecraft:bamboo"
-        - "minecraft:beetroot"
-        - "minecraft:beetroot_seeds"
-        - "minecraft:bone"
-        - "minecraft:cactus"
-        - "minecraft:carrot"
-        - "minecraft:dried_kelp"
-        - "minecraft:ender_pearl"
-        - "minecraft:glow_berries"
-        - "minecraft:glow_ink_sac"
-        - "minecraft:gunpowder"
-        - "minecraft:ink_sac"
-        - "minecraft:kelp"
-        - "minecraft:melon_slice"
-        - "minecraft:potato"
-        - "minecraft:prismarine_crystals"
-        - "minecraft:prismarine_shard"
-        - "minecraft:pumpkin"
-        - "minecraft:rotten_flesh"
-        - "minecraft:slime_ball"
-        - "minecraft:spider_eye"
-        - "minecraft:string"
-        - "minecraft:sugar_cane"
-        - "minecraft:sweet_berries"
-        - "minecraft:wheat"
-        - "minecraft:wheat_seeds"
-    set:
-      policy: EXCHANGE
-      stock-profile: farm_bulk_aggressive
-      eco-envelope: farm_bulk_aggressive
-      note: "High-rate farmables taper hard to moderate eco spam from industrial output."
-
   - id: disable-spawn-eggs
     match:
       item-key-patterns:
@@ -114,6 +37,74 @@ rules:
       stock-profile: disabled_placeholder
       eco-envelope: disabled_placeholder
       note: "Spawn eggs are disabled from the exchange."
+
+  - id: progression-guarded
+    match:
+      item-keys:
+        - "minecraft:ancient_debris"
+        - "minecraft:beacon"
+        - "minecraft:elytra"
+        - "minecraft:enchanted_book"
+        - "minecraft:nether_star"
+        - "minecraft:netherite_ingot"
+        - "minecraft:netherite_scrap"
+        - "minecraft:shulker_shell"
+        - "minecraft:shulker_box"
+        - "minecraft:totem_of_undying"
+        - "minecraft:trial_key"
+      item-key-patterns:
+        - "minecraft:diamond_*"
+        - "minecraft:netherite_*"
+    set:
+      policy: EXCHANGE
+      stock-profile: progression_guarded
+      eco-envelope: progression_guarded
+      note: "Progression-sensitive item with guarded shop behavior."
+
+  - id: prestige-loot
+    match:
+      item-keys:
+        - "minecraft:disc_fragment_5"
+        - "minecraft:dragon_egg"
+        - "minecraft:dragon_head"
+      item-key-patterns:
+        - "minecraft:music_disc_*"
+        - "minecraft:*_armor_trim_smithing_template"
+        - "minecraft:*_banner_pattern"
+    set:
+      policy: EXCHANGE
+      stock-profile: loot_prestige
+      eco-envelope: loot_prestige
+      note: "Prestige / trophy loot item with high buy premium and guarded resale."
+
+  - id: farm-bulk-aggressive
+    match:
+      item-keys:
+        - "minecraft:bamboo"
+        - "minecraft:bamboo_block"
+        - "minecraft:beetroot"
+        - "minecraft:beetroot_seeds"
+        - "minecraft:bone"
+        - "minecraft:cactus"
+        - "minecraft:ender_pearl"
+        - "minecraft:glow_berries"
+        - "minecraft:gunpowder"
+        - "minecraft:kelp"
+        - "minecraft:potato"
+        - "minecraft:rotten_flesh"
+        - "minecraft:slime_ball"
+        - "minecraft:spider_eye"
+        - "minecraft:string"
+        - "minecraft:sugar_cane"
+        - "minecraft:sweet_berries"
+        - "minecraft:wheat"
+        - "minecraft:wheat_seeds"
+        - "minecraft:carrot"
+    set:
+      policy: EXCHANGE
+      stock-profile: farm_bulk_aggressive
+      eco-envelope: farm_bulk_aggressive
+      note: "High-rate farmable item with aggressive sell taper."
 
   - id: default-exchange
     match: {}

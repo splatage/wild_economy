@@ -38,19 +38,21 @@ public record AdminCatalogPolicyRule(
     ) {
         final String itemKey = AdminCatalogItemKeys.canonicalize(facts.key());
 
-        if (!this.itemKeys.isEmpty() && !this.itemKeys.contains(itemKey)) {
-            return false;
-        }
+        if (!this.itemKeys.isEmpty() || !this.itemKeyPatterns.isEmpty()) {
+            boolean matchedItemKeyConstraint = false;
 
-        if (!this.itemKeyPatterns.isEmpty()) {
-            boolean matchedPattern = false;
-            for (final String pattern : this.itemKeyPatterns) {
-                if (wildcardMatches(pattern, itemKey)) {
-                    matchedPattern = true;
-                    break;
+            if (this.itemKeys.contains(itemKey)) {
+                matchedItemKeyConstraint = true;
+            } else {
+                for (final String pattern : this.itemKeyPatterns) {
+                    if (wildcardMatches(pattern, itemKey)) {
+                        matchedItemKeyConstraint = true;
+                        break;
+                    }
                 }
             }
-            if (!matchedPattern) {
+
+            if (!matchedItemKeyConstraint) {
                 return false;
             }
         }
