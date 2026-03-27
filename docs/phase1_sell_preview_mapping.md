@@ -1,512 +1,596 @@
-# wild_economy — Phase 1 Mapping and Implementation Document
+# Phase 1 — Exact File-by-File Patch Plan (No Parallel Systems)
 
-## Scope of Phase 1
+## Architectural rule
 
-Phase 1 for this codebase is **not** to add sell commands from scratch. Those already exist. The real Phase 1 work is to introduce a **shared sale-planning / preview path** and make the current hand, inventory, and container sell flows consume it consistently.
+Phase 1 must be implemented as a **read-only projection of the existing sell system**.
 
-In practical terms, Phase 1 is:
+That means:
 
-- extract the existing grouped sale planning into a reusable first-class planning layer
-- make `/sellhand`, `/sellall`, and `/sellcontainer` all build from that same plan model
-- separate **plan / preview / execute** cleanly
-- standardize output formatting so the sell surface no longer feels stack-oriented or command-specific
+- reuse `StockState`
+- reuse `StockSnapshot`
+- reuse `SellQuote`
+- reuse `ExchangeSellServiceImpl` planning logic
+- do **not** add parallel enums, pricing helpers, or preview planners
+
+The only new feature surface is a preview command that reads from the existing sell domain.
 
 ---
 
-## What already exists
+## What the codebase already gives us
 
-### Command surface
+The attached repo already has the key pieces we need:
 
-The command layer is already present and thin:
+- `ExchangeSellServiceImpl`
+  - existing grouped inventory/container sale planning
+  - existing remove/restore/commit path
+- `StockSnapshot`
+  - includes `StockState`
+- `StockStateResolver`
+  - already defines the stock-state semantics
+- `SellQuote`
+  - already defines the quote model
+- `ExchangeService`
+  - existing façade used by commands
+- `ShopCommand`
+  - existing `/shop ...` subcommand router
+- `plugin.yml`
+  - current command registration surface
 
-- `src/main/java/com/splatage/wild_economy/command/ShopSellHandSubcommand.java`
-- `src/main/java/com/splatage/wild_economy/command/ShopSellAllSubcommand.java`
-- `src/main/java/com/splatage/wild_economy/command/ShopSellContainerSubcommand.java`
-- `src/main/java/com/splatage/wild_economy/command/ShopCommand.java`
+So the elegant Phase 1 edit set is **small and additive**:
 
-These subcommands currently invoke the exchange layer directly and then format messages per command.
+1. formalize the existing internal sale plan in `ExchangeSellServiceImpl`
+2. expose a read-only preview result from the same planner
+3. wire `/shop sell preview`
+4. wire `/worth` as an alias to the same preview path
+5. clean up wording drift in grouped outputs
+6. move `sellHand` onto the same planner spine where sensible
 
-### Service surface
+---
 
-The public sell API already exists on:
+# Exact files to modify
 
-- `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeService.java`
-- `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeServiceImpl.java`
+## 1) `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeSellService.java`
 
-Current public methods:
+### Why this file changes
+The preview command must call the existing sell domain through an explicit service method, not by duplicating planner logic in the command layer.
 
-- `sellHand(UUID playerId)`
-- `sellAll(UUID playerId)`
-- `sellContainer(UUID playerId)`
+### Add
+A new read-only method:
 
-### Execution engine
+```java
+SellPreviewResult previewInventorySell(UUID playerId);
+```
 
-Most of the real sell logic already lives in:
+### Why this is the right place
+This keeps preview in the sell domain, which is where it belongs.  
+It avoids creating a second “preview-only” service that would compete with the real sell flow.
 
-- `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeSellServiceImpl.java`
+---
 
-This class already contains the embryo of the future Phase 1 model:
+## 2) `src/main/java/com/splatage/wild_economy/exchange/domain/SellPreviewResult.java` **(new)**
 
-- grouped inventory scanning
-n- grouped pricing
-- planned removals
-- restore-on-payout-failure
-- grouped sell line results
+### Why this file is needed
+Preview needs a dedicated read-only result type. It should not be forced into `SellAllResult`, because `SellAllResult` is an execution result.
 
-The key existing internal planning method is:
+### Recommended shape
+
+```java
+public record SellPreviewResult(
+    boolean success,
+    List<SellPreviewLine> lines,
+    BigDecimal totalQuoted,
+    List<String> skippedDescriptions,
+    String message
+) {}
+```
+
+### Why this is elegant
+This adds a **read-only projection type** without inventing a second quote system.
+
+---
+
+## 3) `src/main/java/com/splatage/wild_economy/exchange/domain/SellPreviewLine.java` **(new)**
+
+### Why this file is needed
+Preview lines are not the same thing as `SellLineResult`.
+
+`SellLineResult` is a **completed sale** line.  
+Preview needs a **quoted sale** line that still carries the live stock state.
+
+### Recommended shape
+
+```java
+public record SellPreviewLine(
+    ItemKey itemKey,
+    String displayName,
+    int amountQuoted,
+    BigDecimal effectiveUnitPrice,
+    BigDecimal totalQuoted,
+    StockState stockState,
+    boolean tapered
+) {}
+```
+
+### Important rule
+Use the existing `StockState`.  
+Do **not** add a second enum such as `StockLevel`.
+
+---
+
+## 4) `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeSellServiceImpl.java`
+
+### This is the main Phase 1 file.
+
+### Current shape
+This file already contains the real planner spine:
 
 - `planSalesFromInventory(...)`
+- `removePlannedItems(...)`
+- `restorePlannedItems(...)`
+- `completePlannedSales(...)`
 
-And the existing plan shape is internal/private:
+### What should change
 
+#### A. Add preview entrypoint
+Add:
+
+```java
+@Override
+public SellPreviewResult previewInventorySell(final UUID playerId)
+```
+
+Flow:
+1. resolve online player
+2. call the existing inventory planner
+3. if empty, return failed preview result with skipped descriptions
+4. map planned lines into `SellPreviewLine`
+5. return total + skipped + message
+
+No mutation. No payout. No stock writes. No transaction logging.
+
+---
+
+#### B. Reuse existing planner internals
+Do **not** create a separate preview planner.
+
+Instead, extend the internal plan model so each planned line carries the existing `StockSnapshot` or at least `StockState`.
+
+Today the internal record is:
+
+```java
+private record GroupedPlannedSale(
+    ItemKey itemKey,
+    String displayName,
+    int amount,
+    SellQuote quote,
+    List<InventoryRemoval> removals
+) {}
+```
+
+Recommended change:
+
+```java
+private record GroupedPlannedSale(
+    ItemKey itemKey,
+    String displayName,
+    int amount,
+    SellQuote quote,
+    StockSnapshot stockSnapshot,
+    List<InventoryRemoval> removals
+) {}
+```
+
+### Why
+The planner already resolves stock before quoting.  
+Keeping `StockSnapshot` on the planned line lets preview reuse that exact same stock interpretation without recalculating or introducing parallel state logic.
+
+---
+
+#### C. Rename internal records for clarity (recommended, not required)
+Current names:
 - `SalePlanning`
 - `GroupedPlannedSale`
 - `InventoryRemoval`
-- `GroupedSaleAccumulator`
 
-### Folia-sensitive container path
+Recommended:
+- `SalePlan`
+- `PlannedSaleLine`
+- `InventoryRemoval`
 
-Container execution already has a coordinator:
-
-- `src/main/java/com/splatage/wild_economy/exchange/service/FoliaContainerSellCoordinator.java`
-
-This exists because placed-container selling has region/thread ownership constraints.
-
-### Wiring
-
-Construction is already centralized in:
-
-- `src/main/java/com/splatage/wild_economy/bootstrap/ServiceRegistry.java`
-
-That means Phase 1 can be added cleanly without scattering creation logic.
+This is optional, but it makes the internal architecture clearer and better aligned with the design docs.
 
 ---
 
-## Current architecture assessment
+#### D. Add held-item planner
+Current inconsistency:
+- `sellAll` and `sellContainer` go through grouped planning
+- `sellHand` does not
 
-The code already has a usable execution path, but it is still **execution-first** rather than **plan-first**.
+Add a helper:
 
-### What is good already
+```java
+private SalePlanning planHeldItem(ItemStack held)
+```
 
-- `/sellall` and `/sellcontainer` already group by item type before pricing
-- payout failure already restores inventory/container contents
-- transaction logging and stock updates happen after successful payout
-- command classes are thin and mostly defer to services
-- container selling already respects the Folia placement/ownership model
+or, if renamed,
 
-### What is still missing for Phase 1
+```java
+private SalePlan planHeldItem(ItemStack held)
+```
 
-- no reusable public/intermediate **sale plan** model
-- no clean preview API that can be called without executing the sale
-- `sellHand(...)` still bypasses the grouped planning path and performs its own one-off flow
-- command output formatting is duplicated and slightly inconsistent
-- “preview” is implicit inside execution, not a first-class step
+This helper should:
+- validate the held item
+- resolve catalog entry
+- resolve current `StockSnapshot`
+- quote via existing `PricingService`
+- return a one-line plan
 
-So the Phase 1 refactor should not redesign the economy. It should promote the existing internal planning logic into a proper shared layer.
-
----
-
-## Phase 1 target architecture
-
-## 1. Introduce a first-class sale planning layer
-
-Create a dedicated planner responsible only for **inspection and quoting**, not mutation.
-
-### Recommended new service
-
-`src/main/java/com/splatage/wild_economy/exchange/service/ExchangeSellPlanner.java`
-
-Suggested responsibility:
-
-- validate items for selling
-- group by `ItemKey`
-- quote using `PricingService`
-- collect skipped reasons
-- build a reusable plan object
-- perform **no inventory mutation**
-- perform **no stock writes**
-- perform **no transaction logging**
-- perform **no economy deposit**
-
-### Recommended implementation
-
-`src/main/java/com/splatage/wild_economy/exchange/service/ExchangeSellPlannerImpl.java`
-
-This should absorb the logic currently embedded in `ExchangeSellServiceImpl.planSalesFromInventory(...)` and the one-off sell-hand quote path.
+### Why
+This removes the last major divergence in the sell domain.
 
 ---
 
-## 2. Promote the current private plan records into shared domain objects
+#### E. Refactor `sellHand(...)` to use the planner
+After the helper exists, change `sellHand(...)` to:
 
-Right now the planning records are private implementation details inside `ExchangeSellServiceImpl`. That is the main reason preview cannot be exposed cleanly.
+1. build held-item plan
+2. fail if plan empty
+3. remove held item
+4. deposit payout
+5. restore on failure
+6. finalize through the same commit path used by grouped sells
 
-### Recommended new domain types
-
-Under:
-
-`src/main/java/com/splatage/wild_economy/exchange/domain/`
-
-Suggested types:
-
-#### `SellPlan`
-Represents one complete sell attempt before execution.
-
-Suggested fields:
-
-- `List<PlannedSellLine> plannedLines`
-- `List<String> skippedDescriptions`
-- `BigDecimal totalEarned`
-- `boolean taperedAny`
-- `SellSourceType sourceType`
-- `String sourceDescription`
-
-#### `PlannedSellLine`
-Represents one grouped item type to be sold.
-
-Suggested fields:
-
-- `ItemKey itemKey`
-- `String displayName`
-- `int amount`
-- `BigDecimal effectiveUnitPrice`
-- `BigDecimal totalEarned`
-- `boolean tapered`
-- `List<InventoryRemoval> removals`
-
-#### `InventoryRemoval`
-Can remain effectively the same as today, but should move out of the private record scope if execution remains two-stage.
-
-Suggested fields:
-
-- `int slot`
-- `ItemStack originalStack`
-
-#### `SellSourceType`
-Keeps output and execution semantics explicit.
-
-Suggested values:
-
-- `HAND`
-- `PLAYER_INVENTORY`
-- `CONTAINER`
-- `HELD_SHULKER`
-
-This lets the executor and formatter know what they are dealing with without command-specific branching.
+This makes hand-selling and grouped selling conceptually the same system.
 
 ---
 
-## 3. Split execution away from planning
+#### F. Add preview mapping helper
+Recommended helper:
 
-Once the plan exists, `ExchangeSellServiceImpl` should become an executor/orchestrator rather than the place where planning logic lives.
+```java
+private SellPreviewResult toPreviewResult(SalePlanning planning)
+```
 
-### Recommended role for `ExchangeSellServiceImpl` after refactor
+or equivalent.
 
-Keep it as the mutation path:
-
-- resolve player / container target
-- request a `SellPlan` from the planner
-- short-circuit on empty plans
-- remove planned items
-- deposit payout
-- restore on failure
-- update stock
-- log transactions
-- return result DTOs
-
-That preserves the current safety properties, but with a much cleaner internal shape.
-
-### Internal structure after refactor
-
-`ExchangeSellServiceImpl` should roughly have these responsibilities:
-
-#### Source resolution
-- find player
-- find held item
-- find inventory
-- resolve supported placed container or held shulker
-
-#### Execution
-- `executePlanAgainstInventory(...)`
-- `executePlanAgainstHeldShulker(...)`
-- `completePlannedSales(...)`
-
-#### Formatting/result projection
-- map `SellPlan` → `SellHandResult`
-- map `SellPlan` → `SellAllResult`
-- map `SellPlan` → `SellContainerResult`
-
-That is much clearer than mixing scanning, quoting, removal, payout, and string formatting in one flow.
+This helper should:
+- map each planned sale line to `SellPreviewLine`
+- use `sale.stockSnapshot().stockState()`
+- preserve `quote.tapered()`
+- preserve grouped-by-item-type semantics
 
 ---
 
-## 4. Unify hand selling onto the same plan model
+#### G. Leave these parts alone
+Do **not** disturb:
+- container protection logic
+- lock checks
+- Folia targeting flow
+- held-shulker restore behavior
+- payout-before-stock/log ordering
 
-This is the most important Phase 1 behavioural cleanup.
-
-### Current state
-
-`sellHand(UUID playerId)` in `ExchangeSellServiceImpl` currently does its own separate path:
-
-- validate held item
-- fetch catalog entry
-- quote single stack
-- remove item directly
-- deposit
-- restore on failure
-- add stock
-- log sale
-- return a dedicated `SellHandResult`
-
-### Why this is a problem
-
-- it duplicates logic already present in grouped planning
-- preview cannot be shared across all sell entry points while hand selling remains special-cased
-- future sell formatting or stock-pressure hints would need to be implemented twice
-
-### Phase 1 change
-
-Hand selling should become:
-
-- build `SellPlan` from the main-hand slot only
-- execute that plan using the same execution machinery as any other source
-- project the single planned line back into `SellHandResult`
-
-This preserves the external command behaviour, but collapses the internal drift.
+That behavior is already correct and should remain stable.
 
 ---
 
-## 5. Keep sell result DTOs for compatibility, but generate them from the plan
+## 5) `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeService.java`
 
-The current public result records are already reasonable and should probably stay for Phase 1:
+### Why this file changes
+Commands currently talk to the façade, not directly to `ExchangeSellService`.
 
-- `SellHandResult`
-- `SellAllResult`
-- `SellContainerResult`
-- `SellLineResult`
+### Add
+A new façade method:
 
-The refactor should **not** immediately replace these externally. Instead:
+```java
+SellPreviewResult previewInventorySell(UUID playerId);
+```
 
-- build one `SellPlan`
-- execute it
-- map it into the existing result records
-
-This avoids breaking command and GUI callers while still improving the core design.
+### Why
+This keeps command wiring consistent with the existing service architecture.
 
 ---
 
-## 6. Standardize sell message formatting
+## 6) `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeServiceImpl.java`
 
-At the moment:
+### Why this file changes
+The façade needs to delegate the new preview call.
 
-- `ShopSellAllSubcommand` formats sold lines and skipped lines inline
-- `ShopSellContainerSubcommand` duplicates similar formatting
-- `ShopSellHandSubcommand` only sends the service message
+### Add delegation
+Forward the new method directly to `exchangeSellService.previewInventorySell(playerId)`.
 
-That means the command layer is doing presentation work in multiple places.
-
-### Recommended new formatter
-
-`src/main/java/com/splatage/wild_economy/command/SellCommandSummaryFormatter.java`
-
-Suggested responsibilities:
-
-- format sold lines consistently
-- format skipped lines consistently
-- clamp output count consistently
-- use “item type(s)” rather than “stack(s)” where lines are grouped
-
-### Why this matters
-
-This is not cosmetic only. Right now `/sellall` and `/sellcontainer` are already grouping by item type, but the overflow message still says “more stack(s)”. That mismatches the real behaviour and weakens player understanding.
-
-A formatter lets Phase 1 fix that cleanly in one place.
+### Why
+This keeps preview as a thin façade pass-through, with no duplicate logic.
 
 ---
 
-## Exact file mapping for Phase 1
+## 7) `src/main/java/com/splatage/wild_economy/command/ShopSellPreviewSubcommand.java` **(new)**
 
-## Existing files to modify
+### Why this file is needed
+This is the canonical new player-facing command.
 
-### `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeSellServiceImpl.java`
+### Responsibilities
+Only:
+- confirm sender is a player
+- run through `PlatformExecutor`
+- call `exchangeService.previewInventorySell(...)`
+- format grouped preview output
 
-Primary Phase 1 refactor target.
+### It must NOT:
+- scan inventory directly
+- quote directly
+- resolve stock state directly
 
-Changes:
+That would create the parallel system we explicitly want to avoid.
 
-- extract planning logic into a planner service
-- refactor `sellHand(...)` to use shared planning
-- keep execution and recovery here
-- stop owning private planning records if they are promoted
+### Output requirements
+Grouped by item type, not stacks.
 
-### `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeService.java`
+Suggested output shape:
 
-Optional change only if you want preview APIs to be public in Phase 1.
+```text
+Sell preview:
+ - 128x Wheat for $45.00 [LOW]
+ - 64x Carrot for $18.00 [HEALTHY]
+ - 12x Iron Ingot for $30.00 [HIGH] (reduced)
 
-Possible additions:
+Skipped:
+ - Diamond Sword x1
 
-- `SellPlan previewSellHand(UUID playerId)`
-- `SellPlan previewSellAll(UUID playerId)`
-- `SellPlan previewSellContainer(UUID playerId)`
+Total quoted payout: $93.00
+```
 
-If you want to keep preview internal for now, leave this interface untouched in Phase 1.
+If truncated:
 
-### `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeServiceImpl.java`
+```text
+ - ... and 8 more item type(s)
+ - ... and 5 more skipped entries
+```
 
-Only needs changes if preview APIs are added publicly.
-
-### `src/main/java/com/splatage/wild_economy/command/ShopSellHandSubcommand.java`
-
-Minor change if you introduce a shared formatter or confirm/preview behaviour.
-
-### `src/main/java/com/splatage/wild_economy/command/ShopSellAllSubcommand.java`
-
-Refactor to delegate result display to a shared formatter.
-
-### `src/main/java/com/splatage/wild_economy/command/ShopSellContainerSubcommand.java`
-
-Refactor to delegate result display to a shared formatter.
-
-### `src/main/java/com/splatage/wild_economy/bootstrap/ServiceRegistry.java`
-
-Register:
-
-- planner service
-- optional formatter if injected
-- any new public preview-capable service wiring
+### Presentation rule
+Use the existing `StockState` names for now unless you later choose to add a formatter-only label mapping.
 
 ---
 
-## Recommended new files
+## 8) `src/main/java/com/splatage/wild_economy/command/ShopCommand.java`
 
-### Domain
+### Why this file changes
+`/shop sell preview` must route through the existing subcommand tree.
 
-- `src/main/java/com/splatage/wild_economy/exchange/domain/SellPlan.java`
-- `src/main/java/com/splatage/wild_economy/exchange/domain/PlannedSellLine.java`
-- `src/main/java/com/splatage/wild_economy/exchange/domain/InventoryRemoval.java`
-- `src/main/java/com/splatage/wild_economy/exchange/domain/SellSourceType.java`
+### Current limitation
+`ShopCommand` only handles:
+- `sellhand`
+- `sellall`
+- `sellcontainer`
 
-### Service
+### Required change
+Add a preview subcommand dependency:
 
-- `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeSellPlanner.java`
-- `src/main/java/com/splatage/wild_economy/exchange/service/ExchangeSellPlannerImpl.java`
+```java
+private final ShopSellPreviewSubcommand sellPreviewSubcommand;
+```
 
-### Command formatting
+Update constructor accordingly.
 
-- `src/main/java/com/splatage/wild_economy/command/SellCommandSummaryFormatter.java`
+Then extend routing to support:
 
----
+- `/shop sell preview`
 
-## Keep out of Phase 1
+Since the current command style is flattened (`/shop sellall`, `/shop sellhand`, etc.), there are two possible approaches:
 
-To avoid drift, do **not** mix these into Phase 1:
+### Recommended approach: support both
+Keep the current flat commands, but add nested parsing for preview:
 
-- transaction-history commands
-- supplier stats
-- stock-pressure GUI signals
-- virtual category views
-- price model redesign
-- DB schema work
-- confirmation UX state machines unless explicitly wanted now
+- `/shop sell preview`
 
-Phase 1 should stay tightly focused on one thing:
+Implementation suggestion:
+- if `args[0].equalsIgnoreCase("sell") && args.length >= 2 && args[1].equalsIgnoreCase("preview")`
+  -> preview subcommand
+- keep existing flat `sellhand`, `sellall`, `sellcontainer`
 
-> make sale planning a first-class shared layer and make all sell commands build from it.
-
----
-
-## Behavioural contract for Phase 1
-
-After the refactor, all three sell entry points should obey the same internal contract.
-
-### Preview stage
-
-- inspect source
-- validate sellable items
-- group by `ItemKey`
-- quote against current stock snapshot
-- collect skipped items/reasons
-- compute total
-- mark whether any line is tapered
-
-### Execute stage
-
-- remove only the planned items
-- deposit the planned total
-- restore items if payout fails
-- apply stock deltas only after successful payout
-- append transaction log entries only after successful payout
-
-### Result stage
-
-- project the executed plan into existing result DTOs
-- format player-facing output consistently
-
-That gives you a stable foundation for later preview commands, GUI confirmation, stock-pressure hints, and supplier tracking.
+### Why this is the better compromise
+It preserves backward compatibility while still giving you the cleaner canonical preview form.
 
 ---
 
-## Risk notes
+## 9) `src/main/java/com/splatage/wild_economy/command/ShopSellAllSubcommand.java`
 
-### 1. Folia container ownership
+### Why this file changes
+It currently calls grouped item-type results “stack(s)”.
 
-Do not collapse `FoliaContainerSellCoordinator` into the planner. The planner should stay pure and source-agnostic. Container thread/region choreography should remain in the coordinator/executor layer.
+### Required edits
+Change:
+- `more stack(s)` -> `more item type(s)`
+- `more skipped stack(s)` -> `more skipped entries`
 
-### 2. ItemStack retention in `InventoryRemoval`
+### Why
+The planner groups by item type, not by raw inventory stack, so the current wording is inaccurate.
 
-If `InventoryRemoval` becomes a shared domain object, be careful that it is still treated as an execution detail and not cached or persisted. It contains live cloned Bukkit item data.
-
-### 3. Public preview API timing
-
-You do not need to expose preview methods publicly in Phase 1 to get the architectural benefit. A purely internal plan layer is enough. Public preview commands can come later.
-
-### 4. Message drift
-
-The wording should reflect grouped item-type selling, not stack-by-stack selling. This is a small but important player-trust detail.
+### Important note
+No logic changes needed here beyond wording unless you later choose to extract a shared formatter.
 
 ---
 
-## Recommended implementation order
+## 10) `src/main/java/com/splatage/wild_economy/command/ShopSellContainerSubcommand.java`
 
-### Step 1
-Create shared domain records for the sell plan.
+### Why this file changes
+Same wording issue as `ShopSellAllSubcommand`.
 
-### Step 2
-Extract `planSalesFromInventory(...)` logic into `ExchangeSellPlannerImpl`.
+### Required edits
+Change:
+- `more stack(s)` -> `more item type(s)`
+- `more skipped stack(s)` -> `more skipped entries`
 
-### Step 3
-Add a single-slot / hand planning path to the planner.
-
-### Step 4
-Refactor `ExchangeSellServiceImpl` to execute a `SellPlan` instead of building plans inline.
-
-### Step 5
-Move duplicated command summary formatting into one formatter.
-
-### Step 6
-Regression-check:
-
-- `/sellhand`
-- `/sellall`
-- `/sellcontainer` on placed chest/barrel/shulker
-- `/sellcontainer` on held shulker
-- payout failure restore paths
-- shulker protection in `/sellall`
-- tapered/reduced value messaging
+### Why
+Same reason: grouped output must describe grouped item types, not stacks.
 
 ---
 
-## Final recommendation
+## 11) `src/main/java/com/splatage/wild_economy/bootstrap/ServiceRegistry.java`
 
-For this repository, Phase 1 should be treated as an **internal architecture cleanup that unlocks later UX features**, not as a player-facing feature drop by itself.
+### Why this file changes
+It must instantiate and register the new preview command.
 
-That is the right move because the code already contains the core behaviour; what it lacks is a durable shared planning model.
+### Required edits
 
-Once this is in place, later Tier 1 work becomes much easier:
+#### A. Construct preview subcommand
+Add:
 
-- stock-aware preview hints
-- unified sell preview output
-- confirmation flows
-- supplier tracking hooks
-- cleaner transaction/history exposure
+```java
+final ShopSellPreviewSubcommand sellPreviewSubcommand =
+    new ShopSellPreviewSubcommand(this.exchangeService, this.platformExecutor);
+```
 
-Without this refactor, each of those features will keep re-implementing sell logic in parallel.
+#### B. Pass preview subcommand into `ShopCommand`
+Update constructor call accordingly.
+
+#### C. Register `/worth`
+Get the plugin command and set the same preview executor:
+
+```java
+final PluginCommand worth = this.plugin.getCommand("worth");
+if (worth != null) {
+    worth.setExecutor(sellPreviewSubcommand);
+}
+```
+
+### What should NOT happen
+Do not instantiate a new special preview service here.  
+It should use the same `exchangeService` already in use.
+
+---
+
+## 12) `src/main/resources/plugin.yml`
+
+### Why this file changes
+We need to expose the new alias cleanly.
+
+### Recommended edit
+Add:
+
+```yaml
+  worth:
+    description: Preview the current Exchange sell value of your inventory.
+    usage: /worth
+    permission: wild_economy.shop.sell
+```
+
+### Important design note
+Do **not** add a separate `sellpreview` top-level command.
+
+Why:
+- the locked scope says `/sell preview` is canonical
+- `/worth` is the familiar alias
+- a third top-level command just adds surface clutter
+
+### Also update `/shop` usage text
+Current:
+
+```yaml
+usage: /shop [sellhand|sellall|sellcontainer]
+```
+
+Recommended:
+
+```yaml
+usage: /shop [sell preview|sellhand|sellall|sellcontainer]
+```
+
+and update description/help text accordingly.
+
+---
+
+# Files that should NOT change in Phase 1
+
+These are intentionally out of scope unless compile wiring forces a minimal touch:
+
+- `StockState.java`
+- `StockSnapshot.java`
+- `StockStateResolver.java`
+- `SellQuote.java`
+- `PricingServiceImpl.java`
+- `StockServiceImpl.java`
+- container protection integration classes
+- GUI browse/view models
+- transaction repositories
+- economy ledger system
+
+These already express the domain correctly and should be reused, not edited.
+
+---
+
+# Exact non-goals to enforce elegance
+
+Do not add any of the following:
+
+- `StockLevel`
+- `PreviewStockState`
+- `SellPreviewPlannerService`
+- command-side inventory scanning logic
+- command-side quoting logic
+- duplicate stock threshold logic
+- a second pricing path for previews
+
+If a change introduces any of those, it is drifting into a competing system.
+
+---
+
+# Implementation order
+
+## Step 1
+Add:
+- `SellPreviewResult`
+- `SellPreviewLine`
+
+## Step 2
+Extend `ExchangeSellService` and `ExchangeService` with preview method
+
+## Step 3
+Refactor `ExchangeSellServiceImpl`
+- add stock snapshot to planned lines
+- add preview method
+- add held-item planner
+- unify `sellHand`
+
+## Step 4
+Add `ShopSellPreviewSubcommand`
+
+## Step 5
+Update `ShopCommand` routing
+
+## Step 6
+Update `ServiceRegistry` registration
+
+## Step 7
+Update `plugin.yml`
+
+## Step 8
+Fix grouped wording in sell-all and sell-container commands
+
+---
+
+# Definition of done
+
+Phase 1 is complete when:
+
+- `/shop sell preview` works
+- `/worth` calls the exact same preview flow
+- preview lines are grouped by item type
+- preview lines reuse the existing `StockState`
+- no new preview-only planner or stock enum exists
+- `sellHand` uses the same planner spine as the grouped sell flows
+- grouped output no longer says “stack(s)” when it means grouped item types
+
+---
+
+# Final judgment
+
+The elegant implementation is **not** to bolt a preview feature beside the sell system.
+
+It is to make preview a **read-only lens on the sell system that already exists**.
+
+That gives you:
+- one planner
+- one quote model
+- one stock-state model
+- one source of truth
+- minimal drift
