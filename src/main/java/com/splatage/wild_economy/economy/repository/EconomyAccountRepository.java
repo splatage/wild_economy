@@ -16,5 +16,13 @@ public interface EconomyAccountRepository {
 
     void upsert(Connection connection, UUID playerId, MoneyAmount balance, long updatedAtEpochSecond);
 
+    boolean updateIfBalanceMatches(
+        Connection connection,
+        UUID playerId,
+        MoneyAmount expectedBalance,
+        MoneyAmount newBalance,
+        long updatedAtEpochSecond
+    );
+
     List<EconomyAccountRecord> findTopAccounts(int limit, int offset);
 }

@@ -19,6 +19,8 @@ import java.util.concurrent.ConcurrentMap;
 
 public final class EconomyServiceImpl implements EconomyService {
 
+    private static final int MAX_BALANCE_UPDATE_ATTEMPTS = 3;
+
     private final EconomyConfig economyConfig;
     private final EconomyAccountRepository economyAccountRepository;
     private final EconomyLedgerRepository economyLedgerRepository;
@@ -112,29 +114,41 @@ public final class EconomyServiceImpl implements EconomyService {
 
         final Object lock = this.lockFor(playerId);
         synchronized (lock) {
-            final long now = this.now();
-            final MoneyAmount currentBalance = this.loadBalanceLocked(playerId, true);
-            final MoneyAmount newBalance = currentBalance.add(amount);
+            for (int attempt = 0; attempt < MAX_BALANCE_UPDATE_ATTEMPTS; attempt++) {
+                final long now = this.now();
+                try {
+                    final EconomyMutationResult result = this.transactionRunner.run(connection -> {
+                        this.economyAccountRepository.createIfAbsent(connection, playerId, now);
+                        final MoneyAmount currentBalance = this.balanceOf(this.economyAccountRepository.findByPlayerId(connection, playerId));
+                        final MoneyAmount newBalance = currentBalance.add(amount);
+                        if (!this.economyAccountRepository.updateIfBalanceMatches(connection, playerId, currentBalance, newBalance, now)) {
+                            throw new ConcurrentBalanceUpdateException();
+                        }
+                        this.economyLedgerRepository.insert(connection, new EconomyLedgerEntry(
+                                playerId,
+                                reason,
+                                amount,
+                                newBalance,
+                                null,
+                                referenceType,
+                                referenceId,
+                                now
+                        ));
+                        return EconomyMutationResult.success(newBalance);
+                    });
 
-            this.transactionRunner.run(connection -> {
-                this.economyAccountRepository.createIfAbsent(connection, playerId, now);
-                this.economyAccountRepository.upsert(connection, playerId, newBalance, now);
-                this.economyLedgerRepository.insert(connection, new EconomyLedgerEntry(
-                        playerId,
-                        reason,
-                        amount,
-                        newBalance,
-                        null,
-                        referenceType,
-                        referenceId,
-                        now
-                ));
-                return null;
-            });
+                    this.balanceCache.put(playerId, result.resultingBalance(), now, this.balanceCache.isOnline(playerId));
+                    this.baltopService.invalidate();
+                    return result;
+                } catch (final ConcurrentBalanceUpdateException ignored) {
+                    // Retry against the latest shared-database state.
+                }
+            }
 
-            this.balanceCache.put(playerId, newBalance, now, this.balanceCache.isOnline(playerId));
-            this.baltopService.invalidate();
-            return EconomyMutationResult.success(newBalance);
+            return EconomyMutationResult.failure(
+                    "Balance changed during update, please try again.",
+                    this.getBalanceForSensitiveOperation(playerId)
+            );
         }
     }
 
@@ -157,33 +171,50 @@ public final class EconomyServiceImpl implements EconomyService {
 
         final Object lock = this.lockFor(playerId);
         synchronized (lock) {
-            final long now = this.now();
-            final MoneyAmount currentBalance = this.loadBalanceLocked(playerId, true);
-            if (currentBalance.minorUnits() < amount.minorUnits()) {
-                return EconomyMutationResult.failure("Insufficient funds", currentBalance);
+            for (int attempt = 0; attempt < MAX_BALANCE_UPDATE_ATTEMPTS; attempt++) {
+                final long now = this.now();
+                try {
+                    final EconomyMutationResult result = this.transactionRunner.run(connection -> {
+                        this.economyAccountRepository.createIfAbsent(connection, playerId, now);
+                        final MoneyAmount currentBalance = this.balanceOf(this.economyAccountRepository.findByPlayerId(connection, playerId));
+                        if (currentBalance.minorUnits() < amount.minorUnits()) {
+                            return EconomyMutationResult.failure("Insufficient funds", currentBalance);
+                        }
+
+                        final MoneyAmount newBalance = currentBalance.subtract(amount);
+                        if (!this.economyAccountRepository.updateIfBalanceMatches(connection, playerId, currentBalance, newBalance, now)) {
+                            throw new ConcurrentBalanceUpdateException();
+                        }
+
+                        this.economyLedgerRepository.insert(connection, new EconomyLedgerEntry(
+                                playerId,
+                                reason,
+                                MoneyAmount.ofMinor(-amount.minorUnits()),
+                                newBalance,
+                                null,
+                                referenceType,
+                                referenceId,
+                                now
+                        ));
+                        return EconomyMutationResult.success(newBalance);
+                    });
+
+                    if (!result.success()) {
+                        return result;
+                    }
+
+                    this.balanceCache.put(playerId, result.resultingBalance(), now, this.balanceCache.isOnline(playerId));
+                    this.baltopService.invalidate();
+                    return result;
+                } catch (final ConcurrentBalanceUpdateException ignored) {
+                    // Retry against the latest shared-database state.
+                }
             }
 
-            final MoneyAmount newBalance = currentBalance.subtract(amount);
-
-            this.transactionRunner.run(connection -> {
-                this.economyAccountRepository.createIfAbsent(connection, playerId, now);
-                this.economyAccountRepository.upsert(connection, playerId, newBalance, now);
-                this.economyLedgerRepository.insert(connection, new EconomyLedgerEntry(
-                        playerId,
-                        reason,
-                        MoneyAmount.ofMinor(-amount.minorUnits()),
-                        newBalance,
-                        null,
-                        referenceType,
-                        referenceId,
-                        now
-                ));
-                return null;
-            });
-
-            this.balanceCache.put(playerId, newBalance, now, this.balanceCache.isOnline(playerId));
-            this.baltopService.invalidate();
-            return EconomyMutationResult.success(newBalance);
+            return EconomyMutationResult.failure(
+                    "Balance changed during update, please try again.",
+                    this.getBalanceForSensitiveOperation(playerId)
+            );
         }
     }
 
@@ -201,29 +232,41 @@ public final class EconomyServiceImpl implements EconomyService {
 
         final Object lock = this.lockFor(playerId);
         synchronized (lock) {
-            final long now = this.now();
-            final MoneyAmount currentBalance = this.loadBalanceLocked(playerId, false);
-            final MoneyAmount delta = balance.subtract(currentBalance);
+            for (int attempt = 0; attempt < MAX_BALANCE_UPDATE_ATTEMPTS; attempt++) {
+                final long now = this.now();
+                try {
+                    final EconomyMutationResult result = this.transactionRunner.run(connection -> {
+                        this.economyAccountRepository.createIfAbsent(connection, playerId, now);
+                        final MoneyAmount currentBalance = this.balanceOf(this.economyAccountRepository.findByPlayerId(connection, playerId));
+                        final MoneyAmount delta = balance.subtract(currentBalance);
+                        if (!this.economyAccountRepository.updateIfBalanceMatches(connection, playerId, currentBalance, balance, now)) {
+                            throw new ConcurrentBalanceUpdateException();
+                        }
+                        this.economyLedgerRepository.insert(connection, new EconomyLedgerEntry(
+                                playerId,
+                                reason,
+                                delta,
+                                balance,
+                                null,
+                                referenceType,
+                                referenceId,
+                                now
+                        ));
+                        return EconomyMutationResult.success(balance);
+                    });
 
-            this.transactionRunner.run(connection -> {
-                this.economyAccountRepository.createIfAbsent(connection, playerId, now);
-                this.economyAccountRepository.upsert(connection, playerId, balance, now);
-                this.economyLedgerRepository.insert(connection, new EconomyLedgerEntry(
-                        playerId,
-                        reason,
-                        delta,
-                        balance,
-                        null,
-                        referenceType,
-                        referenceId,
-                        now
-                ));
-                return null;
-            });
+                    this.balanceCache.put(playerId, result.resultingBalance(), now, this.balanceCache.isOnline(playerId));
+                    this.baltopService.invalidate();
+                    return result;
+                } catch (final ConcurrentBalanceUpdateException ignored) {
+                    // Retry against the latest shared-database state.
+                }
+            }
 
-            this.balanceCache.put(playerId, balance, now, this.balanceCache.isOnline(playerId));
-            this.baltopService.invalidate();
-            return EconomyMutationResult.success(balance);
+            return EconomyMutationResult.failure(
+                    "Balance changed during update, please try again.",
+                    this.getBalanceForSensitiveOperation(playerId)
+            );
         }
     }
 
@@ -263,51 +306,72 @@ public final class EconomyServiceImpl implements EconomyService {
 
         synchronized (firstLock) {
             synchronized (secondLock) {
-                final long now = this.now();
+                for (int attempt = 0; attempt < MAX_BALANCE_UPDATE_ATTEMPTS; attempt++) {
+                    final long now = this.now();
+                    try {
+                        final EconomyTransferResult result = this.transactionRunner.run(connection -> {
+                            this.economyAccountRepository.createIfAbsent(connection, senderId, now);
+                            this.economyAccountRepository.createIfAbsent(connection, recipientId, now);
 
-                final MoneyAmount senderBalance = this.loadBalanceLocked(senderId, true);
-                if (senderBalance.minorUnits() < amount.minorUnits()) {
-                    return EconomyTransferResult.failure("Insufficient funds", senderBalance, this.loadBalanceLocked(recipientId, false));
+                            final MoneyAmount senderBalance = this.balanceOf(this.economyAccountRepository.findByPlayerId(connection, senderId));
+                            if (senderBalance.minorUnits() < amount.minorUnits()) {
+                                final MoneyAmount recipientBalance = this.balanceOf(this.economyAccountRepository.findByPlayerId(connection, recipientId));
+                                return EconomyTransferResult.failure("Insufficient funds", senderBalance, recipientBalance);
+                            }
+
+                            final MoneyAmount recipientBalance = this.balanceOf(this.economyAccountRepository.findByPlayerId(connection, recipientId));
+                            final MoneyAmount newSenderBalance = senderBalance.subtract(amount);
+                            final MoneyAmount newRecipientBalance = recipientBalance.add(amount);
+
+                            if (!this.economyAccountRepository.updateIfBalanceMatches(connection, senderId, senderBalance, newSenderBalance, now)) {
+                                throw new ConcurrentBalanceUpdateException();
+                            }
+                            if (!this.economyAccountRepository.updateIfBalanceMatches(connection, recipientId, recipientBalance, newRecipientBalance, now)) {
+                                throw new ConcurrentBalanceUpdateException();
+                            }
+
+                            this.economyLedgerRepository.insert(connection, new EconomyLedgerEntry(
+                                    senderId,
+                                    EconomyReason.PLAYER_PAY_SEND,
+                                    MoneyAmount.ofMinor(-amount.minorUnits()),
+                                    newSenderBalance,
+                                    recipientId,
+                                    referenceType,
+                                    referenceId,
+                                    now
+                            ));
+
+                            this.economyLedgerRepository.insert(connection, new EconomyLedgerEntry(
+                                    recipientId,
+                                    EconomyReason.PLAYER_PAY_RECEIVE,
+                                    amount,
+                                    newRecipientBalance,
+                                    senderId,
+                                    referenceType,
+                                    referenceId,
+                                    now
+                            ));
+                            return EconomyTransferResult.success(newSenderBalance, newRecipientBalance);
+                        });
+
+                        if (!result.success()) {
+                            return result;
+                        }
+
+                        this.balanceCache.put(senderId, result.senderBalance(), now, this.balanceCache.isOnline(senderId));
+                        this.balanceCache.put(recipientId, result.recipientBalance(), now, this.balanceCache.isOnline(recipientId));
+                        this.baltopService.invalidate();
+                        return result;
+                    } catch (final ConcurrentBalanceUpdateException ignored) {
+                        // Retry against the latest shared-database state.
+                    }
                 }
 
-                final MoneyAmount recipientBalance = this.loadBalanceLocked(recipientId, true);
-                final MoneyAmount newSenderBalance = senderBalance.subtract(amount);
-                final MoneyAmount newRecipientBalance = recipientBalance.add(amount);
-
-                this.transactionRunner.run(connection -> {
-                    this.economyAccountRepository.createIfAbsent(connection, senderId, now);
-                    this.economyAccountRepository.createIfAbsent(connection, recipientId, now);
-                    this.economyAccountRepository.upsert(connection, senderId, newSenderBalance, now);
-                    this.economyAccountRepository.upsert(connection, recipientId, newRecipientBalance, now);
-
-                    this.economyLedgerRepository.insert(connection, new EconomyLedgerEntry(
-                            senderId,
-                            EconomyReason.PLAYER_PAY_SEND,
-                            MoneyAmount.ofMinor(-amount.minorUnits()),
-                            newSenderBalance,
-                            recipientId,
-                            referenceType,
-                            referenceId,
-                            now
-                    ));
-
-                    this.economyLedgerRepository.insert(connection, new EconomyLedgerEntry(
-                            recipientId,
-                            EconomyReason.PLAYER_PAY_RECEIVE,
-                            amount,
-                            newRecipientBalance,
-                            senderId,
-                            referenceType,
-                            referenceId,
-                            now
-                    ));
-                    return null;
-                });
-
-                this.balanceCache.put(senderId, newSenderBalance, now, this.balanceCache.isOnline(senderId));
-                this.balanceCache.put(recipientId, newRecipientBalance, now, this.balanceCache.isOnline(recipientId));
-                this.baltopService.invalidate();
-                return EconomyTransferResult.success(newSenderBalance, newRecipientBalance);
+                return EconomyTransferResult.failure(
+                        "Balance changed during update, please try again.",
+                        this.getBalanceForSensitiveOperation(senderId),
+                        this.getBalance(recipientId)
+                );
             }
         }
     }
@@ -315,6 +379,10 @@ public final class EconomyServiceImpl implements EconomyService {
     @Override
     public void invalidate(final UUID playerId) {
         this.balanceCache.evict(playerId);
+    }
+
+    private MoneyAmount balanceOf(final EconomyAccountRecord account) {
+        return account == null ? MoneyAmount.zero() : account.balance();
     }
 
     private MoneyAmount loadBalance(final UUID playerId, final boolean forceRefresh) {
@@ -359,5 +427,9 @@ public final class EconomyServiceImpl implements EconomyService {
 
     private int order(final UUID left, final UUID right) {
         return left.toString().compareTo(right.toString());
+    }
+
+    private static final class ConcurrentBalanceUpdateException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
     }
 }

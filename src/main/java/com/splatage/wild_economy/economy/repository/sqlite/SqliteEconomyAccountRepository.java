@@ -97,6 +97,28 @@ public final class SqliteEconomyAccountRepository implements EconomyAccountRepos
     }
 
     @Override
+    public boolean updateIfBalanceMatches(
+        final Connection connection,
+        final UUID playerId,
+        final MoneyAmount expectedBalance,
+        final MoneyAmount newBalance,
+        final long updatedAtEpochSecond
+    ) {
+        final String sql = "UPDATE " + this.accountsTableName
+                + " SET balance_minor = ?, updated_at = ? WHERE player_uuid = ? AND balance_minor = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, newBalance.minorUnits());
+            statement.setLong(2, updatedAtEpochSecond);
+            statement.setString(3, playerId.toString());
+            statement.setLong(4, expectedBalance.minorUnits());
+            return statement.executeUpdate() == 1;
+        } catch (final SQLException exception) {
+            throw new IllegalStateException("Failed to compare-and-swap economy account for " + playerId, exception);
+        }
+    }
+
+    @Override
     public List<EconomyAccountRecord> findTopAccounts(final int limit, final int offset) {
         final String sql = "SELECT player_uuid, balance_minor, updated_at FROM " + this.accountsTableName
                 + " ORDER BY balance_minor DESC, player_uuid ASC LIMIT ? OFFSET ?";
@@ -121,3 +143,4 @@ public final class SqliteEconomyAccountRepository implements EconomyAccountRepos
         }
     }
 }
+
