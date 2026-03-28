@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.gui;
 
+import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.supplier.SupplierContributionEntry;
 import com.splatage.wild_economy.exchange.supplier.SupplierPlayerDetail;
 import com.splatage.wild_economy.exchange.supplier.SupplierScope;
@@ -270,8 +271,10 @@ public final class TopSupplierMenu {
     }
 
     private ItemStack contributionEntry(final int position, final SupplierContributionEntry contribution) {
+        final Material material = resolveMaterial(contribution.itemKey());
+
         return this.infoItem(
-            Material.CHEST,
+            material,
             "#" + position + " " + contribution.displayName(),
             List.of(
                 "§7Quantity supplied:",
@@ -280,6 +283,13 @@ public final class TopSupplierMenu {
                 "§7Item key: §8" + contribution.itemKey().value()
             )
         );
+    }
+
+    private Material resolveMaterial(final ItemKey itemKey) {
+        final String raw = itemKey.value();
+        final String bukkitName = raw.startsWith("minecraft:") ? raw.substring("minecraft:".length()) : raw;
+        final Material material = Material.matchMaterial(bukkitName);
+        return material != null ? material : Material.CHEST;
     }
 
     private ItemStack infoItem(final Material material, final String name, final List<String> lore) {
