@@ -21,6 +21,7 @@ public final class ShopMenuRouter {
     private final StoreCategoryMenu storeCategoryMenu;
     private final StoreProductDetailMenu storeProductDetailMenu;
     private final XpBottleMenu xpBottleMenu;
+    private final TopSupplierMenu topSupplierMenu;
 
     public ShopMenuRouter(
         final PlatformExecutor platformExecutor,
@@ -31,7 +32,8 @@ public final class ShopMenuRouter {
         final StoreRootMenu storeRootMenu,
         final StoreCategoryMenu storeCategoryMenu,
         final StoreProductDetailMenu storeProductDetailMenu,
-        final XpBottleMenu xpBottleMenu
+        final XpBottleMenu xpBottleMenu,
+        final TopSupplierMenu topSupplierMenu
     ) {
         this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
         this.exchangeRootMenu = Objects.requireNonNull(exchangeRootMenu, "exchangeRootMenu");
@@ -42,6 +44,7 @@ public final class ShopMenuRouter {
         this.storeCategoryMenu = Objects.requireNonNull(storeCategoryMenu, "storeCategoryMenu");
         this.storeProductDetailMenu = Objects.requireNonNull(storeProductDetailMenu, "storeProductDetailMenu");
         this.xpBottleMenu = Objects.requireNonNull(xpBottleMenu, "xpBottleMenu");
+        this.topSupplierMenu = Objects.requireNonNull(topSupplierMenu, "topSupplierMenu");
     }
 
     public void openRoot(final Player player) {
@@ -105,6 +108,22 @@ public final class ShopMenuRouter {
     public void openStoreXpBottles(final Player player) {
         this.platformExecutor.runOnPlayer(player, () -> this.xpBottleMenu.open(player));
     }
+    public void openTopSuppliers(final Player player) {
+        this.platformExecutor.runOnPlayer(player, () -> this.topSupplierMenu.open(player));
+    }
+
+    public void openTopSuppliers(final Player player, final com.splatage.wild_economy.exchange.supplier.SupplierScope scope) {
+        this.platformExecutor.runOnPlayer(player, () -> this.topSupplierMenu.open(player, scope));
+    }
+
+    public void openTopSupplierDetail(
+        final Player player,
+        final java.util.UUID selectedPlayerId,
+        final com.splatage.wild_economy.exchange.supplier.SupplierScope scope
+    ) {
+        this.platformExecutor.runOnPlayer(player, () -> this.topSupplierMenu.openPlayerDetail(player, selectedPlayerId, scope));
+    }
+
 
     public void goBack(final Player player) {
         final ShopMenuHolder holder = this.currentHolder(player);
@@ -151,7 +170,8 @@ public final class ShopMenuRouter {
 
     public void closeAllShopViews() {
         for (final Player player : Bukkit.getOnlinePlayers()) {
-            if (this.currentHolder(player) == null) {
+            final Inventory topInventory = player.getOpenInventory().getTopInventory();
+            if (this.currentHolder(player) == null && !this.topSupplierMenu.isTopSupplierInventory(topInventory)) {
                 continue;
             }
             this.platformExecutor.runOnPlayer(player, player::closeInventory);

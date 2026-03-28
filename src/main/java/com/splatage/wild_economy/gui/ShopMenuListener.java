@@ -16,6 +16,7 @@ public final class ShopMenuListener implements Listener {
     private final StoreCategoryMenu storeCategoryMenu;
     private final StoreProductDetailMenu storeProductDetailMenu;
     private final XpBottleMenu xpBottleMenu;
+    private final TopSupplierMenu topSupplierMenu;
 
     public ShopMenuListener(
         final ExchangeRootMenu exchangeRootMenu,
@@ -25,7 +26,8 @@ public final class ShopMenuListener implements Listener {
         final StoreRootMenu storeRootMenu,
         final StoreCategoryMenu storeCategoryMenu,
         final StoreProductDetailMenu storeProductDetailMenu,
-        final XpBottleMenu xpBottleMenu
+        final XpBottleMenu xpBottleMenu,
+        final TopSupplierMenu topSupplierMenu
     ) {
         this.exchangeRootMenu = Objects.requireNonNull(exchangeRootMenu, "exchangeRootMenu");
         this.exchangeSubcategoryMenu = Objects.requireNonNull(exchangeSubcategoryMenu, "exchangeSubcategoryMenu");
@@ -35,10 +37,16 @@ public final class ShopMenuListener implements Listener {
         this.storeCategoryMenu = Objects.requireNonNull(storeCategoryMenu, "storeCategoryMenu");
         this.storeProductDetailMenu = Objects.requireNonNull(storeProductDetailMenu, "storeProductDetailMenu");
         this.xpBottleMenu = Objects.requireNonNull(xpBottleMenu, "xpBottleMenu");
+        this.topSupplierMenu = Objects.requireNonNull(topSupplierMenu, "topSupplierMenu");
     }
 
     @EventHandler
     public void onInventoryClick(final InventoryClickEvent event) {
+        if (this.topSupplierMenu.isTopSupplierInventory(event.getView().getTopInventory())) {
+            this.topSupplierMenu.handleClick(event);
+            return;
+        }
+
         final ShopMenuHolder holder = ShopMenuRouter.getShopMenuHolder(event.getView().getTopInventory());
         if (holder == null) {
             return;
@@ -76,8 +84,19 @@ public final class ShopMenuListener implements Listener {
         }
     }
 
-    @EventHandler
+@EventHandler
     public void onInventoryDrag(final InventoryDragEvent event) {
+        if (this.topSupplierMenu.isTopSupplierInventory(event.getView().getTopInventory())) {
+            final int topInventorySize = event.getView().getTopInventory().getSize();
+            for (final int rawSlot : event.getRawSlots()) {
+                if (rawSlot < topInventorySize) {
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+            return;
+        }
+
         final ShopMenuHolder holder = ShopMenuRouter.getShopMenuHolder(event.getView().getTopInventory());
         if (holder == null) {
             return;

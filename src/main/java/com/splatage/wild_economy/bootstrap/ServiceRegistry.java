@@ -43,6 +43,7 @@ import com.splatage.wild_economy.gui.PlayerInfoItemFactory;
 import com.splatage.wild_economy.gui.StoreCategoryMenu;
 import com.splatage.wild_economy.gui.StoreProductDetailMenu;
 import com.splatage.wild_economy.gui.StoreRootMenu;
+import com.splatage.wild_economy.gui.TopSupplierMenu;
 import com.splatage.wild_economy.gui.XpBottleMenu;
 import com.splatage.wild_economy.store.action.ProductActionExecutor;
 import com.splatage.wild_economy.store.action.SimpleProductActionExecutor;
@@ -368,7 +369,8 @@ public final class ServiceRegistry {
         this.foliaContainerSellCoordinator = new FoliaContainerSellCoordinator(this.platformExecutor, this.exchangeService, rawSellService);
 
         final LayoutIconResolver layoutIconResolver = new LayoutIconResolver();
-        final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService, playerInfoItemFactory, this.layoutBlueprint, layoutIconResolver);
+        final TopSupplierMenu topSupplierMenu = new TopSupplierMenu(this.supplierStatsService, playerInfoItemFactory);
+        final ExchangeRootMenu rootMenu = new ExchangeRootMenu(this.exchangeService, playerInfoItemFactory, this.layoutBlueprint, layoutIconResolver, topSupplierMenu);
         final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService, playerInfoItemFactory, this.layoutBlueprint, layoutIconResolver);
         final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService, playerInfoItemFactory, this.layoutBlueprint);
         final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService, this.platformExecutor, playerInfoItemFactory);
@@ -386,7 +388,8 @@ public final class ServiceRegistry {
                 storeRootMenu,
                 storeCategoryMenu,
                 storeProductDetailMenu,
-                xpBottleMenu
+                xpBottleMenu,
+                topSupplierMenu
         );
 
         rootMenu.setShopMenuRouter(this.shopMenuRouter);
@@ -397,6 +400,7 @@ public final class ServiceRegistry {
         storeCategoryMenu.setShopMenuRouter(this.shopMenuRouter);
         storeProductDetailMenu.setShopMenuRouter(this.shopMenuRouter);
         xpBottleMenu.setShopMenuRouter(this.shopMenuRouter);
+        topSupplierMenu.setShopMenuRouter(this.shopMenuRouter);
 
         this.shopMenuListener = new ShopMenuListener(
                 rootMenu,
@@ -406,7 +410,8 @@ public final class ServiceRegistry {
                 storeRootMenu,
                 storeCategoryMenu,
                 storeProductDetailMenu,
-                xpBottleMenu
+                xpBottleMenu,
+                topSupplierMenu
         );
         this.plugin.getServer().getPluginManager().registerEvents(this.shopMenuListener, this.plugin);
 

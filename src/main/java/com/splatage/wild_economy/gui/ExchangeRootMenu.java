@@ -21,18 +21,21 @@ public final class ExchangeRootMenu {
     private final ExchangeService exchangeService;
     private final LayoutBlueprint layoutBlueprint;
     private final LayoutIconResolver layoutIconResolver;
+    private final TopSupplierMenu topSupplierMenu;
     private ShopMenuRouter shopMenuRouter;
 
     public ExchangeRootMenu(
        final ExchangeService exchangeService,
        final PlayerInfoItemFactory playerInfoItemFactory,
        final LayoutBlueprint layoutBlueprint,
-       final LayoutIconResolver layoutIconResolver
+       final LayoutIconResolver layoutIconResolver,
+       final TopSupplierMenu topSupplierMenu
     ) {
         this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
         this.layoutBlueprint = Objects.requireNonNull(layoutBlueprint, "layoutBlueprint");
         this.layoutIconResolver = Objects.requireNonNull(layoutIconResolver, "layoutIconResolver");
+        this.topSupplierMenu = Objects.requireNonNull(topSupplierMenu, "topSupplierMenu");
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -55,6 +58,7 @@ public final class ExchangeRootMenu {
         }
 
         inventory.setItem(22, this.button(Material.NETHER_STAR, "Store"));
+        inventory.setItem(23, this.button(Material.GOLD_INGOT, "Top Suppliers"));
         inventory.setItem(26, this.button(Material.BARRIER, "Close"));
 
         player.openInventory(inventory);
@@ -76,6 +80,7 @@ public final class ExchangeRootMenu {
 
         switch (event.getRawSlot()) {
             case 22 -> this.shopMenuRouter.openStoreRoot(player);
+            case 23 -> this.topSupplierMenu.open(player);
             case 26 -> player.closeInventory();
             default -> {
             }
