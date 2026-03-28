@@ -7,6 +7,7 @@ public interface StoreRuntimeStateService {
     StoreOwnershipState getOwnershipState(UUID playerId, String entitlementKey);
     void grantEntitlement(UUID playerId, String entitlementKey, String productId, long grantedAtEpochSecond);
     void recordPurchase(StorePurchaseAuditRecord record);
+    void handlePlayerQuit(UUID playerId);
     void flushDirtyNow();
     void shutdown();
 }

@@ -64,6 +64,7 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
     public void ensurePlayerLoadedAsync(final UUID playerId) {
         Objects.requireNonNull(playerId, "playerId");
         final PlayerStoreState state = this.playerStates.computeIfAbsent(playerId, ignored -> new PlayerStoreState());
+        state.markActive();
         if (!state.beginLoad()) {
             return;
         }
@@ -83,6 +84,7 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
         }
 
         final PlayerStoreState state = this.playerStates.computeIfAbsent(playerId, ignored -> new PlayerStoreState());
+        state.markActive();
         final PlayerLoadState loadState = state.loadState();
         if (loadState == PlayerLoadState.UNLOADED) {
             this.ensurePlayerLoadedAsync(playerId);
@@ -109,6 +111,7 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
             return;
         }
         final PlayerStoreState state = this.playerStates.computeIfAbsent(playerId, ignored -> new PlayerStoreState());
+        state.markActive();
         state.applyGrant(entitlementKey, productId, grantedAtEpochSecond);
         this.flushDirtyNow();
     }
@@ -118,6 +121,23 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
         Objects.requireNonNull(record, "record");
         this.purchaseAuditQueue.add(record);
         this.flushDirtyNow();
+    }
+
+    @Override
+    public void handlePlayerQuit(final UUID playerId) {
+        Objects.requireNonNull(playerId, "playerId");
+        final PlayerStoreState state = this.playerStates.get(playerId);
+        if (state == null) {
+            return;
+        }
+        state.markQuitRequested();
+        if (state.hasDirtyEntitlements()) {
+            this.flushDirtyNow();
+            return;
+        }
+        if (state.canEvictNow()) {
+            this.playerStates.remove(playerId, state);
+        }
     }
 
     @Override
@@ -169,13 +189,16 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
         } catch (final RuntimeException exception) {
             state.failLoad();
             this.logger.log(Level.WARNING, "Failed to lazy-load store entitlements for " + playerId, exception);
+        } finally {
+            this.evictIdlePlayer(playerId, state);
         }
     }
 
     private boolean hasPendingWork() {
-        if (!this.purchaseAuditQueue.isEmpty()) {
-            return true;
-        }
+        return this.hasPendingEntitlements() || !this.purchaseAuditQueue.isEmpty();
+    }
+
+    private boolean hasPendingEntitlements() {
         for (final PlayerStoreState state : this.playerStates.values()) {
             if (state.hasDirtyEntitlements()) {
                 return true;
@@ -185,28 +208,16 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
     }
 
     private void flushPendingWork() {
-        final Map<UUID, List<DirtyEntitlementGrant>> entitlementSnapshot = this.snapshotDirtyEntitlements();
-        final List<StorePurchaseAuditRecord> purchaseSnapshot = this.drainPurchaseAuditQueue();
-        if (entitlementSnapshot.isEmpty() && purchaseSnapshot.isEmpty()) {
-            this.flushDispatchInProgress.set(false);
-            return;
-        }
-
+        boolean entitlementFlushed = false;
+        boolean purchaseFlushed = false;
         try {
-            this.transactionRunner.run(connection -> {
-                for (final Map.Entry<UUID, List<DirtyEntitlementGrant>> entry : entitlementSnapshot.entrySet()) {
-                    this.storeEntitlementRepository.upsertBatch(connection, entry.getKey(), entry.getValue());
-                }
-                this.storePurchaseRepository.insertBatch(connection, purchaseSnapshot);
-                return null;
-            });
-            this.markSuccessfulEntitlementFlush(entitlementSnapshot);
-        } catch (final RuntimeException exception) {
-            this.restorePurchaseAuditQueue(purchaseSnapshot);
-            this.logger.log(Level.WARNING, "Failed to flush pending store runtime state.", exception);
+            entitlementFlushed = this.flushPendingEntitlementsAsync();
+            purchaseFlushed = this.flushPendingPurchaseAuditAsync();
         } finally {
             this.flushDispatchInProgress.set(false);
-            if (this.hasPendingWork()) {
+            final boolean pendingEntitlements = this.hasPendingEntitlements();
+            final boolean pendingPurchaseAudit = !this.purchaseAuditQueue.isEmpty();
+            if ((entitlementFlushed && pendingEntitlements) || (purchaseFlushed && pendingPurchaseAudit)) {
                 this.flushDirtyNow();
             }
         }
@@ -214,25 +225,96 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
 
     private void flushDirtySynchronously() {
         while (this.hasPendingWork()) {
-            final Map<UUID, List<DirtyEntitlementGrant>> entitlementSnapshot = this.snapshotDirtyEntitlements();
-            final List<StorePurchaseAuditRecord> purchaseSnapshot = this.drainPurchaseAuditQueue();
-            if (entitlementSnapshot.isEmpty() && purchaseSnapshot.isEmpty()) {
+            boolean madeProgress = false;
+            madeProgress |= this.flushPendingEntitlementsSync();
+            madeProgress |= this.flushPendingPurchaseAuditSync();
+            if (!madeProgress) {
+                if (this.hasPendingEntitlements()) {
+                    this.logger.severe("Store runtime shutdown ended with entitlement writes still pending.");
+                }
+                if (!this.purchaseAuditQueue.isEmpty()) {
+                    this.logger.severe("Store runtime shutdown ended with purchase audit writes still pending.");
+                }
                 return;
             }
-            try {
-                this.transactionRunner.run(connection -> {
-                    for (final Map.Entry<UUID, List<DirtyEntitlementGrant>> entry : entitlementSnapshot.entrySet()) {
-                        this.storeEntitlementRepository.upsertBatch(connection, entry.getKey(), entry.getValue());
-                    }
-                    this.storePurchaseRepository.insertBatch(connection, purchaseSnapshot);
-                    return null;
-                });
-                this.markSuccessfulEntitlementFlush(entitlementSnapshot);
-            } catch (final RuntimeException exception) {
-                this.restorePurchaseAuditQueue(purchaseSnapshot);
-                this.logger.log(Level.SEVERE, "Failed to synchronously flush store runtime state during shutdown.", exception);
-                return;
-            }
+        }
+    }
+
+    private boolean flushPendingEntitlementsAsync() {
+        final Map<UUID, List<DirtyEntitlementGrant>> entitlementSnapshot = this.snapshotDirtyEntitlements();
+        if (entitlementSnapshot.isEmpty()) {
+            return false;
+        }
+        try {
+            this.transactionRunner.run(connection -> {
+                for (final Map.Entry<UUID, List<DirtyEntitlementGrant>> entry : entitlementSnapshot.entrySet()) {
+                    this.storeEntitlementRepository.upsertBatch(connection, entry.getKey(), entry.getValue());
+                }
+                return null;
+            });
+            this.markSuccessfulEntitlementFlush(entitlementSnapshot);
+            this.evictFlushedPlayers(entitlementSnapshot.keySet());
+            return true;
+        } catch (final RuntimeException exception) {
+            this.logger.log(Level.WARNING, "Failed to flush pending store entitlements.", exception);
+            return false;
+        }
+    }
+
+    private boolean flushPendingPurchaseAuditAsync() {
+        final List<StorePurchaseAuditRecord> purchaseSnapshot = this.drainPurchaseAuditQueue();
+        if (purchaseSnapshot.isEmpty()) {
+            return false;
+        }
+        try {
+            this.transactionRunner.run(connection -> {
+                this.storePurchaseRepository.insertBatch(connection, purchaseSnapshot);
+                return null;
+            });
+            return true;
+        } catch (final RuntimeException exception) {
+            this.restorePurchaseAuditQueue(purchaseSnapshot);
+            this.logger.log(Level.WARNING, "Failed to flush pending store purchase audit.", exception);
+            return false;
+        }
+    }
+
+    private boolean flushPendingEntitlementsSync() {
+        final Map<UUID, List<DirtyEntitlementGrant>> entitlementSnapshot = this.snapshotDirtyEntitlements();
+        if (entitlementSnapshot.isEmpty()) {
+            return false;
+        }
+        try {
+            this.transactionRunner.run(connection -> {
+                for (final Map.Entry<UUID, List<DirtyEntitlementGrant>> entry : entitlementSnapshot.entrySet()) {
+                    this.storeEntitlementRepository.upsertBatch(connection, entry.getKey(), entry.getValue());
+                }
+                return null;
+            });
+            this.markSuccessfulEntitlementFlush(entitlementSnapshot);
+            this.evictFlushedPlayers(entitlementSnapshot.keySet());
+            return true;
+        } catch (final RuntimeException exception) {
+            this.logger.log(Level.SEVERE, "Failed to synchronously flush store entitlements during shutdown.", exception);
+            return false;
+        }
+    }
+
+    private boolean flushPendingPurchaseAuditSync() {
+        final List<StorePurchaseAuditRecord> purchaseSnapshot = this.drainPurchaseAuditQueue();
+        if (purchaseSnapshot.isEmpty()) {
+            return false;
+        }
+        try {
+            this.transactionRunner.run(connection -> {
+                this.storePurchaseRepository.insertBatch(connection, purchaseSnapshot);
+                return null;
+            });
+            return true;
+        } catch (final RuntimeException exception) {
+            this.restorePurchaseAuditQueue(purchaseSnapshot);
+            this.logger.log(Level.SEVERE, "Failed to synchronously flush store purchase audit during shutdown.", exception);
+            return false;
         }
     }
 
@@ -271,6 +353,21 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
             if (state != null) {
                 state.markFlushed(entry.getValue());
             }
+        }
+    }
+
+    private void evictFlushedPlayers(final Collection<UUID> playerIds) {
+        for (final UUID playerId : playerIds) {
+            final PlayerStoreState state = this.playerStates.get(playerId);
+            if (state != null) {
+                this.evictIdlePlayer(playerId, state);
+            }
+        }
+    }
+
+    private void evictIdlePlayer(final UUID playerId, final PlayerStoreState state) {
+        if (state.canEvictWhenInactive()) {
+            this.playerStates.remove(playerId, state);
         }
     }
 
@@ -327,11 +424,13 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
         private final Set<String> entitlementKeys;
         private final ConcurrentHashMap<String, DirtyEntitlementGrant> dirtyEntitlements;
         private volatile PlayerLoadState loadState;
+        private volatile boolean quitRequested;
 
         private PlayerStoreState() {
             this.entitlementKeys = ConcurrentHashMap.newKeySet();
             this.dirtyEntitlements = new ConcurrentHashMap<>();
             this.loadState = PlayerLoadState.UNLOADED;
+            this.quitRequested = false;
         }
 
         private synchronized boolean beginLoad() {
@@ -351,6 +450,14 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
 
         private void failLoad() {
             this.loadState = PlayerLoadState.LOAD_FAILED;
+        }
+
+        private void markActive() {
+            this.quitRequested = false;
+        }
+
+        private void markQuitRequested() {
+            this.quitRequested = true;
         }
 
         private PlayerLoadState loadState() {
@@ -379,6 +486,14 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
             for (final DirtyEntitlementGrant grant : flushedGrants) {
                 this.dirtyEntitlements.remove(grant.entitlementKey(), grant);
             }
+        }
+
+        private boolean canEvictNow() {
+            return this.loadState != PlayerLoadState.LOADING && this.dirtyEntitlements.isEmpty();
+        }
+
+        private boolean canEvictWhenInactive() {
+            return this.quitRequested && this.canEvictNow();
         }
     }
 }

@@ -54,6 +54,7 @@ import com.splatage.wild_economy.store.repository.mysql.MysqlStorePurchaseReposi
 import com.splatage.wild_economy.store.repository.sqlite.SqliteStoreEntitlementRepository;
 import com.splatage.wild_economy.store.repository.sqlite.SqliteStorePurchaseRepository;
 import com.splatage.wild_economy.store.service.StoreService;
+import com.splatage.wild_economy.store.listener.StorePlayerSessionListener;
 import com.splatage.wild_economy.store.service.StoreServiceImpl;
 import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
 import com.splatage.wild_economy.store.state.StoreRuntimeStateServiceImpl;
@@ -171,6 +172,7 @@ public final class ServiceRegistry {
     private EconomyService economyService;
     private BaltopService baltopService;
     private EconomyPlayerSessionListener economyPlayerSessionListener;
+    private StorePlayerSessionListener storePlayerSessionListener;
     private StoreProductsConfig storeProductsConfig;
     private StoreRuntimeStateService storeRuntimeStateService;
     private StoreService storeService;
@@ -474,6 +476,8 @@ public final class ServiceRegistry {
         );
         this.economyPlayerSessionListener = new EconomyPlayerSessionListener(this.plugin, this.economyService);
         this.plugin.getServer().getPluginManager().registerEvents(this.economyPlayerSessionListener, this.plugin);
+        this.storePlayerSessionListener = new StorePlayerSessionListener(this.storeRuntimeStateService);
+        this.plugin.getServer().getPluginManager().registerEvents(this.storePlayerSessionListener, this.plugin);
 
         this.xpBottleRedeemListener = new XpBottleRedeemListener(this.xpBottleService);
         this.plugin.getServer().getPluginManager().registerEvents(this.xpBottleRedeemListener, this.plugin);
@@ -618,6 +622,10 @@ public final class ServiceRegistry {
         if (this.economyPlayerSessionListener != null) {
             HandlerList.unregisterAll(this.economyPlayerSessionListener);
             this.economyPlayerSessionListener = null;
+        }
+        if (this.storePlayerSessionListener != null) {
+            HandlerList.unregisterAll(this.storePlayerSessionListener);
+            this.storePlayerSessionListener = null;
         }
         if (this.xpBottleRedeemListener != null) {
             HandlerList.unregisterAll(this.xpBottleRedeemListener);
