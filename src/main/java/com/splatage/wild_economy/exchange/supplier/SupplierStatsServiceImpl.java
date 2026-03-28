@@ -83,8 +83,7 @@ public final class SupplierStatsServiceImpl implements SupplierStatsService {
         try {
             this.executor.submit(() -> {
                 try {
-                    this.supplierStatsRepository.incrementAllTime(playerId, itemKey.value(), amount, updatedAtEpochSecond);
-                    this.supplierStatsRepository.incrementWeekly(weekKey, playerId, itemKey.value(), amount, updatedAtEpochSecond);
+                    this.supplierStatsRepository.recordSaleContribution(weekKey, playerId, itemKey.value(), amount, updatedAtEpochSecond);
                 } catch (final RuntimeException exception) {
                     this.logger.log(Level.WARNING, "Failed to persist supplier aggregate for " + itemKey.value() + '.', exception);
                 }

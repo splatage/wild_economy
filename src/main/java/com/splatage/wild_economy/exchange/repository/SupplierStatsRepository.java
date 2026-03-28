@@ -10,7 +10,5 @@ public interface SupplierStatsRepository {
 
     List<SupplierAggregateRow> loadWeeklyRows(String weekKey);
 
-    void incrementAllTime(UUID playerId, String itemKey, long quantitySold, long updatedAtEpochSecond);
-
-    void incrementWeekly(String weekKey, UUID playerId, String itemKey, long quantitySold, long updatedAtEpochSecond);
+    void recordSaleContribution(String weekKey, UUID playerId, String itemKey, long quantitySold, long updatedAtEpochSecond);
 }
