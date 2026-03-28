@@ -44,7 +44,7 @@ public final class WildEconomyExpansion extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getIdentifier() {
-        return "wild_economy";
+        return "wildeco";
     }
 
     @Override
