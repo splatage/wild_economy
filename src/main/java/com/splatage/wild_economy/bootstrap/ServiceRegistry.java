@@ -190,13 +190,13 @@ public final class ServiceRegistry {
         final TransactionRunner transactionRunner = new TransactionRunner(this.databaseProvider);
 
         final EconomyAccountRepository economyAccountRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteEconomyAccountRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
-            case MYSQL -> new MysqlEconomyAccountRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
+            case SQLITE -> new SqliteEconomyAccountRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+            case MYSQL -> new MysqlEconomyAccountRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
         };
 
         final EconomyLedgerRepository economyLedgerRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
-            case MYSQL -> new MysqlEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
+            case SQLITE -> new SqliteEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+            case MYSQL -> new MysqlEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
         };
 
         final EconomyNameCacheRepository economyNameCacheRepository = switch (this.databaseProvider.dialect()) {
@@ -232,13 +232,13 @@ public final class ServiceRegistry {
         );
 
         final StoreEntitlementRepository storeEntitlementRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
-            case MYSQL -> new MysqlStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+            case SQLITE -> new SqliteStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
+            case MYSQL -> new MysqlStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
         };
 
         final StorePurchaseRepository storePurchaseRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteStorePurchaseRepository(this.databaseConfig.economyTablePrefix());
-            case MYSQL -> new MysqlStorePurchaseRepository(this.databaseConfig.economyTablePrefix());
+            case SQLITE -> new SqliteStorePurchaseRepository(this.databaseConfig.storeTablePrefix());
+            case MYSQL -> new MysqlStorePurchaseRepository(this.databaseConfig.storeTablePrefix());
         };
 
         final ProductActionExecutor productActionExecutor = new SimpleProductActionExecutor();

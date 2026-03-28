@@ -37,17 +37,23 @@ public final class MysqlExchangeTransactionRepository implements ExchangeTransac
             + "(transaction_type, player_uuid, item_key, amount, unit_price, total_value, created_at, meta_json) "
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try (Connection connection = this.databaseProvider.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, type.name());
-            statement.setString(2, playerId.toString());
-            statement.setString(3, itemKey);
-            statement.setInt(4, amount);
-            statement.setBigDecimal(5, unitPrice);
-            statement.setBigDecimal(6, totalValue);
-            statement.setLong(7, createdAt.getEpochSecond());
-            JdbcUtils.bindNullableString(statement, 8, metaJson);
-            statement.executeUpdate();
+        try (Connection connection = this.databaseProvider.getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, type.name());
+                statement.setString(2, playerId.toString());
+                statement.setString(3, itemKey);
+                statement.setInt(4, amount);
+                statement.setBigDecimal(5, unitPrice);
+                statement.setBigDecimal(6, totalValue);
+                statement.setLong(7, createdAt.getEpochSecond());
+                JdbcUtils.bindNullableString(statement, 8, metaJson);
+                statement.executeUpdate();
+                connection.commit();
+            } catch (final SQLException exception) {
+                connection.rollback();
+                throw exception;
+            }
         } catch (final SQLException exception) {
             throw new IllegalStateException("Failed to insert exchange transaction", exception);
         }
