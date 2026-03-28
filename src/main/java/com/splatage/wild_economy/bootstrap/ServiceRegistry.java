@@ -55,6 +55,8 @@ import com.splatage.wild_economy.store.repository.sqlite.SqliteStoreEntitlementR
 import com.splatage.wild_economy.store.repository.sqlite.SqliteStorePurchaseRepository;
 import com.splatage.wild_economy.store.service.StoreService;
 import com.splatage.wild_economy.store.service.StoreServiceImpl;
+import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
+import com.splatage.wild_economy.store.state.StoreRuntimeStateServiceImpl;
 import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.vault.WildEconomyVaultProvider;
 import com.splatage.wild_economy.xp.listener.XpBottleRedeemListener;
@@ -170,6 +172,7 @@ public final class ServiceRegistry {
     private BaltopService baltopService;
     private EconomyPlayerSessionListener economyPlayerSessionListener;
     private StoreProductsConfig storeProductsConfig;
+    private StoreRuntimeStateService storeRuntimeStateService;
     private StoreService storeService;
     private WildEconomyVaultProvider vaultEconomyProvider;
     private WildEconomyExpansion placeholderExpansion;
@@ -247,13 +250,20 @@ public final class ServiceRegistry {
 
         final ProductActionExecutor productActionExecutor = new SimpleProductActionExecutor();
 
+        this.storeRuntimeStateService = new StoreRuntimeStateServiceImpl(
+                storeEntitlementRepository,
+                storePurchaseRepository,
+                transactionRunner,
+                this.plugin.getLogger(),
+                this.databaseProvider.dialect(),
+                this.databaseConfig.mysqlMaximumPoolSize()
+        );
+
         this.storeService = new StoreServiceImpl(
                 this.storeProductsConfig,
                 this.economyService,
-                storeEntitlementRepository,
-                storePurchaseRepository,
+                this.storeRuntimeStateService,
                 productActionExecutor,
-                transactionRunner,
                 this.xpBottleService
         );
 
@@ -648,6 +658,10 @@ public final class ServiceRegistry {
             this.stockService.shutdown();
             this.stockService = null;
         }
+        if (this.storeRuntimeStateService != null) {
+            this.storeRuntimeStateService.shutdown();
+            this.storeRuntimeStateService = null;
+        }
         if (this.economyService != null) {
             for (final Player onlinePlayer : this.plugin.getServer().getOnlinePlayers()) {
                 this.economyService.flushPlayerSession(onlinePlayer.getUniqueId(), onlinePlayer.getName());
@@ -671,6 +685,7 @@ public final class ServiceRegistry {
         this.stockTurnoverService = null;
         this.foliaContainerSellCoordinator = null;
         this.economyGateway = null;
+        this.storeRuntimeStateService = null;
         this.storeService = null;
         this.storeProductsConfig = null;
         this.xpBottleService = null;

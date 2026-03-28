@@ -5,7 +5,6 @@ import com.splatage.wild_economy.economy.model.EconomyMutationResult;
 import com.splatage.wild_economy.economy.model.EconomyReason;
 import com.splatage.wild_economy.economy.model.MoneyAmount;
 import com.splatage.wild_economy.economy.service.EconomyService;
-import com.splatage.wild_economy.persistence.TransactionRunner;
 import com.splatage.wild_economy.store.action.ProductActionExecutor;
 import com.splatage.wild_economy.store.action.StoreActionExecutionResult;
 import com.splatage.wild_economy.store.model.StoreCategory;
@@ -13,8 +12,9 @@ import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
 import com.splatage.wild_economy.store.model.StorePurchaseResult;
 import com.splatage.wild_economy.store.model.StorePurchaseStatus;
-import com.splatage.wild_economy.store.repository.StoreEntitlementRepository;
-import com.splatage.wild_economy.store.repository.StorePurchaseRepository;
+import com.splatage.wild_economy.store.state.StoreOwnershipState;
+import com.splatage.wild_economy.store.state.StorePurchaseAuditRecord;
+import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
 import com.splatage.wild_economy.xp.service.XpBottleService;
 import com.splatage.wild_economy.xp.service.XpBottleWithdrawResult;
 import java.time.Instant;
@@ -28,27 +28,21 @@ public final class StoreServiceImpl implements StoreService {
 
     private final StoreProductsConfig storeProductsConfig;
     private final EconomyService economyService;
-    private final StoreEntitlementRepository storeEntitlementRepository;
-    private final StorePurchaseRepository storePurchaseRepository;
+    private final StoreRuntimeStateService storeRuntimeStateService;
     private final ProductActionExecutor productActionExecutor;
-    private final TransactionRunner transactionRunner;
     private final XpBottleService xpBottleService;
 
     public StoreServiceImpl(
         final StoreProductsConfig storeProductsConfig,
         final EconomyService economyService,
-        final StoreEntitlementRepository storeEntitlementRepository,
-        final StorePurchaseRepository storePurchaseRepository,
+        final StoreRuntimeStateService storeRuntimeStateService,
         final ProductActionExecutor productActionExecutor,
-        final TransactionRunner transactionRunner,
         final XpBottleService xpBottleService
     ) {
         this.storeProductsConfig = Objects.requireNonNull(storeProductsConfig, "storeProductsConfig");
         this.economyService = Objects.requireNonNull(economyService, "economyService");
-        this.storeEntitlementRepository = Objects.requireNonNull(storeEntitlementRepository, "storeEntitlementRepository");
-        this.storePurchaseRepository = Objects.requireNonNull(storePurchaseRepository, "storePurchaseRepository");
+        this.storeRuntimeStateService = Objects.requireNonNull(storeRuntimeStateService, "storeRuntimeStateService");
         this.productActionExecutor = Objects.requireNonNull(productActionExecutor, "productActionExecutor");
-        this.transactionRunner = Objects.requireNonNull(transactionRunner, "transactionRunner");
         this.xpBottleService = Objects.requireNonNull(xpBottleService, "xpBottleService");
     }
 
@@ -68,11 +62,13 @@ public final class StoreServiceImpl implements StoreService {
     }
 
     @Override
-    public boolean ownsEntitlement(final UUID playerId, final String entitlementKey) {
-        if (entitlementKey == null || entitlementKey.isBlank()) {
-            return false;
-        }
-        return this.storeEntitlementRepository.hasEntitlement(playerId, entitlementKey);
+    public void ensurePlayerLoadedAsync(final UUID playerId) {
+        this.storeRuntimeStateService.ensurePlayerLoadedAsync(playerId);
+    }
+
+    @Override
+    public StoreOwnershipState getOwnershipState(final UUID playerId, final String entitlementKey) {
+        return this.storeRuntimeStateService.getOwnershipState(playerId, entitlementKey);
     }
 
     @Override
@@ -87,13 +83,30 @@ public final class StoreServiceImpl implements StoreService {
             );
         }
 
-        if (product.type() == StoreProductType.PERMANENT_UNLOCK
-                && this.ownsEntitlement(playerId, product.entitlementKey())) {
-            return StorePurchaseResult.failure(
-                    "You already own this unlock.",
-                    product,
-                    this.economyService.getBalance(playerId)
-            );
+        if (product.type() == StoreProductType.PERMANENT_UNLOCK) {
+            final StoreOwnershipState ownershipState = this.getOwnershipState(playerId, product.entitlementKey());
+            if (ownershipState == StoreOwnershipState.OWNED) {
+                return StorePurchaseResult.failure(
+                        "You already own this unlock.",
+                        product,
+                        this.economyService.getBalance(playerId)
+                );
+            }
+            if (ownershipState == StoreOwnershipState.LOADING) {
+                return StorePurchaseResult.failure(
+                        "Store data is still loading. Please try again in a moment.",
+                        product,
+                        this.economyService.getBalance(playerId)
+                );
+            }
+            if (ownershipState == StoreOwnershipState.LOAD_FAILED) {
+                this.ensurePlayerLoadedAsync(playerId);
+                return StorePurchaseResult.failure(
+                        "Store data could not be loaded right now. Please try again in a moment.",
+                        product,
+                        this.economyService.getBalance(playerId)
+                );
+            }
         }
 
         if (product.type() == StoreProductType.XP_WITHDRAWAL) {
@@ -143,35 +156,22 @@ public final class StoreServiceImpl implements StoreService {
             );
         }
 
-        this.transactionRunner.run(connection -> {
-            final long now = Instant.now().getEpochSecond();
-            if (product.type() == StoreProductType.PERMANENT_UNLOCK) {
-                this.storeEntitlementRepository.upsert(
-                        connection,
-                        playerId,
-                        product.entitlementKey(),
-                        product.productId(),
-                        now
-                );
-            }
-            this.storePurchaseRepository.insert(
-                    connection,
+        final long now = Instant.now().getEpochSecond();
+        if (product.type() == StoreProductType.PERMANENT_UNLOCK) {
+            this.storeRuntimeStateService.grantEntitlement(
                     playerId,
+                    product.entitlementKey(),
                     product.productId(),
-                    product.type(),
-                    product.price(),
-                    StorePurchaseStatus.SUCCESS,
-                    null,
-                    now,
                     now
             );
-            return null;
-        });
+        }
+        this.recordPurchase(playerId, product, StorePurchaseStatus.SUCCESS, null, now, now);
 
         return StorePurchaseResult.success(product, withdrawResult.resultingBalance());
     }
 
     private StorePurchaseResult purchaseXpWithdrawal(final Player player, final StoreProduct product) {
+        final UUID playerId = player.getUniqueId();
         final XpBottleWithdrawResult xpResult = this.xpBottleService.withdrawToBottle(
                 player,
                 product.productId(),
@@ -180,16 +180,16 @@ public final class StoreServiceImpl implements StoreService {
         );
 
         if (!xpResult.success()) {
-            this.recordPurchase(player.getUniqueId(), product, StorePurchaseStatus.FAILED, xpResult.message());
+            this.recordPurchase(playerId, product, StorePurchaseStatus.FAILED, xpResult.message());
             return StorePurchaseResult.failure(
                     xpResult.message(),
                     product,
-                    this.economyService.getBalance(player.getUniqueId())
+                    this.economyService.getBalance(playerId)
             );
         }
 
-        this.recordPurchase(player.getUniqueId(), product, StorePurchaseStatus.SUCCESS, null);
-        return StorePurchaseResult.success(product, this.economyService.getBalance(player.getUniqueId()));
+        this.recordPurchase(playerId, product, StorePurchaseStatus.SUCCESS, null);
+        return StorePurchaseResult.success(product, this.economyService.getBalance(playerId));
     }
 
     private void recordPurchase(
@@ -198,21 +198,27 @@ public final class StoreServiceImpl implements StoreService {
         final StorePurchaseStatus status,
         final String failureReason
     ) {
-        this.transactionRunner.run(connection -> {
-            final long now = Instant.now().getEpochSecond();
-            this.storePurchaseRepository.insert(
-                    connection,
-                    playerId,
-                    product.productId(),
-                    product.type(),
-                    product.price(),
-                    status,
-                    failureReason,
-                    now,
-                    now
-            );
-            return null;
-        });
+        final long now = Instant.now().getEpochSecond();
+        this.recordPurchase(playerId, product, status, failureReason, now, now);
+    }
+
+    private void recordPurchase(
+        final UUID playerId,
+        final StoreProduct product,
+        final StorePurchaseStatus status,
+        final String failureReason,
+        final long createdAtEpochSecond,
+        final Long completedAtEpochSecond
+    ) {
+        this.storeRuntimeStateService.recordPurchase(new StorePurchaseAuditRecord(
+                playerId,
+                product.productId(),
+                product.type(),
+                product.price(),
+                status,
+                failureReason,
+                createdAtEpochSecond,
+                completedAtEpochSecond
+        ));
     }
 }
-
