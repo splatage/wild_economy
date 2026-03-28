@@ -27,36 +27,7 @@ public final class ShopSellAllSubcommand implements CommandExecutor {
 
         this.platformExecutor.runOnPlayer(player, () -> {
             final SellAllResult result = this.exchangeService.sellAll(player.getUniqueId());
-            player.sendMessage(result.message());
-
-            if (!result.soldLines().isEmpty()) {
-                final int maxLines = Math.min(5, result.soldLines().size());
-                for (int i = 0; i < maxLines; i++) {
-                    final var line = result.soldLines().get(i);
-                    final String taperSuffix = line.tapered() ? " (reduced)" : "";
-                    player.sendMessage(
-                        " - " + line.amountSold() + "x " + line.displayName() + " for " + line.totalEarned() + taperSuffix
-                    );
-                }
-
-                if (result.soldLines().size() > maxLines) {
-                    player.sendMessage(" - ... and " + (result.soldLines().size() - maxLines) + " more item type(s)");
-                }
-            }
-
-            if (!result.skippedDescriptions().isEmpty()) {
-                final int maxSkipped = Math.min(5, result.skippedDescriptions().size());
-                player.sendMessage("Skipped:");
-                for (int i = 0; i < maxSkipped; i++) {
-                    player.sendMessage(" - " + result.skippedDescriptions().get(i));
-                }
-
-                if (result.skippedDescriptions().size() > maxSkipped) {
-                    player.sendMessage(
-                        " - ... and " + (result.skippedDescriptions().size() - maxSkipped) + " more skipped entries"
-                    );
-                }
-            }
+            ExchangeMessageFormatter.sendSellAll(player, result);
         });
 
         return true;

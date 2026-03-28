@@ -27,7 +27,7 @@ public final class ShopSellHandSubcommand implements CommandExecutor {
 
         this.platformExecutor.runOnPlayer(player, () -> {
             final SellHandResult result = this.exchangeService.sellHand(player.getUniqueId());
-            player.sendMessage(result.message());
+            ExchangeMessageFormatter.sendSellHand(player, result);
         });
         return true;
     }

@@ -1,9 +1,6 @@
 package com.splatage.wild_economy.command;
 
-import com.splatage.wild_economy.exchange.domain.SellContainerResult;
-import com.splatage.wild_economy.exchange.domain.SellLineResult;
 import com.splatage.wild_economy.exchange.service.FoliaContainerSellCoordinator;
-import java.util.List;
 import java.util.Objects;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -24,49 +21,12 @@ public final class ShopSellContainerSubcommand implements CommandExecutor {
             return true;
         }
 
-        this.sellCoordinator.sellContainer(player, result -> {
-            player.sendMessage(result.message());
-            this.sendSoldLines(player, result.soldLines());
-            this.sendSkippedLines(player, result.skippedDescriptions());
-        });
+        this.sellCoordinator.sellContainer(player, result -> ExchangeMessageFormatter.sendSellContainer(player, result));
         return true;
     }
 
     @Override
     public boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
         return this.execute(sender);
-    }
-
-    private void sendSoldLines(final Player player, final List<SellLineResult> soldLines) {
-        if (soldLines.isEmpty()) {
-            return;
-        }
-
-        final int maxLines = Math.min(5, soldLines.size());
-        for (int i = 0; i < maxLines; i++) {
-            final SellLineResult line = soldLines.get(i);
-            final String taperSuffix = line.tapered() ? " (reduced)" : "";
-            player.sendMessage(" - " + line.amountSold() + "x " + line.displayName() + " for " + line.totalEarned() + taperSuffix);
-        }
-
-        if (soldLines.size() > maxLines) {
-            player.sendMessage(" - ... and " + (soldLines.size() - maxLines) + " more item type(s)");
-        }
-    }
-
-    private void sendSkippedLines(final Player player, final List<String> skippedDescriptions) {
-        if (skippedDescriptions.isEmpty()) {
-            return;
-        }
-
-        final int maxSkipped = Math.min(5, skippedDescriptions.size());
-        player.sendMessage("Skipped:");
-        for (int i = 0; i < maxSkipped; i++) {
-            player.sendMessage(" - " + skippedDescriptions.get(i));
-        }
-
-        if (skippedDescriptions.size() > maxSkipped) {
-            player.sendMessage(" - ... and " + (skippedDescriptions.size() - maxSkipped) + " more skipped entries");
-        }
     }
 }

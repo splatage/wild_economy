@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.gui;
 
+import com.splatage.wild_economy.command.ExchangeMessageFormatter;
 import com.splatage.wild_economy.exchange.domain.BuyResult;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.service.ExchangeItemView;
@@ -126,7 +127,8 @@ public final class ExchangeItemDetailMenu {
                 holder.quotedUnitPrice()
             );
 
-            player.sendMessage(result.message());
+            final String displayName = this.exchangeService.getItemView(itemKey).displayName();
+            ExchangeMessageFormatter.sendBuyResult(player, result, displayName, amount);
 
             if (result.success()) {
                 this.open(
