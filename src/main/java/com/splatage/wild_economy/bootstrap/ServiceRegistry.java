@@ -190,13 +190,13 @@ public final class ServiceRegistry {
         final TransactionRunner transactionRunner = new TransactionRunner(this.databaseProvider);
 
         final EconomyAccountRepository economyAccountRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteEconomyAccountRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
-            case MYSQL -> new MysqlEconomyAccountRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+            case SQLITE -> new SqliteEconomyAccountRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
+            case MYSQL -> new MysqlEconomyAccountRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
         };
 
         final EconomyLedgerRepository economyLedgerRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
-            case MYSQL -> new MysqlEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
+            case SQLITE -> new SqliteEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
+            case MYSQL -> new MysqlEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
         };
 
         final EconomyNameCacheRepository economyNameCacheRepository = switch (this.databaseProvider.dialect()) {

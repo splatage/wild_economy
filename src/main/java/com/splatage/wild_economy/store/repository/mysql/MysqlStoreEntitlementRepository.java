@@ -14,9 +14,9 @@ public final class MysqlStoreEntitlementRepository implements StoreEntitlementRe
     private final DatabaseProvider databaseProvider;
     private final String entitlementsTableName;
 
-    public MysqlStoreEntitlementRepository(final DatabaseProvider databaseProvider, final String economyTablePrefix) {
+    public MysqlStoreEntitlementRepository(final DatabaseProvider databaseProvider, final String storeTablePrefix) {
         this.databaseProvider = Objects.requireNonNull(databaseProvider, "databaseProvider");
-        this.entitlementsTableName = Objects.requireNonNull(economyTablePrefix, "economyTablePrefix") + "store_entitlements";
+        this.entitlementsTableName = Objects.requireNonNull(storeTablePrefix, "storeTablePrefix") + "store_entitlements";
     }
 
     @Override

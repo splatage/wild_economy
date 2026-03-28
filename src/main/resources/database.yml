@@ -15,3 +15,4 @@ mysql:
 tables:
   economy-prefix: network_
   exchange-prefix: survival1_
+  store-prefix: survival1_store_

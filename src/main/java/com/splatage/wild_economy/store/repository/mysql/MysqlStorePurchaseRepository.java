@@ -14,8 +14,8 @@ public final class MysqlStorePurchaseRepository implements StorePurchaseReposito
 
     private final String purchasesTableName;
 
-    public MysqlStorePurchaseRepository(final String economyTablePrefix) {
-        this.purchasesTableName = Objects.requireNonNull(economyTablePrefix, "economyTablePrefix") + "store_purchases";
+    public MysqlStorePurchaseRepository(final String storeTablePrefix) {
+        this.purchasesTableName = Objects.requireNonNull(storeTablePrefix, "storeTablePrefix") + "store_purchases";
     }
 
     @Override

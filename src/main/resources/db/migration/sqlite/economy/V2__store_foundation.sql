@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS ${economy_prefix}store_entitlements (
+CREATE TABLE IF NOT EXISTS ${store_prefix}store_entitlements (
     player_uuid TEXT NOT NULL,
     entitlement_key TEXT NOT NULL,
     product_id TEXT NOT NULL,
@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS ${economy_prefix}store_entitlements (
     PRIMARY KEY (player_uuid, entitlement_key)
 );
 
-CREATE TABLE IF NOT EXISTS ${economy_prefix}store_purchases (
+CREATE TABLE IF NOT EXISTS ${store_prefix}store_purchases (
     purchase_id INTEGER PRIMARY KEY AUTOINCREMENT,
     player_uuid TEXT NOT NULL,
     product_id TEXT NOT NULL,
@@ -18,11 +18,11 @@ CREATE TABLE IF NOT EXISTS ${economy_prefix}store_purchases (
     completed_at INTEGER NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_${economy_prefix}store_entitlements_product_id
-    ON ${economy_prefix}store_entitlements (product_id);
+CREATE INDEX IF NOT EXISTS idx_${store_prefix}store_entitlements_product_id
+    ON ${store_prefix}store_entitlements (product_id);
 
-CREATE INDEX IF NOT EXISTS idx_${economy_prefix}store_purchases_player_created_at
-    ON ${economy_prefix}store_purchases (player_uuid, created_at);
+CREATE INDEX IF NOT EXISTS idx_${store_prefix}store_purchases_player_created_at
+    ON ${store_prefix}store_purchases (player_uuid, created_at);
 
-CREATE INDEX IF NOT EXISTS idx_${economy_prefix}store_purchases_product_status
-    ON ${economy_prefix}store_purchases (product_id, status);
+CREATE INDEX IF NOT EXISTS idx_${store_prefix}store_purchases_product_status
+    ON ${store_prefix}store_purchases (product_id, status);

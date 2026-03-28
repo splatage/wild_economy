@@ -26,7 +26,8 @@ public enum MigrationDomain {
     public Map<String, String> placeholders(final DatabaseConfig databaseConfig) {
         return Map.of(
                 "${economy_prefix}", databaseConfig.economyTablePrefix(),
-                "${exchange_prefix}", databaseConfig.exchangeTablePrefix()
+                "${exchange_prefix}", databaseConfig.exchangeTablePrefix(),
+                "${store_prefix}", databaseConfig.storeTablePrefix()
         );
     }
 

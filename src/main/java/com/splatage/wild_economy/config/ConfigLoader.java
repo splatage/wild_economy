@@ -61,6 +61,7 @@ public final class ConfigLoader {
 
     public DatabaseConfig loadDatabaseConfig() {
         final FileConfiguration config = this.loadYaml("database.yml");
+        final String economyTablePrefix = this.requireTablePrefix(config, "tables.economy-prefix");
         return new DatabaseConfig(
                 config.getString("backend", "sqlite"),
                 config.getString("sqlite.file", "plugins/wild_economy/data.db"),
@@ -71,8 +72,9 @@ public final class ConfigLoader {
                 config.getString("mysql.password", "change-me"),
                 config.getBoolean("mysql.ssl", false),
                 config.getInt("mysql.maximum-pool-size", 10),
-                this.requireTablePrefix(config, "tables.economy-prefix"),
-                this.requireTablePrefix(config, "tables.exchange-prefix")
+                economyTablePrefix,
+                this.requireTablePrefix(config, "tables.exchange-prefix"),
+                this.tablePrefixOrFallback(config, "tables.store-prefix", economyTablePrefix)
         );
     }
 
@@ -523,6 +525,24 @@ public final class ConfigLoader {
         final String value = config.getString(path, "").trim();
         if (value.isEmpty()) {
             throw new IllegalStateException("database.yml is missing required value '" + path + "'");
+        }
+        if (!value.matches("[A-Za-z0-9_]+")) {
+            throw new IllegalStateException(
+                    "database.yml value '" + path + "' contains invalid characters: '" + value + "'"
+            );
+        }
+        return value;
+    }
+
+    private String tablePrefixOrFallback(
+        final FileConfiguration config,
+        final String path,
+        final String fallback
+    ) {
+        final String rawValue = config.getString(path, "");
+        final String value = rawValue == null ? "" : rawValue.trim();
+        if (value.isEmpty()) {
+            return fallback;
         }
         if (!value.matches("[A-Za-z0-9_]+")) {
             throw new IllegalStateException(

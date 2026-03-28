@@ -14,9 +14,9 @@ public final class SqliteStoreEntitlementRepository implements StoreEntitlementR
     private final DatabaseProvider databaseProvider;
     private final String entitlementsTableName;
 
-    public SqliteStoreEntitlementRepository(final DatabaseProvider databaseProvider, final String economyTablePrefix) {
+    public SqliteStoreEntitlementRepository(final DatabaseProvider databaseProvider, final String storeTablePrefix) {
         this.databaseProvider = Objects.requireNonNull(databaseProvider, "databaseProvider");
-        this.entitlementsTableName = Objects.requireNonNull(economyTablePrefix, "economyTablePrefix") + "store_entitlements";
+        this.entitlementsTableName = Objects.requireNonNull(storeTablePrefix, "storeTablePrefix") + "store_entitlements";
     }
 
     @Override

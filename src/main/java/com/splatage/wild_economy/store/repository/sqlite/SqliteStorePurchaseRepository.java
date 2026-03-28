@@ -14,8 +14,8 @@ public final class SqliteStorePurchaseRepository implements StorePurchaseReposit
 
     private final String purchasesTableName;
 
-    public SqliteStorePurchaseRepository(final String economyTablePrefix) {
-        this.purchasesTableName = Objects.requireNonNull(economyTablePrefix, "economyTablePrefix") + "store_purchases";
+    public SqliteStorePurchaseRepository(final String storeTablePrefix) {
+        this.purchasesTableName = Objects.requireNonNull(storeTablePrefix, "storeTablePrefix") + "store_purchases";
     }
 
     @Override

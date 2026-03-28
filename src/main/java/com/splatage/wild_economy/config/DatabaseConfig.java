@@ -11,5 +11,6 @@ public record DatabaseConfig(
     boolean mysqlSsl,
     int mysqlMaximumPoolSize,
     String economyTablePrefix,
-    String exchangeTablePrefix
+    String exchangeTablePrefix,
+    String storeTablePrefix
 ) {}
