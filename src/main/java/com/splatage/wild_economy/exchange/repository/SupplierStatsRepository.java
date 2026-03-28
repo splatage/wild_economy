@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.exchange.repository;
 
+import com.splatage.wild_economy.exchange.activity.MarketActivityRecord;
 import com.splatage.wild_economy.exchange.supplier.SupplierAggregateRow;
 import java.util.List;
 import java.util.UUID;
@@ -11,4 +12,6 @@ public interface SupplierStatsRepository {
     List<SupplierAggregateRow> loadWeeklyRows(String weekKey);
 
     void recordSaleContribution(String weekKey, UUID playerId, String itemKey, long quantitySold, long updatedAtEpochSecond);
+
+    List<MarketActivityRecord> loadRecentlyStocked(long sinceEpochSecond, int limit);
 }

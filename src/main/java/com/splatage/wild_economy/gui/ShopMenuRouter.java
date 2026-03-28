@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.gui;
 
+import com.splatage.wild_economy.exchange.activity.MarketActivityCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.platform.PlatformExecutor;
 import java.util.Objects;
@@ -22,6 +23,7 @@ public final class ShopMenuRouter {
     private final StoreProductDetailMenu storeProductDetailMenu;
     private final XpBottleMenu xpBottleMenu;
     private final TopSupplierMenu topSupplierMenu;
+    private final MarketActivityMenu marketActivityMenu;
 
     public ShopMenuRouter(
         final PlatformExecutor platformExecutor,
@@ -33,7 +35,8 @@ public final class ShopMenuRouter {
         final StoreCategoryMenu storeCategoryMenu,
         final StoreProductDetailMenu storeProductDetailMenu,
         final XpBottleMenu xpBottleMenu,
-        final TopSupplierMenu topSupplierMenu
+        final TopSupplierMenu topSupplierMenu,
+        final MarketActivityMenu marketActivityMenu
     ) {
         this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
         this.exchangeRootMenu = Objects.requireNonNull(exchangeRootMenu, "exchangeRootMenu");
@@ -45,6 +48,7 @@ public final class ShopMenuRouter {
         this.storeProductDetailMenu = Objects.requireNonNull(storeProductDetailMenu, "storeProductDetailMenu");
         this.xpBottleMenu = Objects.requireNonNull(xpBottleMenu, "xpBottleMenu");
         this.topSupplierMenu = Objects.requireNonNull(topSupplierMenu, "topSupplierMenu");
+        this.marketActivityMenu = Objects.requireNonNull(marketActivityMenu, "marketActivityMenu");
     }
 
     public void openRoot(final Player player) {
@@ -107,6 +111,14 @@ public final class ShopMenuRouter {
 
     public void openStoreXpBottles(final Player player) {
         this.platformExecutor.runOnPlayer(player, () -> this.xpBottleMenu.open(player));
+    }
+
+    public void openMarketActivityRoot(final Player player) {
+        this.platformExecutor.runOnPlayer(player, () -> this.marketActivityMenu.openRoot(player));
+    }
+
+    public void openMarketActivityCategory(final Player player, final MarketActivityCategory category) {
+        this.platformExecutor.runOnPlayer(player, () -> this.marketActivityMenu.openCategory(player, category));
     }
     public void openTopSuppliers(final Player player) {
         this.platformExecutor.runOnPlayer(player, () -> this.topSupplierMenu.open(player));
@@ -171,7 +183,9 @@ public final class ShopMenuRouter {
     public void closeAllShopViews() {
         for (final Player player : Bukkit.getOnlinePlayers()) {
             final Inventory topInventory = player.getOpenInventory().getTopInventory();
-            if (this.currentHolder(player) == null && !this.topSupplierMenu.isTopSupplierInventory(topInventory)) {
+            if (this.currentHolder(player) == null
+                && !this.topSupplierMenu.isTopSupplierInventory(topInventory)
+                && !this.marketActivityMenu.isMarketActivityInventory(topInventory)) {
                 continue;
             }
             this.platformExecutor.runOnPlayer(player, player::closeInventory);

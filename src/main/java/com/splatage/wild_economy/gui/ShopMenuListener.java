@@ -17,6 +17,7 @@ public final class ShopMenuListener implements Listener {
     private final StoreProductDetailMenu storeProductDetailMenu;
     private final XpBottleMenu xpBottleMenu;
     private final TopSupplierMenu topSupplierMenu;
+    private final MarketActivityMenu marketActivityMenu;
 
     public ShopMenuListener(
         final ExchangeRootMenu exchangeRootMenu,
@@ -27,7 +28,8 @@ public final class ShopMenuListener implements Listener {
         final StoreCategoryMenu storeCategoryMenu,
         final StoreProductDetailMenu storeProductDetailMenu,
         final XpBottleMenu xpBottleMenu,
-        final TopSupplierMenu topSupplierMenu
+        final TopSupplierMenu topSupplierMenu,
+        final MarketActivityMenu marketActivityMenu
     ) {
         this.exchangeRootMenu = Objects.requireNonNull(exchangeRootMenu, "exchangeRootMenu");
         this.exchangeSubcategoryMenu = Objects.requireNonNull(exchangeSubcategoryMenu, "exchangeSubcategoryMenu");
@@ -38,12 +40,17 @@ public final class ShopMenuListener implements Listener {
         this.storeProductDetailMenu = Objects.requireNonNull(storeProductDetailMenu, "storeProductDetailMenu");
         this.xpBottleMenu = Objects.requireNonNull(xpBottleMenu, "xpBottleMenu");
         this.topSupplierMenu = Objects.requireNonNull(topSupplierMenu, "topSupplierMenu");
+        this.marketActivityMenu = Objects.requireNonNull(marketActivityMenu, "marketActivityMenu");
     }
 
     @EventHandler
     public void onInventoryClick(final InventoryClickEvent event) {
         if (this.topSupplierMenu.isTopSupplierInventory(event.getView().getTopInventory())) {
             this.topSupplierMenu.handleClick(event);
+            return;
+        }
+        if (this.marketActivityMenu.isMarketActivityInventory(event.getView().getTopInventory())) {
+            this.marketActivityMenu.handleClick(event);
             return;
         }
 
@@ -86,7 +93,8 @@ public final class ShopMenuListener implements Listener {
 
 @EventHandler
     public void onInventoryDrag(final InventoryDragEvent event) {
-        if (this.topSupplierMenu.isTopSupplierInventory(event.getView().getTopInventory())) {
+        if (this.topSupplierMenu.isTopSupplierInventory(event.getView().getTopInventory())
+            || this.marketActivityMenu.isMarketActivityInventory(event.getView().getTopInventory())) {
             final int topInventorySize = event.getView().getTopInventory().getSize();
             for (final int rawSlot : event.getRawSlots()) {
                 if (rawSlot < topInventorySize) {

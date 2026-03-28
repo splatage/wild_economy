@@ -22,6 +22,7 @@ public final class ExchangeRootMenu {
     private final LayoutBlueprint layoutBlueprint;
     private final LayoutIconResolver layoutIconResolver;
     private final TopSupplierMenu topSupplierMenu;
+    private final MarketActivityMenu marketActivityMenu;
     private ShopMenuRouter shopMenuRouter;
 
     public ExchangeRootMenu(
@@ -29,13 +30,15 @@ public final class ExchangeRootMenu {
        final PlayerInfoItemFactory playerInfoItemFactory,
        final LayoutBlueprint layoutBlueprint,
        final LayoutIconResolver layoutIconResolver,
-       final TopSupplierMenu topSupplierMenu
+       final TopSupplierMenu topSupplierMenu,
+       final MarketActivityMenu marketActivityMenu
     ) {
         this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
         this.layoutBlueprint = Objects.requireNonNull(layoutBlueprint, "layoutBlueprint");
         this.layoutIconResolver = Objects.requireNonNull(layoutIconResolver, "layoutIconResolver");
         this.topSupplierMenu = Objects.requireNonNull(topSupplierMenu, "topSupplierMenu");
+        this.marketActivityMenu = Objects.requireNonNull(marketActivityMenu, "marketActivityMenu");
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -57,6 +60,7 @@ public final class ExchangeRootMenu {
             );
         }
 
+        inventory.setItem(18, this.button(Material.BUNDLE, "Market Activity"));
         inventory.setItem(22, this.button(Material.NETHER_STAR, "Store"));
         inventory.setItem(23, this.button(Material.GOLD_INGOT, "Top Suppliers"));
         inventory.setItem(26, this.button(Material.BARRIER, "Close"));
@@ -79,6 +83,7 @@ public final class ExchangeRootMenu {
         }
 
         switch (event.getRawSlot()) {
+            case 18 -> this.marketActivityMenu.openRoot(player);
             case 22 -> this.shopMenuRouter.openStoreRoot(player);
             case 23 -> this.topSupplierMenu.open(player);
             case 26 -> player.closeInventory();

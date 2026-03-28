@@ -49,6 +49,7 @@ public final class ConfigLoader {
         return new GlobalConfig(
                 config.getLong("turnover.interval-ticks", 72000L),
                 config.getInt("gui.page-size", 45),
+                config.getInt("gui.market-activity.recent-window-hours", 72),
                 config.getString("commands.base-command", "shop"),
                 config.getString("commands.admin-command", "shopadmin"),
                 config.getBoolean("logging.debug", false),

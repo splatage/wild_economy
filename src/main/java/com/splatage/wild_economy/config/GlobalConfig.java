@@ -3,6 +3,7 @@ package com.splatage.wild_economy.config;
 public record GlobalConfig(
     long turnoverIntervalTicks,
     int guiPageSize,
+    int recentWindowHours,
     String baseCommand,
     String adminCommand,
     boolean debugLogging,
@@ -11,4 +12,3 @@ public record GlobalConfig(
     boolean buyToInventoryEnabled,
     boolean buyDropAtFeetEnabled
 ) {}
-

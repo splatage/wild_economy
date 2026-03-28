@@ -28,6 +28,11 @@ gui:
   title-browse-prefix: "Shop - "
   title-detail-prefix: "Buy - "
 
+  market-activity:
+    # Shared recent window used by Recently Stocked, Recently Purchased,
+    # Top Turnover, and Your Recent Purchases.
+    recent-window-hours: 72
+
 commands:
   base-command: shop
   admin-command: shopadmin

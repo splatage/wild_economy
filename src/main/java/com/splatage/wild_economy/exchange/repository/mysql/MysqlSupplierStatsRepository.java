@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.exchange.repository.mysql;
 
+import com.splatage.wild_economy.exchange.activity.MarketActivityRecord;
 import com.splatage.wild_economy.exchange.repository.SupplierStatsRepository;
 import com.splatage.wild_economy.exchange.supplier.SupplierAggregateRow;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
@@ -78,6 +79,33 @@ public final class MysqlSupplierStatsRepository implements SupplierStatsReposito
             throw new IllegalStateException("Failed to record supplier contribution", exception);
         }
     }
+
+    @Override
+    public List<MarketActivityRecord> loadRecentlyStocked(final long sinceEpochSecond, final int limit) {
+        final String sql = "SELECT item_key, MAX(updated_at) AS event_epoch, 0 AS total_value, 0 AS amount "
+            + "FROM " + this.supplierAllTimeTableName + " WHERE updated_at >= ? "
+            + "GROUP BY item_key ORDER BY event_epoch DESC LIMIT ?";
+        final List<MarketActivityRecord> rows = new ArrayList<>();
+        try (Connection connection = this.databaseProvider.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, sinceEpochSecond);
+            statement.setInt(2, limit);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    rows.add(new MarketActivityRecord(
+                        resultSet.getString("item_key"),
+                        resultSet.getLong("event_epoch"),
+                        java.math.BigDecimal.ZERO,
+                        0
+                    ));
+                }
+            }
+        } catch (final SQLException exception) {
+            throw new IllegalStateException("Failed to load recently stocked items", exception);
+        }
+        return rows;
+    }
+
 
 
     private List<SupplierAggregateRow> loadRows(final String sql, final String weekKey) {
