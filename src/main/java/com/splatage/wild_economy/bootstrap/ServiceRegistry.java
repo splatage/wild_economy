@@ -467,6 +467,7 @@ public final class ServiceRegistry {
                     this.plugin,
                     this.economyService,
                     this.baltopService,
+                    this.supplierStatsService,
                     this.economyConfig
             );
             this.placeholderExpansion.register();

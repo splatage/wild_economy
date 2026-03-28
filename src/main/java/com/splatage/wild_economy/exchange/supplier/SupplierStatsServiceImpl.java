@@ -107,6 +107,35 @@ public final class SupplierStatsServiceImpl implements SupplierStatsService {
     }
 
     @Override
+    public Optional<TopSupplierEntry> getTopSupplier(final SupplierScope scope) {
+        this.rotateWeekIfNeeded();
+        final List<Map.Entry<UUID, Long>> sorted = this.sortedTotals(this.totalsFor(scope));
+        if (sorted.isEmpty()) {
+            return Optional.empty();
+        }
+        final Map.Entry<UUID, Long> entry = sorted.get(0);
+        return Optional.of(new TopSupplierEntry(1, entry.getKey(), this.resolveDisplayName(entry.getKey()), entry.getValue()));
+    }
+
+    @Override
+    public long getPlayerTotalSupplied(final SupplierScope scope, final UUID playerId) {
+        if (playerId == null) {
+            return 0L;
+        }
+        this.rotateWeekIfNeeded();
+        return this.totalsFor(scope).getOrDefault(playerId, 0L);
+    }
+
+    @Override
+    public int getPlayerRank(final SupplierScope scope, final UUID playerId) {
+        if (playerId == null) {
+            return 0;
+        }
+        this.rotateWeekIfNeeded();
+        return this.computeRank(this.totalsFor(scope), playerId);
+    }
+
+    @Override
     public Optional<SupplierPlayerDetail> getPlayerDetail(final SupplierScope scope, final UUID playerId, final int topItemsLimit) {
         this.rotateWeekIfNeeded();
         final Map<UUID, Long> totals = this.totalsFor(scope);

@@ -19,6 +19,7 @@ public final class BaltopServiceImpl implements BaltopService {
     private final EconomyNameCacheRepository economyNameCacheRepository;
     private final EconomyConfig economyConfig;
     private final ConcurrentMap<String, CachedPage> pageCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, CachedRank> rankCache = new ConcurrentHashMap<>();
 
     public BaltopServiceImpl(
         final EconomyAccountRepository economyAccountRepository,
@@ -67,9 +68,27 @@ public final class BaltopServiceImpl implements BaltopService {
     }
 
     @Override
+    public int getRank(final UUID playerId) {
+        if (playerId == null) {
+            return 0;
+        }
+        final long now = System.currentTimeMillis() / 1000L;
+        final CachedRank cachedRank = this.rankCache.get(playerId);
+        if (cachedRank != null && cachedRank.expiresAtEpochSecond() > now) {
+            return cachedRank.rank();
+        }
+
+        final int rank = Math.max(0, this.economyAccountRepository.findRank(playerId));
+        this.rankCache.put(playerId, new CachedRank(rank, now + Math.max(1, this.economyConfig.offlineCacheSeconds())));
+        return rank;
+    }
+
+    @Override
     public void invalidate() {
         this.pageCache.clear();
+        this.rankCache.clear();
     }
 
     private record CachedPage(List<BalanceRankEntry> entries, long expiresAtEpochSecond) {}
+    private record CachedRank(int rank, long expiresAtEpochSecond) {}
 }

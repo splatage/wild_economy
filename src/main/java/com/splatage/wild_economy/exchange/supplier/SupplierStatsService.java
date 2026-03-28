@@ -11,6 +11,12 @@ public interface SupplierStatsService {
 
     List<TopSupplierEntry> getTopSuppliers(SupplierScope scope, int limit);
 
+    Optional<TopSupplierEntry> getTopSupplier(SupplierScope scope);
+
+    long getPlayerTotalSupplied(SupplierScope scope, UUID playerId);
+
+    int getPlayerRank(SupplierScope scope, UUID playerId);
+
     Optional<SupplierPlayerDetail> getPlayerDetail(SupplierScope scope, UUID playerId, int topItemsLimit);
 
     Optional<UUID> findPlayerIdByName(String playerName);

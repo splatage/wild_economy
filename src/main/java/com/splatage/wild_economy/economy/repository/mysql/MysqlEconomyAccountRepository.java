@@ -119,6 +119,41 @@ public final class MysqlEconomyAccountRepository implements EconomyAccountReposi
     }
 
     @Override
+    public int findRank(final UUID playerId) {
+        final String sql = """
+            SELECT CASE
+                WHEN EXISTS(SELECT 1 FROM %1$s WHERE player_uuid = ?)
+                THEN (
+                    SELECT COUNT(*) + 1
+                    FROM %1$s ranked
+                    WHERE ranked.balance_minor > (SELECT balance_minor FROM %1$s WHERE player_uuid = ?)
+                       OR (
+                           ranked.balance_minor = (SELECT balance_minor FROM %1$s WHERE player_uuid = ?)
+                           AND ranked.player_uuid < ?
+                       )
+                )
+                ELSE 0
+            END AS rank_position
+            """.formatted(this.accountsTableName);
+
+        try (Connection connection = this.databaseProvider.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, playerId.toString());
+            statement.setString(2, playerId.toString());
+            statement.setString(3, playerId.toString());
+            statement.setString(4, playerId.toString());
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    return 0;
+                }
+                return Math.max(0, resultSet.getInt("rank_position"));
+            }
+        } catch (final SQLException exception) {
+            throw new IllegalStateException("Failed to load baltop rank for " + playerId, exception);
+        }
+    }
+
+    @Override
     public List<EconomyAccountRecord> findTopAccounts(final int limit, final int offset) {
         final String sql = "SELECT player_uuid, balance_minor, updated_at FROM " + this.accountsTableName
                 + " ORDER BY balance_minor DESC, player_uuid ASC LIMIT ? OFFSET ?";

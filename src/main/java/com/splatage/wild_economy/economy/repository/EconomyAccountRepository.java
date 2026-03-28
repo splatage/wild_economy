@@ -25,4 +25,6 @@ public interface EconomyAccountRepository {
     );
 
     List<EconomyAccountRecord> findTopAccounts(int limit, int offset);
+
+    int findRank(UUID playerId);
 }
