@@ -35,8 +35,8 @@ public final class ShopSellPreviewSubcommand implements CommandExecutor {
 
         this.platformExecutor.runOnPlayer(player, () -> {
             final SellPreviewResult result = containerPreview
-                ? this.exchangeService.previewContainerSell(player.getUniqueId())
-                : this.exchangeService.previewInventorySell(player.getUniqueId());
+                ? this.exchangeService.previewContainerSell(player)
+                : this.exchangeService.previewInventorySell(player);
             ExchangeMessageFormatter.sendSellPreview(player, result);
         });
 

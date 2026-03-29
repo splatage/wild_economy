@@ -9,7 +9,7 @@ import com.splatage.wild_economy.exchange.domain.SellPreviewResult;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
+import org.bukkit.entity.Player;
 
 public final class ExchangeServiceImpl implements ExchangeService {
 
@@ -28,43 +28,43 @@ public final class ExchangeServiceImpl implements ExchangeService {
     }
 
     @Override
-    public SellHandResult sellHand(final UUID playerId) {
-        return this.exchangeSellService.sellHand(playerId);
+    public SellHandResult sellHand(final Player player) {
+        return this.exchangeSellService.sellHand(player);
     }
 
     @Override
-    public SellAllResult sellAll(final UUID playerId) {
-        return this.exchangeSellService.sellAll(playerId);
+    public SellAllResult sellAll(final Player player) {
+        return this.exchangeSellService.sellAll(player);
     }
 
     @Override
-    public SellContainerResult sellContainer(final UUID playerId) {
-        return this.exchangeSellService.sellContainer(playerId);
+    public SellContainerResult sellContainer(final Player player) {
+        return this.exchangeSellService.sellContainer(player);
     }
 
     @Override
-    public SellPreviewResult previewInventorySell(final UUID playerId) {
-        return this.exchangeSellService.previewInventorySell(playerId);
+    public SellPreviewResult previewInventorySell(final Player player) {
+        return this.exchangeSellService.previewInventorySell(player);
     }
 
     @Override
-    public SellPreviewResult previewContainerSell(final UUID playerId) {
-        return this.exchangeSellService.previewContainerSell(playerId);
+    public SellPreviewResult previewContainerSell(final Player player) {
+        return this.exchangeSellService.previewContainerSell(player);
     }
 
     @Override
-    public BuyResult buy(final UUID playerId, final ItemKey itemKey, final int amount) {
-        return this.exchangeBuyService.buy(playerId, itemKey, amount);
+    public BuyResult buy(final Player player, final ItemKey itemKey, final int amount) {
+        return this.exchangeBuyService.buy(player, itemKey, amount);
     }
 
     @Override
     public BuyResult buyQuoted(
-        final UUID playerId,
+        final Player player,
         final ItemKey itemKey,
         final int amount,
         final BigDecimal quotedUnitPrice
     ) {
-        return this.exchangeBuyService.buyQuoted(playerId, itemKey, amount, quotedUnitPrice);
+        return this.exchangeBuyService.buyQuoted(player, itemKey, amount, quotedUnitPrice);
     }
 
     @Override

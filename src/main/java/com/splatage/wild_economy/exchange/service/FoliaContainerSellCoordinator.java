@@ -37,7 +37,7 @@ public final class FoliaContainerSellCoordinator {
     private void sellContainerOnPlayer(final Player player, final Consumer<SellContainerResult> callback) {
         final Block targetBlock = player.getTargetBlockExact(CONTAINER_TARGET_RANGE);
         if (!this.exchangeSellService.isSupportedPlacedContainerTarget(targetBlock)) {
-            callback.accept(this.exchangeService.sellContainer(player.getUniqueId()));
+            callback.accept(this.exchangeService.sellContainer(player));
             return;
         }
 
