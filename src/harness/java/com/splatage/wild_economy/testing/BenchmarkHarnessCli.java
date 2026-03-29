@@ -1,6 +1,9 @@
 package com.splatage.wild_economy.testing;
 
 import com.splatage.wild_economy.bootstrap.HarnessBootstrap;
+import com.splatage.wild_economy.testing.scenario.ScenarioResult;
+import com.splatage.wild_economy.testing.scenario.ScenarioRunner;
+import com.splatage.wild_economy.testing.scenario.ScenarioRunnerImpl;
 import com.splatage.wild_economy.testing.seed.SeedGenerator;
 import com.splatage.wild_economy.testing.seed.SeedGeneratorImpl;
 import com.splatage.wild_economy.testing.seed.SeedPlan;
@@ -11,6 +14,7 @@ import com.splatage.wild_economy.testing.verify.InvariantReport;
 import java.io.File;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -33,6 +37,12 @@ public final class BenchmarkHarnessCli {
                 ? Long.parseLong(parsed.get("now-epoch-seconds"))
                 : Instant.now().getEpochSecond();
         final boolean reset = Boolean.parseBoolean(parsed.getOrDefault("reset", "false"));
+        final HarnessMode mode = parsed.containsKey("mode")
+                ? HarnessMode.parse(parsed.get("mode"))
+                : HarnessMode.SEED_VERIFY;
+        if (reset && !mode.includesSeed()) {
+            throw new IllegalArgumentException("--reset requires a harness mode that includes seeding");
+        }
 
         final SeedPlan seedPlan = new SeedPlan(
                 profile,
@@ -44,19 +54,64 @@ public final class BenchmarkHarnessCli {
                 nowEpochSecond,
                 reset
         );
+        final int scenarioOperations = parsed.containsKey("operations")
+                ? Integer.parseInt(parsed.get("operations"))
+                : profileSettings.scenario().operations();
+        final int scenarioConcurrency = parsed.containsKey("concurrency")
+                ? Integer.parseInt(parsed.get("concurrency"))
+                : profileSettings.scenario().concurrency();
 
         final Logger logger = Logger.getLogger("wild_economy_harness");
         try (HarnessBootstrap.HarnessComponents components = HarnessBootstrap.create(configDirectory, logger)) {
             new HarnessGuard().validate(harnessConfig, components.databaseConfig(), seedPlan.resetFirst());
-            final SeedGenerator seedGenerator = new SeedGeneratorImpl(logger);
-            final SeedRunReport seedRunReport = seedGenerator.generate(components, seedPlan);
-            final DatasetVerifier verifier = new DatasetVerifierImpl();
-            final InvariantReport invariantReport = verifier.verify(components, seedPlan);
-            System.out.println(seedRunReport.describe());
-            System.out.println(invariantReport.describe());
-            if (!invariantReport.success()) {
-                System.exit(2);
+
+            if (mode.includesSeed()) {
+                final SeedGenerator seedGenerator = new SeedGeneratorImpl(logger);
+                final SeedRunReport seedRunReport = seedGenerator.generate(components, seedPlan);
+                System.out.println(seedRunReport.describe());
+                final InvariantReport invariantReport = verifyDataset(components, seedPlan);
+                System.out.println(invariantReport.describe());
+                if (!invariantReport.success()) {
+                    System.exit(2);
+                }
             }
+
+            if (mode.includesScenarios()) {
+                final ScenarioRunner scenarioRunner = new ScenarioRunnerImpl();
+                final List<ScenarioResult> scenarioResults = scenarioRunner.run(
+                        components,
+                        seedPlan,
+                        scenarioOperations,
+                        scenarioConcurrency,
+                        profileSettings.scenario().mix()
+                );
+                printScenarioSummary(mode, scenarioOperations, scenarioConcurrency, scenarioResults);
+                final InvariantReport invariantReport = verifyDataset(components, seedPlan);
+                System.out.println(invariantReport.describe());
+                if (!invariantReport.success()) {
+                    System.exit(2);
+                }
+            }
+        }
+    }
+
+    private static InvariantReport verifyDataset(
+            final HarnessBootstrap.HarnessComponents components,
+            final SeedPlan seedPlan
+    ) {
+        final DatasetVerifier verifier = new DatasetVerifierImpl();
+        return verifier.verify(components, seedPlan);
+    }
+
+    private static void printScenarioSummary(
+            final HarnessMode mode,
+            final int operations,
+            final int concurrency,
+            final List<ScenarioResult> scenarioResults
+    ) {
+        System.out.println("Scenario run summary: mode=" + mode.name().toLowerCase() + ", operations=" + operations + ", concurrency=" + concurrency);
+        for (final ScenarioResult scenarioResult : scenarioResults) {
+            System.out.println(" - " + scenarioResult.describe());
         }
     }
 

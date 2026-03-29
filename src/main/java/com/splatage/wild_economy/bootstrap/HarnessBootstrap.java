@@ -18,6 +18,7 @@ import com.splatage.wild_economy.exchange.repository.ExchangeStockRepository;
 import com.splatage.wild_economy.exchange.repository.ExchangeTransactionRepository;
 import com.splatage.wild_economy.exchange.repository.SchemaVersionRepository;
 import com.splatage.wild_economy.exchange.repository.SupplierStatsRepository;
+import com.splatage.wild_economy.exchange.service.ExchangeBrowseService;
 import com.splatage.wild_economy.exchange.service.TransactionLogService;
 import com.splatage.wild_economy.exchange.stock.StockService;
 import com.splatage.wild_economy.exchange.supplier.SupplierStatsService;
@@ -28,8 +29,8 @@ import com.splatage.wild_economy.store.repository.StoreEntitlementRepository;
 import com.splatage.wild_economy.store.repository.StorePurchaseRepository;
 import com.splatage.wild_economy.store.service.StoreService;
 import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
-import com.splatage.wild_economy.xp.service.XpBottleService;
 import com.splatage.wild_economy.xp.service.NoopXpBottleService;
+import com.splatage.wild_economy.xp.service.XpBottleService;
 import java.io.File;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -105,6 +106,7 @@ public final class HarnessBootstrap {
                 exchangeComponents.exchangeStockRepository(),
                 exchangeComponents.exchangeTransactionRepository(),
                 exchangeComponents.supplierStatsRepository(),
+                exchangeComponents.exchangeBrowseService(),
                 exchangeComponents.stockService(),
                 exchangeComponents.pricingService(),
                 exchangeComponents.transactionLogService(),
@@ -137,6 +139,7 @@ public final class HarnessBootstrap {
             ExchangeStockRepository exchangeStockRepository,
             ExchangeTransactionRepository exchangeTransactionRepository,
             SupplierStatsRepository supplierStatsRepository,
+            ExchangeBrowseService exchangeBrowseService,
             StockService stockService,
             PricingService pricingService,
             TransactionLogService transactionLogService,

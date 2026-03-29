@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.testing;
 
+import com.splatage.wild_economy.testing.scenario.ScenarioMix;
 import java.io.File;
 import java.util.EnumMap;
 import java.util.Map;
@@ -45,7 +46,8 @@ public record HarnessConfig(
                     section.getLong("random-seed"),
                     section.getInt("exchange-transaction-count", 0),
                     section.getInt("store-purchase-count", 0),
-                    section.getInt("entitlement-grant-count", 0)
+                    section.getInt("entitlement-grant-count", 0),
+                    parseScenarioSettings(section, profile)
             ));
         }
 
@@ -55,6 +57,30 @@ public record HarnessConfig(
                 marker,
                 defaultProfile,
                 profiles
+        );
+    }
+
+    private static HarnessScenarioSettings parseScenarioSettings(
+            final ConfigurationSection profileSection,
+            final TestProfile profile
+    ) {
+        final ConfigurationSection scenarioSection = profileSection.getConfigurationSection("scenario");
+        if (scenarioSection == null) {
+            throw new IllegalStateException("Harness profile '" + profile.name().toLowerCase() + "' is missing the 'scenario' section");
+        }
+        final ConfigurationSection mixSection = scenarioSection.getConfigurationSection("mix");
+        if (mixSection == null) {
+            throw new IllegalStateException("Harness profile '" + profile.name().toLowerCase() + "' is missing the 'scenario.mix' section");
+        }
+        return new HarnessScenarioSettings(
+                scenarioSection.getInt("operations", 1_000),
+                scenarioSection.getInt("concurrency", 1),
+                new ScenarioMix(
+                        mixSection.getInt("browse-heavy", 40),
+                        mixSection.getInt("buy-heavy", 25),
+                        mixSection.getInt("sell-heavy", 25),
+                        mixSection.getInt("mixed-economy", 10)
+                )
         );
     }
 

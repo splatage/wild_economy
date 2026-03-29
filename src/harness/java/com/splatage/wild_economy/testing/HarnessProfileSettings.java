@@ -5,7 +5,8 @@ public record HarnessProfileSettings(
         long randomSeed,
         int exchangeTransactionCount,
         int storePurchaseCount,
-        int entitlementGrantCount
+        int entitlementGrantCount,
+        HarnessScenarioSettings scenario
 ) {
     public HarnessProfileSettings {
         if (playerCount <= 0) {
@@ -19,6 +20,9 @@ public record HarnessProfileSettings(
         }
         if (entitlementGrantCount < 0) {
             throw new IllegalArgumentException("entitlementGrantCount cannot be negative");
+        }
+        if (scenario == null) {
+            throw new IllegalArgumentException("scenario settings cannot be null");
         }
     }
 }
