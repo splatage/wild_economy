@@ -59,6 +59,46 @@ final class ExchangeLayoutBrowseServiceImplTest {
         layoutBrowseService.shutdown();
     }
 
+
+    @Test
+    void closeDoesNotPrewarmWhileAnotherViewerIsStillOpen() throws Exception {
+        final ExchangeCatalog catalog = catalog(playerStockedEntry());
+        final PricingService pricingService = new PricingServiceImpl(catalog);
+        final CountingStockService stockService = new CountingStockService(
+            new StockSnapshot(ITEM_KEY, 75L, 100L, 0.75D, StockState.HEALTHY)
+        );
+        final LayoutBlueprint layoutBlueprint = layoutBlueprint();
+        final ExchangeBrowseService browseService = new ExchangeBrowseServiceImpl(catalog, stockService, pricingService);
+        final ExchangeLayoutBrowseServiceImpl layoutBrowseService = new ExchangeLayoutBrowseServiceImpl(
+            catalog,
+            browseService,
+            stockService,
+            layoutBlueprint,
+            new LayoutPlacementResolver(layoutBlueprint)
+        );
+
+        layoutBrowseService.browseLayout("blocks", "logs", 0, 10);
+        assertEquals(1, stockService.snapshotCalls());
+
+        stockService.setSnapshot(new StockSnapshot(ITEM_KEY, 60L, 100L, 0.60D, StockState.HEALTHY));
+        stockService.setRevision(2L);
+
+        final UUID viewerOne = UUID.randomUUID();
+        final UUID viewerTwo = UUID.randomUUID();
+        layoutBrowseService.handleExchangeViewOpened(viewerOne);
+        layoutBrowseService.handleExchangeViewOpened(viewerTwo);
+        layoutBrowseService.handleExchangeViewClosed(viewerOne);
+
+        Thread.sleep(150L);
+        assertEquals(1, stockService.snapshotCalls(), "Prewarm should not run while another exchange viewer is still open");
+
+        layoutBrowseService.handleExchangeViewClosed(viewerTwo);
+        Thread.sleep(150L);
+        assertEquals(2, stockService.snapshotCalls(), "Prewarm should run after the last exchange viewer closes for the dirty revision");
+
+        layoutBrowseService.shutdown();
+    }
+
     @Test
     void closeAfterDirtyRevision_prewarmsVisibleCachesBeforeNextOpen() throws Exception {
         final ExchangeCatalog catalog = catalog(playerStockedEntry());
