@@ -117,9 +117,11 @@ public final class ScenarioRunnerImpl implements ScenarioRunner {
     private static final class ScenarioAccumulator {
         private final LongAdder operations = new LongAdder();
         private final LongAdder successes = new LongAdder();
+        private final LongAdder expectedRejections = new LongAdder();
         private final LongAdder failures = new LongAdder();
         private final LongAdder totalDurationNanos = new LongAdder();
         private final AtomicLong maxDurationNanos = new AtomicLong(0L);
+        private volatile String sampleRejection;
         private volatile String sampleFailure;
 
         private void record(final ScenarioExecutionResult executionResult, final long durationNanos) {
@@ -128,11 +130,18 @@ public final class ScenarioRunnerImpl implements ScenarioRunner {
             this.maxDurationNanos.accumulateAndGet(durationNanos, Math::max);
             if (executionResult.success()) {
                 this.successes.increment();
-            } else {
-                this.failures.increment();
-                if (this.sampleFailure == null && executionResult.failureReason() != null) {
-                    this.sampleFailure = executionResult.failureReason();
+                return;
+            }
+            if (executionResult.rejected()) {
+                this.expectedRejections.increment();
+                if (this.sampleRejection == null && executionResult.rejectionReason() != null) {
+                    this.sampleRejection = executionResult.rejectionReason();
                 }
+                return;
+            }
+            this.failures.increment();
+            if (this.sampleFailure == null && executionResult.failureReason() != null) {
+                this.sampleFailure = executionResult.failureReason();
             }
         }
 
@@ -141,9 +150,11 @@ public final class ScenarioRunnerImpl implements ScenarioRunner {
                     scenarioName,
                     this.operations.sum(),
                     this.successes.sum(),
+                    this.expectedRejections.sum(),
                     this.failures.sum(),
                     this.totalDurationNanos.sum(),
                     this.maxDurationNanos.get(),
+                    this.sampleRejection,
                     this.sampleFailure
             );
         }

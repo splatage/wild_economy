@@ -4,9 +4,11 @@ public record ScenarioResult(
         String scenarioName,
         long operations,
         long successes,
+        long expectedRejections,
         long failures,
         long totalDurationNanos,
         long maxDurationNanos,
+        String sampleRejection,
         String sampleFailure
 ) {
     public String describe() {
@@ -17,12 +19,17 @@ public record ScenarioResult(
                 .append(this.operations)
                 .append(", successes=")
                 .append(this.successes)
+                .append(", expectedRejections=")
+                .append(this.expectedRejections)
                 .append(", failures=")
                 .append(this.failures)
                 .append(", avgMicros=")
                 .append(averageMicros)
                 .append(", maxMicros=")
                 .append(maxMicros);
+        if (this.sampleRejection != null && !this.sampleRejection.isBlank()) {
+            builder.append(", sampleRejection=").append(this.sampleRejection);
+        }
         if (this.sampleFailure != null && !this.sampleFailure.isBlank()) {
             builder.append(", sampleFailure=").append(this.sampleFailure);
         }

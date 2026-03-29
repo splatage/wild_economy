@@ -26,7 +26,7 @@ public final class SellHeavyScenario implements Scenario {
         final SellQuote quote = context.components().pricingService().quoteSell(entry.itemKey(), amount, snapshot);
         final MoneyAmount totalPrice = MoneyAmount.fromMajor(quote.totalPrice(), context.components().economyConfig().fractionalDigits());
         if (totalPrice.isZero()) {
-            return ScenarioExecutionResult.failed("Zero-value sell quote for " + entry.itemKey().value());
+            return ScenarioExecutionResult.rejected("Zero-value sell quote for " + entry.itemKey().value());
         }
 
         final EconomyMutationResult payout = context.components().economyService().deposit(
@@ -37,7 +37,7 @@ public final class SellHeavyScenario implements Scenario {
                 this.name()
         );
         if (!payout.success()) {
-            return ScenarioExecutionResult.failed(payout.message());
+            return ScenarioExecutionResult.rejected(payout.message());
         }
 
         context.components().stockService().addStock(entry.itemKey(), amount);

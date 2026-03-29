@@ -7,6 +7,7 @@ import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.testing.seed.SeedPlan;
 import com.splatage.wild_economy.testing.support.SeedPlayer;
 import com.splatage.wild_economy.testing.support.SeedPlayerFactory;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -51,8 +52,14 @@ public record ScenarioContext(
         final List<ExchangeCatalogEntry> buyEntries = allEntries.stream()
                 .filter(ExchangeCatalogEntry::buyEnabled)
                 .toList();
-        final List<ExchangeCatalogEntry> sellEntries = allEntries.stream()
+        final List<ExchangeCatalogEntry> sellEnabledEntries = allEntries.stream()
                 .filter(ExchangeCatalogEntry::sellEnabled)
+                .toList();
+        final List<ExchangeCatalogEntry> sellEntries = sellEnabledEntries.stream()
+                .filter(entry -> components.pricingService()
+                        .quoteSell(entry.itemKey(), 1, components.stockService().getSnapshot(entry.itemKey()))
+                        .totalPrice()
+                        .compareTo(BigDecimal.ZERO) > 0)
                 .toList();
         final List<StoreProduct> storeProducts = new ArrayList<>(components.storeProductsConfig().products().values());
         storeProducts.sort(Comparator.comparing(StoreProduct::productId));
@@ -63,7 +70,7 @@ public record ScenarioContext(
                 players,
                 allEntries,
                 buyEntries.isEmpty() ? allEntries : buyEntries,
-                sellEntries.isEmpty() ? allEntries : sellEntries,
+                sellEntries.isEmpty() ? sellEnabledEntries : sellEntries,
                 storeProducts
         );
     }
@@ -99,9 +106,13 @@ public record ScenarioContext(
     }
 
     public ScenarioSelection nextMixedSelection(final Random random) {
+        final SeedPlayer player = this.randomPlayer(random);
+        final ExchangeCatalogEntry entry = (player.playerId().getLeastSignificantBits() & 1L) == 0L
+                ? this.randomBuyEntry(random)
+                : this.randomSellEntry(random);
         return new ScenarioSelection(
-                this.randomPlayer(random),
-                this.randomBrowseEntry(random),
+                player,
+                entry,
                 this.randomStoreProduct(random),
                 this.randomMarketActivityCategory(random),
                 1 + random.nextInt(8)

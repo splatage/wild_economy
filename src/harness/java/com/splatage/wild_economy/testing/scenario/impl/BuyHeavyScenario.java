@@ -29,11 +29,11 @@ public final class BuyHeavyScenario implements Scenario {
         final boolean playerStocked = entry.policyMode() == ItemPolicyMode.PLAYER_STOCKED;
 
         if (playerStocked && snapshot.stockCount() < amount) {
-            return ScenarioExecutionResult.failed("Out of stock for " + entry.itemKey().value());
+            return ScenarioExecutionResult.rejected("Out of stock for " + entry.itemKey().value());
         }
 
         if (playerStocked && !context.components().stockService().tryConsume(entry.itemKey(), amount)) {
-            return ScenarioExecutionResult.failed("Concurrent stock miss for " + entry.itemKey().value());
+            return ScenarioExecutionResult.rejected("Concurrent stock miss for " + entry.itemKey().value());
         }
 
         final EconomyMutationResult withdrawal = context.components().economyService().withdraw(
@@ -47,7 +47,7 @@ public final class BuyHeavyScenario implements Scenario {
             if (playerStocked) {
                 context.components().stockService().addStock(entry.itemKey(), amount);
             }
-            return ScenarioExecutionResult.failed(withdrawal.message());
+            return ScenarioExecutionResult.rejected(withdrawal.message());
         }
 
         context.components().transactionLogService().logPurchase(

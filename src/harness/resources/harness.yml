@@ -1,5 +1,5 @@
-enabled: false
-allow-reset: false
+enabled: true
+allow-reset: true
 required-prefix-marker: test_
 default-profile: smoke
 profiles:
