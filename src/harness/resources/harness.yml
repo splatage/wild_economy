@@ -1,0 +1,29 @@
+enabled: false
+allow-reset: false
+required-prefix-marker: test_
+default-profile: smoke
+profiles:
+  smoke:
+    player-count: 100
+    random-seed: 1001
+    exchange-transaction-count: 400
+    store-purchase-count: 40
+    entitlement-grant-count: 20
+  qa:
+    player-count: 3000
+    random-seed: 2001
+    exchange-transaction-count: 12000
+    store-purchase-count: 600
+    entitlement-grant-count: 300
+  perf:
+    player-count: 25000
+    random-seed: 3001
+    exchange-transaction-count: 100000
+    store-purchase-count: 4000
+    entitlement-grant-count: 2000
+  soak:
+    player-count: 25000
+    random-seed: 4001
+    exchange-transaction-count: 75000
+    store-purchase-count: 3000
+    entitlement-grant-count: 1500

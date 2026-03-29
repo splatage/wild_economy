@@ -61,13 +61,15 @@ final class EconomyBootstrap {
                 baltopService
         );
 
-        return new Components(economyService, baltopService, economyNameCacheRepository);
+        return new Components(economyService, baltopService, economyNameCacheRepository, economyAccountRepository, economyLedgerRepository);
     }
 
     record Components(
             EconomyService economyService,
             BaltopService baltopService,
-            EconomyNameCacheRepository economyNameCacheRepository
+            EconomyNameCacheRepository economyNameCacheRepository,
+            EconomyAccountRepository economyAccountRepository,
+            EconomyLedgerRepository economyLedgerRepository
     ) {
     }
 }

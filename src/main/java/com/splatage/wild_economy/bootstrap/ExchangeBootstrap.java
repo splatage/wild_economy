@@ -1,6 +1,5 @@
 package com.splatage.wild_economy.bootstrap;
 
-import com.splatage.wild_economy.WildEconomyPlugin;
 import com.splatage.wild_economy.config.DatabaseConfig;
 import com.splatage.wild_economy.config.EconomyConfig;
 import com.splatage.wild_economy.config.ExchangeItemsConfig;
@@ -56,7 +55,9 @@ import com.splatage.wild_economy.gui.layout.LayoutBlueprintLoader;
 import com.splatage.wild_economy.gui.layout.LayoutPlacementResolver;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
 import com.splatage.wild_economy.platform.PlatformExecutor;
+import java.io.File;
 import java.io.IOException;
+import java.util.logging.Logger;
 import java.util.Objects;
 
 final class ExchangeBootstrap {
@@ -65,7 +66,8 @@ final class ExchangeBootstrap {
     }
 
     static Components create(
-            final WildEconomyPlugin plugin,
+            final File dataFolder,
+            final Logger logger,
             final DatabaseProvider databaseProvider,
             final DatabaseConfig databaseConfig,
             final ExchangeItemsConfig exchangeItemsConfig,
@@ -93,7 +95,7 @@ final class ExchangeBootstrap {
         final LayoutBlueprint layoutBlueprint;
         try {
             layoutBlueprint = new LayoutBlueprintLoader().load(
-                    plugin.getDataFolder().toPath().resolve("layout.yml").toFile()
+                    dataFolder.toPath().resolve("layout.yml").toFile()
             );
         } catch (final IOException exception) {
             throw new IllegalStateException("Failed to load layout.yml", exception);
@@ -115,7 +117,7 @@ final class ExchangeBootstrap {
                 exchangeStockRepository,
                 exchangeCatalog,
                 stockStateResolver,
-                plugin.getLogger(),
+                logger,
                 databaseProvider.dialect(),
                 databaseConfig.mysqlMaximumPoolSize()
         );
@@ -124,7 +126,7 @@ final class ExchangeBootstrap {
         final PricingService pricingService = new PricingServiceImpl(exchangeCatalog);
         final TransactionLogService transactionLogService = new TransactionLogServiceImpl(
                 exchangeTransactionRepository,
-                plugin.getLogger(),
+                logger,
                 databaseProvider.dialect(),
                 databaseConfig.mysqlMaximumPoolSize()
         );
@@ -132,7 +134,7 @@ final class ExchangeBootstrap {
                 supplierStatsRepository,
                 economyNameCacheRepository,
                 exchangeCatalog,
-                plugin.getLogger(),
+                logger,
                 databaseProvider.dialect(),
                 databaseConfig.mysqlMaximumPoolSize()
         );
@@ -177,7 +179,8 @@ final class ExchangeBootstrap {
                 pricingService,
                 economyGateway,
                 transactionLogService,
-                supplierStatsService
+                supplierStatsService,
+                supplierStatsRepository
         );
 
         final ExchangeBuyService exchangeBuyService = new FoliaSafeExchangeBuyService(rawBuyService);
@@ -212,7 +215,8 @@ final class ExchangeBootstrap {
                 exchangeSellService,
                 exchangeService,
                 foliaContainerSellCoordinator,
-                supplierStatsService
+                supplierStatsService,
+                supplierStatsRepository
         );
     }
 
@@ -235,7 +239,8 @@ final class ExchangeBootstrap {
             ExchangeSellService exchangeSellService,
             ExchangeService exchangeService,
             FoliaContainerSellCoordinator foliaContainerSellCoordinator,
-            SupplierStatsService supplierStatsService
+            SupplierStatsService supplierStatsService,
+            SupplierStatsRepository supplierStatsRepository
     ) {
     }
 }

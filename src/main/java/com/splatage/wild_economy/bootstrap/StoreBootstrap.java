@@ -63,12 +63,14 @@ final class StoreBootstrap {
                 xpBottleService
         );
 
-        return new Components(storeRuntimeStateService, storeService);
+        return new Components(storeRuntimeStateService, storeService, storeEntitlementRepository, storePurchaseRepository);
     }
 
     record Components(
             StoreRuntimeStateService storeRuntimeStateService,
-            StoreService storeService
+            StoreService storeService,
+            StoreEntitlementRepository storeEntitlementRepository,
+            StorePurchaseRepository storePurchaseRepository
     ) {
     }
 }

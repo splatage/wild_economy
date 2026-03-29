@@ -1,0 +1,351 @@
+package com.splatage.wild_economy.testing.seed;
+
+import com.splatage.wild_economy.bootstrap.HarnessBootstrap;
+import com.splatage.wild_economy.economy.model.EconomyLedgerEntry;
+import com.splatage.wild_economy.economy.model.EconomyReason;
+import com.splatage.wild_economy.economy.model.MoneyAmount;
+import com.splatage.wild_economy.exchange.catalog.ExchangeCatalogEntry;
+import com.splatage.wild_economy.exchange.domain.BuyQuote;
+import com.splatage.wild_economy.exchange.domain.ItemKey;
+import com.splatage.wild_economy.exchange.domain.SellQuote;
+import com.splatage.wild_economy.exchange.domain.StockSnapshot;
+import com.splatage.wild_economy.exchange.domain.TransactionType;
+import com.splatage.wild_economy.store.model.StoreProduct;
+import com.splatage.wild_economy.store.model.StorePurchaseStatus;
+import com.splatage.wild_economy.store.model.StoreProductType;
+import com.splatage.wild_economy.store.state.DirtyEntitlementGrant;
+import com.splatage.wild_economy.store.state.StorePurchaseAuditRecord;
+import com.splatage.wild_economy.testing.support.HarnessSqlSupport;
+import com.splatage.wild_economy.testing.support.SeedPlayer;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.temporal.WeekFields;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
+import java.util.logging.Logger;
+
+public final class SeedGeneratorImpl implements SeedGenerator {
+
+    private final Logger logger;
+
+    public SeedGeneratorImpl(final Logger logger) {
+        this.logger = logger;
+    }
+
+    @Override
+    public SeedRunReport generate(final HarnessBootstrap.HarnessComponents components, final SeedPlan seedPlan) {
+        final long startedAt = System.currentTimeMillis();
+        final Random random = new Random(seedPlan.randomSeed());
+        if (seedPlan.resetFirst()) {
+            HarnessSqlSupport.resetSeededTables(components);
+            this.logger.info("Harness reset completed for configured prefixes.");
+        }
+
+        final List<SeedPlayer> players = this.createPlayers(seedPlan, components, random);
+        final int ledgerEntries = this.seedEconomy(players, components, seedPlan, random);
+        final int stockRows = this.seedStock(components, random);
+        final int exchangeTransactions = this.seedExchangeTransactions(players, components, seedPlan, random);
+        final int supplierContributions = this.seedSupplierContributions(players, components, seedPlan, random);
+        final SeedStoreResult storeResult = this.seedStore(players, components, seedPlan, random);
+
+        components.stockService().flushDirtyNow();
+        components.storeRuntimeStateService().flushDirtyNow();
+
+        final long durationMillis = System.currentTimeMillis() - startedAt;
+        return new SeedRunReport(
+                players.size(),
+                ledgerEntries,
+                stockRows,
+                exchangeTransactions,
+                supplierContributions,
+                storeResult.entitlementsSeeded(),
+                storeResult.purchasesSeeded(),
+                durationMillis
+        );
+    }
+
+    private List<SeedPlayer> createPlayers(
+            final SeedPlan seedPlan,
+            final HarnessBootstrap.HarnessComponents components,
+            final Random random
+    ) {
+        final List<SeedPlayer> players = new ArrayList<>(seedPlan.playerCount());
+        for (int index = 0; index < seedPlan.playerCount(); index++) {
+            final String playerName = "%s_player_%05d".formatted(seedPlan.profile().name().toLowerCase(Locale.ROOT), index + 1);
+            final UUID playerId = UUID.nameUUIDFromBytes((playerName + ':' + seedPlan.randomSeed()).getBytes(StandardCharsets.UTF_8));
+            final int balanceRoll = random.nextInt(100);
+            final long balanceMajor;
+            if (balanceRoll < 40) {
+                balanceMajor = 25L + random.nextInt(250);
+            } else if (balanceRoll < 75) {
+                balanceMajor = 250L + random.nextInt(2_500);
+            } else if (balanceRoll < 92) {
+                balanceMajor = 2_500L + random.nextInt(10_000);
+            } else {
+                balanceMajor = 10_000L + random.nextInt(50_000);
+            }
+            players.add(new SeedPlayer(
+                    playerId,
+                    playerName,
+                    MoneyAmount.ofMinor(balanceMajor * pow10(components.economyConfig().fractionalDigits()))
+            ));
+        }
+        return List.copyOf(players);
+    }
+
+    private int seedEconomy(
+            final List<SeedPlayer> players,
+            final HarnessBootstrap.HarnessComponents components,
+            final SeedPlan seedPlan,
+            final Random random
+    ) {
+        components.transactionRunner().run(connection -> {
+            for (final SeedPlayer player : players) {
+                final long updatedAt = seedPlan.nowEpochSecond() - random.nextInt(86_400 * 21);
+                components.economyAccountRepository().upsert(connection, player.playerId(), player.startingBalance(), updatedAt);
+                components.economyNameCacheRepository().upsert(connection, player.playerId(), player.playerName(), updatedAt);
+                components.economyLedgerRepository().insert(connection, new EconomyLedgerEntry(
+                        player.playerId(),
+                        EconomyReason.MIGRATION_ADJUSTMENT,
+                        player.startingBalance(),
+                        player.startingBalance(),
+                        null,
+                        "HARNESS_SEED",
+                        seedPlan.profile().name().toLowerCase(Locale.ROOT),
+                        updatedAt
+                ));
+            }
+            return null;
+        });
+        return players.size();
+    }
+
+    private int seedStock(final HarnessBootstrap.HarnessComponents components, final Random random) {
+        final List<ExchangeCatalogEntry> entries = new ArrayList<>(components.exchangeCatalog().allEntries());
+        entries.sort(Comparator.comparing(entry -> entry.itemKey().value()));
+        final Map<ItemKey, Long> targetStocks = new LinkedHashMap<>();
+        for (int index = 0; index < entries.size(); index++) {
+            final ExchangeCatalogEntry entry = entries.get(index);
+            final int bucket = index % 6;
+            final long targetStock = this.resolveStockForBucket(entry, bucket, random);
+            targetStocks.put(entry.itemKey(), targetStock);
+            final long currentStock = components.stockService().getSnapshot(entry.itemKey()).stockCount();
+            if (targetStock > currentStock) {
+                final long delta = targetStock - currentStock;
+                this.addStockInChunks(components, entry.itemKey(), delta);
+            } else if (currentStock > targetStock) {
+                final long delta = currentStock - targetStock;
+                this.removeStockInChunks(components, entry.itemKey(), delta);
+            }
+        }
+        components.exchangeStockRepository().flushStocks(targetStocks);
+        return entries.size();
+    }
+
+    private long resolveStockForBucket(final ExchangeCatalogEntry entry, final int bucket, final Random random) {
+        final long cap = entry.stockCap();
+        if (cap <= 0L) {
+            return switch (bucket) {
+                case 0 -> 0L;
+                case 1 -> 2L + random.nextInt(6);
+                case 2 -> 32L + random.nextInt(96);
+                case 3 -> 256L + random.nextInt(512);
+                case 4 -> 1024L + random.nextInt(2048);
+                default -> 48L + random.nextInt(128);
+            };
+        }
+        return switch (bucket) {
+            case 0 -> 0L;
+            case 1 -> Math.max(1L, Math.min(cap, 1L + random.nextInt((int) Math.max(2L, Math.min(cap, 4L)))));
+            case 2 -> Math.max(1L, Math.round(cap * (0.20D + (random.nextDouble() * 0.15D))));
+            case 3 -> Math.max(1L, Math.round(cap * (0.45D + (random.nextDouble() * 0.20D))));
+            case 4 -> Math.max(1L, Math.round(cap * (0.85D + (random.nextDouble() * 0.40D))));
+            default -> Math.max(1L, Math.round(cap * (0.10D + (random.nextDouble() * 0.10D))));
+        };
+    }
+
+    private int seedExchangeTransactions(
+            final List<SeedPlayer> players,
+            final HarnessBootstrap.HarnessComponents components,
+            final SeedPlan seedPlan,
+            final Random random
+    ) {
+        final List<ExchangeCatalogEntry> entries = List.copyOf(components.exchangeCatalog().allEntries());
+        final int total = seedPlan.exchangeTransactionCount();
+        for (int index = 0; index < total; index++) {
+            final SeedPlayer player = players.get(random.nextInt(players.size()));
+            final ExchangeCatalogEntry entry = entries.get(random.nextInt(entries.size()));
+            final int amount = 1 + random.nextInt(32);
+            final StockSnapshot snapshot = components.stockService().getSnapshot(entry.itemKey());
+            final boolean buy = random.nextBoolean();
+            final long createdAt = seedPlan.nowEpochSecond() - random.nextInt(86_400 * 7);
+            final String metaJson = "{\"seeded\":true,\"profile\":\""
+                    + seedPlan.profile().name().toLowerCase(Locale.ROOT)
+                    + "\"}";
+            if (buy) {
+                final BuyQuote quote = components.pricingService().quoteBuy(entry.itemKey(), amount, snapshot);
+                components.exchangeTransactionRepository().insert(
+                        TransactionType.BUY,
+                        player.playerId(),
+                        entry.itemKey().value(),
+                        amount,
+                        quote.unitPrice(),
+                        quote.totalPrice(),
+                        Instant.ofEpochSecond(createdAt),
+                        metaJson
+                );
+            } else {
+                final SellQuote quote = components.pricingService().quoteSell(entry.itemKey(), amount, snapshot);
+                components.exchangeTransactionRepository().insert(
+                        TransactionType.SELL,
+                        player.playerId(),
+                        entry.itemKey().value(),
+                        amount,
+                        quote.effectiveUnitPrice(),
+                        quote.totalPrice(),
+                        Instant.ofEpochSecond(createdAt),
+                        metaJson
+                );
+            }
+        }
+        return total;
+    }
+
+    private int seedSupplierContributions(
+            final List<SeedPlayer> players,
+            final HarnessBootstrap.HarnessComponents components,
+            final SeedPlan seedPlan,
+            final Random random
+    ) {
+        final List<ExchangeCatalogEntry> entries = List.copyOf(components.exchangeCatalog().allEntries());
+        final String currentWeekKey = this.weekKey(seedPlan.nowEpochSecond());
+        final int total = Math.max(1, seedPlan.exchangeTransactionCount() / 2);
+        for (int index = 0; index < total; index++) {
+            final SeedPlayer player = players.get(random.nextInt(players.size()));
+            final ExchangeCatalogEntry entry = entries.get(random.nextInt(entries.size()));
+            final int quantity = 1 + random.nextInt(48);
+            final long updatedAt = seedPlan.nowEpochSecond() - random.nextInt(86_400 * 7);
+            components.supplierStatsRepository().recordSaleContribution(
+                    currentWeekKey,
+                    player.playerId(),
+                    entry.itemKey().value(),
+                    quantity,
+                    updatedAt
+            );
+        }
+        return total;
+    }
+
+    private SeedStoreResult seedStore(
+            final List<SeedPlayer> players,
+            final HarnessBootstrap.HarnessComponents components,
+            final SeedPlan seedPlan,
+            final Random random
+    ) {
+        final List<StoreProduct> products = new ArrayList<>(components.storeProductsConfig().products().values());
+        if (products.isEmpty()) {
+            return new SeedStoreResult(0, 0);
+        }
+
+        final Map<UUID, List<DirtyEntitlementGrant>> entitlementBatches = new LinkedHashMap<>();
+        int entitlementCount = 0;
+        for (int index = 0; index < seedPlan.entitlementGrantCount(); index++) {
+            final SeedPlayer player = players.get(random.nextInt(players.size()));
+            final StoreProduct product = products.get(random.nextInt(products.size()));
+            if (product.entitlementKey() == null || product.entitlementKey().isBlank()) {
+                continue;
+            }
+            final long grantedAt = seedPlan.nowEpochSecond() - random.nextInt(86_400 * 14);
+            entitlementBatches
+                    .computeIfAbsent(player.playerId(), ignored -> new ArrayList<>())
+                    .add(new DirtyEntitlementGrant(product.entitlementKey(), product.productId(), grantedAt));
+            entitlementCount++;
+        }
+
+        if (!entitlementBatches.isEmpty()) {
+            components.transactionRunner().run(connection -> {
+                for (final Map.Entry<UUID, List<DirtyEntitlementGrant>> entry : entitlementBatches.entrySet()) {
+                    components.storeEntitlementRepository().upsertBatch(connection, entry.getKey(), entry.getValue());
+                }
+                return null;
+            });
+        }
+
+        final List<StorePurchaseAuditRecord> purchases = new ArrayList<>();
+        for (int index = 0; index < seedPlan.storePurchaseCount(); index++) {
+            final SeedPlayer player = players.get(random.nextInt(players.size()));
+            final StoreProduct product = products.get(random.nextInt(products.size()));
+            final StorePurchaseStatus status = random.nextInt(100) < 92 ? StorePurchaseStatus.SUCCESS : StorePurchaseStatus.FAILED;
+            final long createdAt = seedPlan.nowEpochSecond() - random.nextInt(86_400 * 14);
+            purchases.add(new StorePurchaseAuditRecord(
+                    player.playerId(),
+                    product.productId(),
+                    product.type(),
+                    product.type() == StoreProductType.XP_WITHDRAWAL ? MoneyAmount.zero() : product.price(),
+                    status,
+                    status == StorePurchaseStatus.SUCCESS ? null : "seeded-failure",
+                    createdAt,
+                    status == StorePurchaseStatus.SUCCESS ? createdAt + random.nextInt(300) : null
+            ));
+        }
+        if (!purchases.isEmpty()) {
+            components.transactionRunner().run(connection -> {
+                components.storePurchaseRepository().insertBatch(connection, purchases);
+                return null;
+            });
+        }
+        return new SeedStoreResult(entitlementCount, purchases.size());
+    }
+
+    private void addStockInChunks(
+            final HarnessBootstrap.HarnessComponents components,
+            final ItemKey itemKey,
+            final long amount
+    ) {
+        long remaining = amount;
+        while (remaining > 0L) {
+            final int chunk = (int) Math.min(Integer.MAX_VALUE, remaining);
+            components.stockService().addStock(itemKey, chunk);
+            remaining -= chunk;
+        }
+    }
+
+    private void removeStockInChunks(
+            final HarnessBootstrap.HarnessComponents components,
+            final ItemKey itemKey,
+            final long amount
+    ) {
+        long remaining = amount;
+        while (remaining > 0L) {
+            final int chunk = (int) Math.min(Integer.MAX_VALUE, remaining);
+            components.stockService().removeStock(itemKey, chunk);
+            remaining -= chunk;
+        }
+    }
+
+    private String weekKey(final long epochSecond) {
+        final java.time.LocalDate date = Instant.ofEpochSecond(epochSecond).atZone(ZoneOffset.UTC).toLocalDate();
+        final WeekFields weekFields = WeekFields.ISO;
+        final int year = date.get(weekFields.weekBasedYear());
+        final int week = date.get(weekFields.weekOfWeekBasedYear());
+        return "%04d-W%02d".formatted(year, week);
+    }
+
+    private long pow10(final int power) {
+        long value = 1L;
+        for (int index = 0; index < power; index++) {
+            value *= 10L;
+        }
+        return value;
+    }
+
+    private record SeedStoreResult(int entitlementsSeeded, int purchasesSeeded) {
+    }
+}
