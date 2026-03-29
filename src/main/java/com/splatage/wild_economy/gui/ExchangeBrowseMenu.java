@@ -2,7 +2,7 @@ package com.splatage.wild_economy.gui;
 
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.service.ExchangeCatalogView;
-import com.splatage.wild_economy.exchange.service.ExchangeService;
+import com.splatage.wild_economy.gui.browse.ExchangeLayoutBrowseService;
 import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
 import java.util.List;
 import java.util.Objects;
@@ -15,17 +15,17 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public final class ExchangeBrowseMenu {
 
-    private final ExchangeService exchangeService;
+    private final ExchangeLayoutBrowseService exchangeLayoutBrowseService;
     private final PlayerInfoItemFactory playerInfoItemFactory;
     private final LayoutBlueprint layoutBlueprint;
     private ShopMenuRouter shopMenuRouter;
 
     public ExchangeBrowseMenu(
-        final ExchangeService exchangeService,
+        final ExchangeLayoutBrowseService exchangeLayoutBrowseService,
         final PlayerInfoItemFactory playerInfoItemFactory,
         final LayoutBlueprint layoutBlueprint
     ) {
-        this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
+        this.exchangeLayoutBrowseService = Objects.requireNonNull(exchangeLayoutBrowseService, "exchangeLayoutBrowseService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
         this.layoutBlueprint = Objects.requireNonNull(layoutBlueprint, "layoutBlueprint");
     }
@@ -43,8 +43,8 @@ public final class ExchangeBrowseMenu {
     ) {
         final ShopMenuHolder holder = ShopMenuHolder.browse(layoutGroupKey, layoutChildKey, page, viaSubcategory);
         final Inventory inventory = holder.createInventory(54, this.title(layoutGroupKey, layoutChildKey));
-        final List<ExchangeCatalogView> entries = this.exchangeService.browseLayout(layoutGroupKey, layoutChildKey, page, 45);
-        final int totalVisible = this.exchangeService.countVisibleItems(layoutGroupKey, layoutChildKey);
+        final List<ExchangeCatalogView> entries = this.exchangeLayoutBrowseService.browseLayout(layoutGroupKey, layoutChildKey, page, 45);
+        final int totalVisible = this.exchangeLayoutBrowseService.countVisibleItems(layoutGroupKey, layoutChildKey);
 
         int slot = 0;
         for (final ExchangeCatalogView view : entries) {
@@ -99,7 +99,7 @@ public final class ExchangeBrowseMenu {
             }
             case 49 -> this.shopMenuRouter.goBack(player);
             case 53 -> {
-                final int totalVisible = this.exchangeService.countVisibleItems(layoutGroupKey, layoutChildKey);
+                final int totalVisible = this.exchangeLayoutBrowseService.countVisibleItems(layoutGroupKey, layoutChildKey);
                 if ((page + 1) * 45 < totalVisible) {
                     this.shopMenuRouter.openBrowse(player, layoutGroupKey, layoutChildKey, page + 1, viaSubcategory);
                 }

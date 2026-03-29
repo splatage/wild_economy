@@ -14,14 +14,8 @@ import com.splatage.wild_economy.exchange.pricing.PricingService;
 import com.splatage.wild_economy.exchange.pricing.PricingServiceImpl;
 import com.splatage.wild_economy.exchange.stock.StockMetricsSnapshot;
 import com.splatage.wild_economy.exchange.stock.StockService;
-import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
-import com.splatage.wild_economy.gui.layout.LayoutChildDefinition;
-import com.splatage.wild_economy.gui.layout.LayoutGroupDefinition;
-import com.splatage.wild_economy.gui.layout.LayoutPlacementResolver;
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class ExchangeBrowseServiceImplTest {
@@ -33,13 +27,10 @@ class ExchangeBrowseServiceImplTest {
         final ExchangeCatalog catalog = catalog(playerStockedEntry());
         final PricingService pricingService = new PricingServiceImpl(catalog);
         final StockSnapshot snapshot = new StockSnapshot(ITEM_KEY, 75L, 100L, 0.75D, StockState.HEALTHY);
-        final LayoutBlueprint layoutBlueprint = layoutBlueprint();
         final ExchangeBrowseServiceImpl browseService = new ExchangeBrowseServiceImpl(
             catalog,
             new FixedSnapshotStockService(snapshot),
-            pricingService,
-            layoutBlueprint,
-            new LayoutPlacementResolver(layoutBlueprint)
+            pricingService
         );
 
         final ExchangeItemView itemView = browseService.getItemView(ITEM_KEY);
@@ -47,55 +38,28 @@ class ExchangeBrowseServiceImplTest {
         assertEquals(
             pricingService.quoteBuy(ITEM_KEY, 1, snapshot).unitPrice(),
             itemView.buyPrice(),
-            "Browse item pricing should come from the canonical pricing service"
+            "Item view pricing should come from the canonical pricing service"
         );
     }
 
     @Test
-    void browseLayout_usesCanonicalPricingServiceForUnlimitedBuyItems() {
-        final ExchangeCatalog catalog = catalog(unlimitedBuyEntry());
-        final PricingService pricingService = new PricingServiceImpl(catalog);
-        final StockSnapshot snapshot = new StockSnapshot(ITEM_KEY, 12L, 100L, 0.12D, StockState.HEALTHY);
-        final LayoutBlueprint layoutBlueprint = layoutBlueprint();
-        final ExchangeBrowseServiceImpl browseService = new ExchangeBrowseServiceImpl(
-            catalog,
-            new FixedSnapshotStockService(snapshot),
-            pricingService,
-            layoutBlueprint,
-            new LayoutPlacementResolver(layoutBlueprint)
-        );
-
-        final ExchangeCatalogView view = browseService.browseLayout("blocks", "logs", 0, 10).getFirst();
-
-        assertEquals(
-            pricingService.quoteBuy(ITEM_KEY, 1, snapshot).unitPrice(),
-            view.buyPrice(),
-            "Browse layout pricing should come from the canonical pricing service"
-        );
-    }
-
-
-    @Test
-    void browseLayout_reusesCachedVisibleEntriesWithinSameStockRevision() {
+    void getItemView_reusesCachedEntryWithinSameStockRevision() {
         final ExchangeCatalog catalog = catalog(playerStockedEntry());
         final PricingService pricingService = new PricingServiceImpl(catalog);
         final CountingStockService stockService = new CountingStockService(
             new StockSnapshot(ITEM_KEY, 75L, 100L, 0.75D, StockState.HEALTHY)
         );
-        final LayoutBlueprint layoutBlueprint = layoutBlueprint();
         final ExchangeBrowseServiceImpl browseService = new ExchangeBrowseServiceImpl(
             catalog,
             stockService,
-            pricingService,
-            layoutBlueprint,
-            new LayoutPlacementResolver(layoutBlueprint)
+            pricingService
         );
 
-        final List<ExchangeCatalogView> first = browseService.browseLayout("blocks", "logs", 0, 10);
-        final List<ExchangeCatalogView> second = browseService.browseLayout("blocks", "logs", 0, 10);
+        final ExchangeItemView first = browseService.getItemView(ITEM_KEY);
+        final ExchangeItemView second = browseService.getItemView(ITEM_KEY);
 
-        assertEquals(1, stockService.snapshotCalls(), "Stock snapshot should be resolved once for the cached browse result");
-        assertEquals(first, second, "Browse results should be stable across repeated calls within the same stock revision");
+        assertEquals(1, stockService.snapshotCalls(), "Stock snapshot should be resolved once for the cached item view");
+        assertEquals(first, second, "Item views should be stable across repeated calls within the same stock revision");
     }
 
     private static ExchangeCatalog catalog(final ExchangeCatalogEntry entry) {
@@ -125,57 +89,6 @@ class ExchangeBrowseServiceImplTest {
         );
     }
 
-    private static ExchangeCatalogEntry unlimitedBuyEntry() {
-        return new ExchangeCatalogEntry(
-            ITEM_KEY,
-            "Oak Log",
-            ItemCategory.BUILDING_MATERIALS,
-            GeneratedItemCategory.WOODS,
-            ItemPolicyMode.UNLIMITED_BUY,
-            new BigDecimal("4.00"),
-            100L,
-            10L,
-            true,
-            true,
-            new ExchangeCatalogEntry.ResolvedEcoEntry(
-                10L,
-                100L,
-                new BigDecimal("6.00"),
-                new BigDecimal("18.00"),
-                new BigDecimal("3.00"),
-                new BigDecimal("9.00")
-            )
-        );
-    }
-
-    private static LayoutBlueprint layoutBlueprint() {
-        return new LayoutBlueprint(
-            Map.of(
-                "blocks",
-                new LayoutGroupDefinition(
-                    "blocks",
-                    "Blocks",
-                    0,
-                    "OAK_LOG",
-                    Map.of(
-                        "logs",
-                        new LayoutChildDefinition(
-                            "logs",
-                            "Logs",
-                            0,
-                            "OAK_LOG",
-                            List.of(ITEM_KEY.value()),
-                            List.of()
-                        )
-                    ),
-                    List.of(),
-                    List.of()
-                )
-            ),
-            Map.of()
-        );
-    }
-
     private static final class FixedSnapshotStockService implements StockService {
         private final StockSnapshot snapshot;
 
@@ -188,113 +101,39 @@ class ExchangeBrowseServiceImplTest {
             return this.snapshot;
         }
 
-        @Override
-        public long getAvailableRoom(final ItemKey itemKey) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void addStock(final ItemKey itemKey, final int amount) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean tryConsume(final ItemKey itemKey, final int amount) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public int consumeUpTo(final ItemKey itemKey, final int amount) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void removeStock(final ItemKey itemKey, final int amount) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void flushDirtyNow() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public long cacheRevision() {
-            return 0L;
-        }
-
-        @Override
-        public StockMetricsSnapshot metricsSnapshot() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void shutdown() {
-            throw new UnsupportedOperationException();
-        }
+        @Override public long getAvailableRoom(final ItemKey itemKey) { throw new UnsupportedOperationException(); }
+        @Override public void addStock(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
+        @Override public boolean tryConsume(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
+        @Override public int consumeUpTo(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
+        @Override public void removeStock(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
+        @Override public long cacheRevision() { return 1L; }
+        @Override public void flushDirtyNow() { throw new UnsupportedOperationException(); }
+        @Override public StockMetricsSnapshot metricsSnapshot() { throw new UnsupportedOperationException(); }
+        @Override public void shutdown() { throw new UnsupportedOperationException(); }
     }
+
     private static final class CountingStockService implements StockService {
         private final StockSnapshot snapshot;
-        private final AtomicInteger snapshotCalls = new AtomicInteger();
+        private int snapshotCalls;
 
-        private CountingStockService(final StockSnapshot snapshot) {
-            this.snapshot = snapshot;
-        }
-
-        int snapshotCalls() {
-            return this.snapshotCalls.get();
-        }
+        private CountingStockService(final StockSnapshot snapshot) { this.snapshot = snapshot; }
 
         @Override
         public StockSnapshot getSnapshot(final ItemKey itemKey) {
-            this.snapshotCalls.incrementAndGet();
+            this.snapshotCalls++;
             return this.snapshot;
         }
 
-        @Override
-        public long getAvailableRoom(final ItemKey itemKey) {
-            throw new UnsupportedOperationException();
-        }
+        private int snapshotCalls() { return this.snapshotCalls; }
 
-        @Override
-        public void addStock(final ItemKey itemKey, final int amount) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean tryConsume(final ItemKey itemKey, final int amount) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public int consumeUpTo(final ItemKey itemKey, final int amount) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void removeStock(final ItemKey itemKey, final int amount) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void flushDirtyNow() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public long cacheRevision() {
-            return 0L;
-        }
-
-        @Override
-        public StockMetricsSnapshot metricsSnapshot() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void shutdown() {
-            throw new UnsupportedOperationException();
-        }
+        @Override public long getAvailableRoom(final ItemKey itemKey) { throw new UnsupportedOperationException(); }
+        @Override public void addStock(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
+        @Override public boolean tryConsume(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
+        @Override public int consumeUpTo(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
+        @Override public void removeStock(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
+        @Override public long cacheRevision() { return 1L; }
+        @Override public void flushDirtyNow() { throw new UnsupportedOperationException(); }
+        @Override public StockMetricsSnapshot metricsSnapshot() { throw new UnsupportedOperationException(); }
+        @Override public void shutdown() { throw new UnsupportedOperationException(); }
     }
-
 }
