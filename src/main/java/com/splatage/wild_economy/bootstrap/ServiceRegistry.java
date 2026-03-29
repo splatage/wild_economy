@@ -17,128 +17,58 @@ import com.splatage.wild_economy.command.ShopTopSubcommand;
 import com.splatage.wild_economy.config.ConfigLoader;
 import com.splatage.wild_economy.config.ConfigValidator;
 import com.splatage.wild_economy.config.DatabaseConfig;
-import com.splatage.wild_economy.config.ExchangeItemsConfig;
 import com.splatage.wild_economy.config.EconomyConfig;
+import com.splatage.wild_economy.config.ExchangeItemsConfig;
 import com.splatage.wild_economy.config.GlobalConfig;
 import com.splatage.wild_economy.config.StoreProductsConfig;
-import com.splatage.wild_economy.economy.InternalEconomyGateway;
+import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.listener.EconomyPlayerSessionListener;
 import com.splatage.wild_economy.economy.placeholder.WildEconomyExpansion;
-import com.splatage.wild_economy.economy.repository.EconomyAccountRepository;
-import com.splatage.wild_economy.economy.repository.EconomyLedgerRepository;
-import com.splatage.wild_economy.economy.repository.EconomyNameCacheRepository;
-import com.splatage.wild_economy.economy.repository.mysql.MysqlEconomyAccountRepository;
-import com.splatage.wild_economy.economy.repository.mysql.MysqlEconomyLedgerRepository;
-import com.splatage.wild_economy.economy.repository.mysql.MysqlEconomyNameCacheRepository;
-import com.splatage.wild_economy.economy.repository.sqlite.SqliteEconomyAccountRepository;
-import com.splatage.wild_economy.economy.repository.sqlite.SqliteEconomyLedgerRepository;
-import com.splatage.wild_economy.economy.repository.sqlite.SqliteEconomyNameCacheRepository;
-import com.splatage.wild_economy.economy.service.BalanceCache;
 import com.splatage.wild_economy.economy.service.BaltopService;
-import com.splatage.wild_economy.economy.service.BaltopServiceImpl;
 import com.splatage.wild_economy.economy.service.EconomyService;
-import com.splatage.wild_economy.economy.service.EconomyServiceImpl;
-import com.splatage.wild_economy.gui.PlayerHeadCache;
-import com.splatage.wild_economy.gui.PlayerInfoItemFactory;
-import com.splatage.wild_economy.gui.StoreCategoryMenu;
-import com.splatage.wild_economy.gui.StoreProductDetailMenu;
-import com.splatage.wild_economy.gui.StoreRootMenu;
-import com.splatage.wild_economy.gui.TopSupplierMenu;
-import com.splatage.wild_economy.gui.XpBottleMenu;
-import com.splatage.wild_economy.store.action.ProductActionExecutor;
-import com.splatage.wild_economy.store.action.SimpleProductActionExecutor;
-import com.splatage.wild_economy.store.repository.StoreEntitlementRepository;
-import com.splatage.wild_economy.store.repository.StorePurchaseRepository;
-import com.splatage.wild_economy.store.repository.mysql.MysqlStoreEntitlementRepository;
-import com.splatage.wild_economy.store.repository.mysql.MysqlStorePurchaseRepository;
-import com.splatage.wild_economy.store.repository.sqlite.SqliteStoreEntitlementRepository;
-import com.splatage.wild_economy.store.repository.sqlite.SqliteStorePurchaseRepository;
-import com.splatage.wild_economy.store.service.StoreService;
-import com.splatage.wild_economy.store.listener.StorePlayerSessionListener;
-import com.splatage.wild_economy.store.service.StoreServiceImpl;
-import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
-import com.splatage.wild_economy.store.state.StoreRuntimeStateServiceImpl;
-import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.vault.WildEconomyVaultProvider;
-import com.splatage.wild_economy.xp.listener.XpBottleRedeemListener;
-import com.splatage.wild_economy.xp.service.XpBottleService;
-import com.splatage.wild_economy.xp.service.XpBottleServiceImpl;
-import com.splatage.wild_economy.exchange.catalog.CatalogLoader;
+import com.splatage.wild_economy.exchange.activity.MarketActivityService;
 import com.splatage.wild_economy.exchange.catalog.ExchangeCatalog;
-import com.splatage.wild_economy.exchange.item.BukkitItemNormalizer;
-import com.splatage.wild_economy.exchange.item.CanonicalItemRules;
 import com.splatage.wild_economy.exchange.item.ItemNormalizer;
 import com.splatage.wild_economy.exchange.item.ItemValidationService;
-import com.splatage.wild_economy.exchange.item.ItemValidationServiceImpl;
 import com.splatage.wild_economy.exchange.pricing.PricingService;
-import com.splatage.wild_economy.exchange.pricing.PricingServiceImpl;
 import com.splatage.wild_economy.exchange.repository.ExchangeStockRepository;
-import com.splatage.wild_economy.exchange.activity.MarketActivityService;
-import com.splatage.wild_economy.exchange.activity.MarketActivityServiceImpl;
 import com.splatage.wild_economy.exchange.repository.ExchangeTransactionRepository;
-import com.splatage.wild_economy.exchange.repository.SupplierStatsRepository;
 import com.splatage.wild_economy.exchange.repository.SchemaVersionRepository;
-import com.splatage.wild_economy.exchange.repository.mysql.MysqlExchangeStockRepository;
-import com.splatage.wild_economy.exchange.repository.mysql.MysqlExchangeTransactionRepository;
-import com.splatage.wild_economy.exchange.repository.mysql.MysqlSchemaVersionRepository;
-import com.splatage.wild_economy.exchange.repository.mysql.MysqlSupplierStatsRepository;
-import com.splatage.wild_economy.exchange.repository.sqlite.SqliteExchangeStockRepository;
-import com.splatage.wild_economy.exchange.repository.sqlite.SqliteExchangeTransactionRepository;
-import com.splatage.wild_economy.exchange.repository.sqlite.SqliteSchemaVersionRepository;
-import com.splatage.wild_economy.exchange.repository.sqlite.SqliteSupplierStatsRepository;
 import com.splatage.wild_economy.exchange.service.ExchangeBrowseService;
-import com.splatage.wild_economy.exchange.service.ExchangeBrowseServiceImpl;
 import com.splatage.wild_economy.exchange.service.ExchangeBuyService;
-import com.splatage.wild_economy.exchange.service.ExchangeBuyServiceImpl;
 import com.splatage.wild_economy.exchange.service.ExchangeSellService;
-import com.splatage.wild_economy.exchange.service.ExchangeSellServiceImpl;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
-import com.splatage.wild_economy.exchange.service.ExchangeServiceImpl;
 import com.splatage.wild_economy.exchange.service.FoliaContainerSellCoordinator;
-import com.splatage.wild_economy.exchange.service.FoliaSafeExchangeBuyService;
-import com.splatage.wild_economy.exchange.service.FoliaSafeExchangeSellService;
 import com.splatage.wild_economy.exchange.service.TransactionLogService;
-import com.splatage.wild_economy.exchange.service.TransactionLogServiceImpl;
 import com.splatage.wild_economy.exchange.stock.StockService;
-import com.splatage.wild_economy.exchange.stock.StockServiceImpl;
-import com.splatage.wild_economy.exchange.stock.StockStateResolver;
 import com.splatage.wild_economy.exchange.stock.StockTurnoverService;
-import com.splatage.wild_economy.exchange.supplier.SupplierStatsServiceImpl;
 import com.splatage.wild_economy.exchange.supplier.SupplierStatsService;
-import com.splatage.wild_economy.exchange.stock.StockTurnoverServiceImpl;
-import com.splatage.wild_economy.gui.ExchangeBrowseMenu;
-import com.splatage.wild_economy.gui.ExchangeItemDetailMenu;
-import com.splatage.wild_economy.gui.ExchangeRootMenu;
-import com.splatage.wild_economy.gui.MarketActivityMenu;
-import com.splatage.wild_economy.gui.ExchangeSubcategoryMenu;
+import com.splatage.wild_economy.gui.PlayerHeadCache;
+import com.splatage.wild_economy.gui.PlayerInfoItemFactory;
 import com.splatage.wild_economy.gui.ShopMenuListener;
 import com.splatage.wild_economy.gui.ShopMenuRouter;
-import com.splatage.wild_economy.gui.admin.AdminItemInspectorMenu;
 import com.splatage.wild_economy.gui.admin.AdminMenuListener;
 import com.splatage.wild_economy.gui.admin.AdminMenuRouter;
-import com.splatage.wild_economy.gui.admin.AdminOverrideEditMenu;
-import com.splatage.wild_economy.gui.admin.AdminReviewBucketMenu;
-import com.splatage.wild_economy.gui.admin.AdminRootMenu;
-import com.splatage.wild_economy.gui.admin.AdminRuleImpactMenu;
 import com.splatage.wild_economy.gui.browse.ExchangeLayoutBrowseService;
-import com.splatage.wild_economy.gui.browse.ExchangeLayoutBrowseServiceImpl;
 import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
-import com.splatage.wild_economy.gui.layout.LayoutBlueprintLoader;
-import com.splatage.wild_economy.gui.layout.LayoutIconResolver;
-import com.splatage.wild_economy.gui.layout.LayoutPlacementResolver;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
-import com.splatage.wild_economy.persistence.MigrationDomain;
-import com.splatage.wild_economy.persistence.MigrationManager;
 import com.splatage.wild_economy.persistence.TransactionRunner;
 import com.splatage.wild_economy.platform.PaperFoliaPlatformExecutor;
 import com.splatage.wild_economy.platform.PlatformExecutor;
+import com.splatage.wild_economy.scheduler.StockTurnoverTask;
+import com.splatage.wild_economy.store.listener.StorePlayerSessionListener;
+import com.splatage.wild_economy.store.service.StoreService;
+import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
+import com.splatage.wild_economy.xp.listener.XpBottleRedeemListener;
+import com.splatage.wild_economy.xp.service.XpBottleService;
 import java.util.Objects;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.event.HandlerList;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.ServicePriority;
+import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.ServicePriority;
 
 public final class ServiceRegistry {
 
@@ -196,46 +126,22 @@ public final class ServiceRegistry {
         this.databaseConfig = configLoader.loadDatabaseConfig();
         this.exchangeItemsConfig = configLoader.loadExchangeItemsConfig();
         this.economyConfig = configLoader.loadEconomyConfig();
-        this.databaseProvider = new DatabaseProvider(this.databaseConfig);
         this.storeProductsConfig = configLoader.loadStoreProductsConfig(this.economyConfig);
-
+        this.databaseProvider = new DatabaseProvider(this.databaseConfig);
         final TransactionRunner transactionRunner = new TransactionRunner(this.databaseProvider);
 
-        final EconomyAccountRepository economyAccountRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteEconomyAccountRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
-            case MYSQL -> new MysqlEconomyAccountRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
-        };
+        final EconomyBootstrap.Components economyComponents = EconomyBootstrap.create(
+                this.databaseProvider,
+                this.databaseConfig,
+                this.economyConfig,
+                transactionRunner
+        );
+        this.economyService = economyComponents.economyService();
+        this.baltopService = economyComponents.baltopService();
 
-        final EconomyLedgerRepository economyLedgerRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
-            case MYSQL -> new MysqlEconomyLedgerRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
-        };
-
-        final EconomyNameCacheRepository economyNameCacheRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteEconomyNameCacheRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
-            case MYSQL -> new MysqlEconomyNameCacheRepository(this.databaseProvider, this.databaseConfig.economyTablePrefix());
-        };
+        this.xpBottleService = new com.splatage.wild_economy.xp.service.XpBottleServiceImpl(this.plugin);
 
         final PlayerHeadCache playerHeadCache = new PlayerHeadCache(this.plugin);
-
-        final BalanceCache balanceCache = new BalanceCache();
-        this.baltopService = new BaltopServiceImpl(
-                economyAccountRepository,
-                economyNameCacheRepository,
-                this.economyConfig
-        );
-        this.economyService = new EconomyServiceImpl(
-                this.economyConfig,
-                economyAccountRepository,
-                economyLedgerRepository,
-                economyNameCacheRepository,
-                transactionRunner,
-                balanceCache,
-                this.baltopService
-        );
-
-        this.xpBottleService = new XpBottleServiceImpl(this.plugin);
-
         final PlayerInfoItemFactory playerInfoItemFactory = new PlayerInfoItemFactory(
                 playerHeadCache,
                 this.economyService,
@@ -243,91 +149,51 @@ public final class ServiceRegistry {
                 this.economyConfig
         );
 
-        final StoreEntitlementRepository storeEntitlementRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
-            case MYSQL -> new MysqlStoreEntitlementRepository(this.databaseProvider, this.databaseConfig.storeTablePrefix());
-        };
-
-        final StorePurchaseRepository storePurchaseRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteStorePurchaseRepository(this.databaseConfig.storeTablePrefix());
-            case MYSQL -> new MysqlStorePurchaseRepository(this.databaseConfig.storeTablePrefix());
-        };
-
-        final ProductActionExecutor productActionExecutor = new SimpleProductActionExecutor();
-
-        this.storeRuntimeStateService = new StoreRuntimeStateServiceImpl(
-                storeEntitlementRepository,
-                storePurchaseRepository,
+        final StoreBootstrap.Components storeComponents = StoreBootstrap.create(
+                this.databaseProvider,
+                this.databaseConfig,
                 transactionRunner,
-                this.plugin.getLogger(),
-                this.databaseProvider.dialect(),
-                this.databaseConfig.mysqlMaximumPoolSize()
-        );
-
-        this.storeService = new StoreServiceImpl(
                 this.storeProductsConfig,
                 this.economyService,
-                this.storeRuntimeStateService,
-                productActionExecutor,
-                this.xpBottleService
+                this.xpBottleService,
+                this.plugin.getLogger()
         );
+        this.storeRuntimeStateService = storeComponents.storeRuntimeStateService();
+        this.storeService = storeComponents.storeService();
 
-        final SchemaVersionRepository schemaVersionRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteSchemaVersionRepository(this.databaseProvider);
-            case MYSQL -> new MysqlSchemaVersionRepository(this.databaseProvider);
-        };
+        final SchemaVersionRepository schemaVersionRepository = MigrationBootstrap.createSchemaVersionRepository(this.databaseProvider);
+        MigrationBootstrap.migrateAll(this.databaseProvider, this.databaseConfig, schemaVersionRepository);
 
-        final MigrationManager exchangeMigrationManager = new MigrationManager(
+        final ExchangeBootstrap.Components exchangeComponents = ExchangeBootstrap.create(
+                this.plugin,
                 this.databaseProvider,
                 this.databaseConfig,
-                schemaVersionRepository,
-                MigrationDomain.EXCHANGE
+                this.exchangeItemsConfig,
+                this.globalConfig,
+                this.economyService,
+                this.economyConfig,
+                economyComponents.economyNameCacheRepository(),
+                this.platformExecutor
         );
-        exchangeMigrationManager.migrate();
-
-        final MigrationManager economyMigrationManager = new MigrationManager(
-                this.databaseProvider,
-                this.databaseConfig,
-                schemaVersionRepository,
-                MigrationDomain.ECONOMY
-        );
-        economyMigrationManager.migrate();
-
-        final MigrationManager storeMigrationManager = new MigrationManager(
-                this.databaseProvider,
-                this.databaseConfig,
-                schemaVersionRepository,
-                MigrationDomain.STORE
-        );
-        storeMigrationManager.migrate();
-
-        this.exchangeStockRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteExchangeStockRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
-            case MYSQL -> new MysqlExchangeStockRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
-        };
-
-        this.exchangeTransactionRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteExchangeTransactionRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
-            case MYSQL -> new MysqlExchangeTransactionRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
-        }
-;
-        final SupplierStatsRepository supplierStatsRepository = switch (this.databaseProvider.dialect()) {
-            case SQLITE -> new SqliteSupplierStatsRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
-            case MYSQL -> new MysqlSupplierStatsRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
-        };
-        try {
-            this.layoutBlueprint = new LayoutBlueprintLoader().load(
-                    this.plugin.getDataFolder().toPath().resolve("layout.yml").toFile()
-            );
-        } catch (final java.io.IOException exception) {
-            throw new IllegalStateException("Failed to load layout.yml", exception);
-        }
-
-        final CatalogLoader catalogLoader = new CatalogLoader();
-        this.exchangeCatalog = Objects.requireNonNull(
-                catalogLoader.load(this.exchangeItemsConfig),
-                "exchangeCatalog"
-        );
+        this.exchangeCatalog = exchangeComponents.exchangeCatalog();
+        this.layoutBlueprint = exchangeComponents.layoutBlueprint();
+        this.itemNormalizer = exchangeComponents.itemNormalizer();
+        this.itemValidationService = exchangeComponents.itemValidationService();
+        this.exchangeStockRepository = exchangeComponents.exchangeStockRepository();
+        this.exchangeTransactionRepository = exchangeComponents.exchangeTransactionRepository();
+        this.economyGateway = exchangeComponents.economyGateway();
+        this.stockService = exchangeComponents.stockService();
+        this.pricingService = exchangeComponents.pricingService();
+        this.transactionLogService = exchangeComponents.transactionLogService();
+        this.stockTurnoverService = exchangeComponents.stockTurnoverService();
+        this.marketActivityService = exchangeComponents.marketActivityService();
+        this.exchangeBrowseService = exchangeComponents.exchangeBrowseService();
+        this.exchangeLayoutBrowseService = exchangeComponents.exchangeLayoutBrowseService();
+        this.exchangeBuyService = exchangeComponents.exchangeBuyService();
+        this.exchangeSellService = exchangeComponents.exchangeSellService();
+        this.exchangeService = exchangeComponents.exchangeService();
+        this.foliaContainerSellCoordinator = exchangeComponents.foliaContainerSellCoordinator();
+        this.supplierStatsService = exchangeComponents.supplierStatsService();
 
         final ConfigValidator configValidator = new ConfigValidator(
                 this.exchangeItemsConfig,
@@ -335,203 +201,75 @@ public final class ServiceRegistry {
         );
         configValidator.validate();
 
-        final CanonicalItemRules canonicalItemRules = new CanonicalItemRules();
-        this.itemNormalizer = new BukkitItemNormalizer(canonicalItemRules);
-        this.itemValidationService = new ItemValidationServiceImpl(this.itemNormalizer, this.exchangeCatalog);
-        this.economyGateway = new InternalEconomyGateway(this.economyService, this.economyConfig);
-
-        final StockStateResolver stockStateResolver = new StockStateResolver();
-        this.stockService = new StockServiceImpl(
-                this.exchangeStockRepository,
-                this.exchangeCatalog,
-                stockStateResolver,
-                this.plugin.getLogger(),
-                this.databaseProvider.dialect(),
-                this.databaseConfig.mysqlMaximumPoolSize()
-        );
-        this.stockService.flushDirtyNow();
-        this.pricingService = new PricingServiceImpl(this.exchangeCatalog);
-
-        this.transactionLogService = new TransactionLogServiceImpl(
-                this.exchangeTransactionRepository,
-                this.plugin.getLogger(),
-                this.databaseProvider.dialect(),
-                this.databaseConfig.mysqlMaximumPoolSize()
-        );
-        this.supplierStatsService = new SupplierStatsServiceImpl(
-                supplierStatsRepository,
-                economyNameCacheRepository,
-                this.exchangeCatalog,
-                this.plugin.getLogger(),
-                this.databaseProvider.dialect(),
-                this.databaseConfig.mysqlMaximumPoolSize()
-        );
-        this.marketActivityService = new MarketActivityServiceImpl(
-                this.exchangeTransactionRepository,
-                supplierStatsRepository,
-                this.exchangeCatalog,
-                this.globalConfig.recentWindowHours()
-        );
-
-        this.stockTurnoverService = new StockTurnoverServiceImpl(this.exchangeCatalog, this.stockService, this.transactionLogService);
-        this.exchangeBrowseService = new ExchangeBrowseServiceImpl(
-            this.exchangeCatalog,
-            this.stockService,
-            this.pricingService
-        );
-        this.exchangeLayoutBrowseService = new ExchangeLayoutBrowseServiceImpl(
-            this.exchangeCatalog,
-            this.exchangeBrowseService,
-            this.stockService,
-            this.layoutBlueprint,
-            new LayoutPlacementResolver(this.layoutBlueprint)
-        );
-
-        final ExchangeBuyService rawBuyService = new ExchangeBuyServiceImpl(
-                this.exchangeCatalog,
-                this.itemValidationService,
-                this.stockService,
-                this.pricingService,
-                this.economyGateway,
-                this.transactionLogService,
-                this.globalConfig
-        );
-
-        final ExchangeSellServiceImpl rawSellService = new ExchangeSellServiceImpl(
-                this.exchangeCatalog,
-                this.itemValidationService,
-                this.stockService,
-                this.pricingService,
-                this.economyGateway,
-                this.transactionLogService,
-                this.supplierStatsService
-        );
-
-        this.exchangeBuyService = new FoliaSafeExchangeBuyService(rawBuyService);
-        this.exchangeSellService = new FoliaSafeExchangeSellService(rawSellService);
-        this.exchangeService = new ExchangeServiceImpl(this.exchangeBrowseService, this.exchangeBuyService, this.exchangeSellService);
-        this.foliaContainerSellCoordinator = new FoliaContainerSellCoordinator(this.platformExecutor, this.exchangeService, rawSellService);
-
-        final LayoutIconResolver layoutIconResolver = new LayoutIconResolver();
-        final TopSupplierMenu topSupplierMenu = new TopSupplierMenu(this.supplierStatsService, playerInfoItemFactory);
-        final MarketActivityMenu marketActivityMenu = new MarketActivityMenu(this.marketActivityService, playerInfoItemFactory);
-        final ExchangeRootMenu rootMenu = new ExchangeRootMenu(
-                this.exchangeLayoutBrowseService,
-                playerInfoItemFactory,
-                this.layoutBlueprint,
-                layoutIconResolver,
-                topSupplierMenu,
-                marketActivityMenu
-        );
-        final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeLayoutBrowseService, playerInfoItemFactory, this.layoutBlueprint, layoutIconResolver);
-        final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeLayoutBrowseService, playerInfoItemFactory, this.layoutBlueprint);
-        final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService, this.platformExecutor, playerInfoItemFactory);
-        final StoreRootMenu storeRootMenu = new StoreRootMenu(this.storeService, playerInfoItemFactory);
-        final StoreCategoryMenu storeCategoryMenu = new StoreCategoryMenu(this.storeService, playerInfoItemFactory);
-        final StoreProductDetailMenu storeProductDetailMenu = new StoreProductDetailMenu(this.storeService, this.economyConfig, playerInfoItemFactory);
-        final XpBottleMenu xpBottleMenu = new XpBottleMenu(this.storeService, playerInfoItemFactory);
-
-        this.shopMenuRouter = new ShopMenuRouter(
-                this.platformExecutor,
-                rootMenu,
-                subcategoryMenu,
-                browseMenu,
-                itemDetailMenu,
-                storeRootMenu,
-                storeCategoryMenu,
-                storeProductDetailMenu,
-                xpBottleMenu,
-                topSupplierMenu,
-                marketActivityMenu
-        );
-
-        rootMenu.setShopMenuRouter(this.shopMenuRouter);
-        subcategoryMenu.setShopMenuRouter(this.shopMenuRouter);
-        browseMenu.setShopMenuRouter(this.shopMenuRouter);
-        itemDetailMenu.setShopMenuRouter(this.shopMenuRouter);
-        storeRootMenu.setShopMenuRouter(this.shopMenuRouter);
-        storeCategoryMenu.setShopMenuRouter(this.shopMenuRouter);
-        storeProductDetailMenu.setShopMenuRouter(this.shopMenuRouter);
-        xpBottleMenu.setShopMenuRouter(this.shopMenuRouter);
-        topSupplierMenu.setShopMenuRouter(this.shopMenuRouter);
-        marketActivityMenu.setShopMenuRouter(this.shopMenuRouter);
-
-        this.shopMenuListener = new ShopMenuListener(
-                this.exchangeLayoutBrowseService,
-                rootMenu,
-                subcategoryMenu,
-                browseMenu,
-                itemDetailMenu,
-                storeRootMenu,
-                storeCategoryMenu,
-                storeProductDetailMenu,
-                xpBottleMenu,
-                topSupplierMenu,
-                marketActivityMenu
-        );
-        this.plugin.getServer().getPluginManager().registerEvents(this.shopMenuListener, this.plugin);
-
-        final AdminRootMenu adminRootMenu = new AdminRootMenu();
-        final AdminReviewBucketMenu adminReviewBucketMenu = new AdminReviewBucketMenu();
-        final AdminRuleImpactMenu adminRuleImpactMenu = new AdminRuleImpactMenu();
-        final AdminItemInspectorMenu adminItemInspectorMenu = new AdminItemInspectorMenu();
-        final AdminOverrideEditMenu adminOverrideEditMenu = new AdminOverrideEditMenu();
-        this.adminMenuRouter = new AdminMenuRouter(
+        final GuiBootstrap.Components guiComponents = GuiBootstrap.create(
                 this.plugin,
                 this.platformExecutor,
-                adminRootMenu,
-                adminReviewBucketMenu,
-                adminRuleImpactMenu,
-                adminItemInspectorMenu,
-                adminOverrideEditMenu
+                this.exchangeLayoutBrowseService,
+                this.exchangeService,
+                this.supplierStatsService,
+                this.marketActivityService,
+                playerInfoItemFactory,
+                this.layoutBlueprint,
+                this.storeService,
+                this.economyConfig,
+                this.xpBottleService,
+                this.economyService
         );
-        adminRootMenu.setAdminMenuRouter(this.adminMenuRouter);
-        adminReviewBucketMenu.setAdminMenuRouter(this.adminMenuRouter);
-        adminRuleImpactMenu.setAdminMenuRouter(this.adminMenuRouter);
-        adminItemInspectorMenu.setAdminMenuRouter(this.adminMenuRouter);
-        adminOverrideEditMenu.setAdminMenuRouter(this.adminMenuRouter);
-        this.adminMenuListener = new AdminMenuListener(
-                adminRootMenu,
-                adminReviewBucketMenu,
-                adminRuleImpactMenu,
-                adminItemInspectorMenu,
-                adminOverrideEditMenu
-        );
+        this.shopMenuRouter = guiComponents.shopMenuRouter();
+        this.shopMenuListener = guiComponents.shopMenuListener();
+        this.adminMenuRouter = guiComponents.adminMenuRouter();
+        this.adminMenuListener = guiComponents.adminMenuListener();
+        this.xpBottleRedeemListener = guiComponents.xpBottleRedeemListener();
+
         this.economyPlayerSessionListener = new EconomyPlayerSessionListener(this.plugin, this.economyService);
-        this.plugin.getServer().getPluginManager().registerEvents(this.economyPlayerSessionListener, this.plugin);
         this.storePlayerSessionListener = new StorePlayerSessionListener(this.storeRuntimeStateService);
+
+        this.registerEventListeners();
+        this.warmOnlineEconomySessions();
+        this.registerVaultIfPresent();
+        this.registerPlaceholderApiIfPresent();
+    }
+
+    private void registerEventListeners() {
+        this.plugin.getServer().getPluginManager().registerEvents(this.shopMenuListener, this.plugin);
+        this.plugin.getServer().getPluginManager().registerEvents(this.adminMenuListener, this.plugin);
+        this.plugin.getServer().getPluginManager().registerEvents(this.economyPlayerSessionListener, this.plugin);
         this.plugin.getServer().getPluginManager().registerEvents(this.storePlayerSessionListener, this.plugin);
-
-        this.xpBottleRedeemListener = new XpBottleRedeemListener(this.xpBottleService);
         this.plugin.getServer().getPluginManager().registerEvents(this.xpBottleRedeemListener, this.plugin);
+    }
 
+    private void warmOnlineEconomySessions() {
         for (final Player onlinePlayer : this.plugin.getServer().getOnlinePlayers()) {
             this.economyService.warmPlayerSession(onlinePlayer.getUniqueId(), onlinePlayer.getName());
         }
+    }
 
-        if (this.plugin.getServer().getPluginManager().isPluginEnabled("Vault")) {
-            this.vaultEconomyProvider = new WildEconomyVaultProvider(this.plugin, this.economyService, this.economyConfig);
-            this.plugin.getServer().getServicesManager().register(
-                    Economy.class,
-                    this.vaultEconomyProvider,
-                    this.plugin,
-                    ServicePriority.Highest
-            );
-            this.logActiveVaultEconomyProvider();
+    private void registerVaultIfPresent() {
+        if (!this.plugin.getServer().getPluginManager().isPluginEnabled("Vault")) {
+            return;
         }
+        this.vaultEconomyProvider = new WildEconomyVaultProvider(this.plugin, this.economyService, this.economyConfig);
+        this.plugin.getServer().getServicesManager().register(
+                Economy.class,
+                this.vaultEconomyProvider,
+                this.plugin,
+                ServicePriority.Highest
+        );
+        this.logActiveVaultEconomyProvider();
+    }
 
-        if (this.plugin.getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-            this.placeholderExpansion = new WildEconomyExpansion(
-                    this.plugin,
-                    this.economyService,
-                    this.baltopService,
-                    this.supplierStatsService,
-                    this.economyConfig
-            );
-            this.placeholderExpansion.register();
+    private void registerPlaceholderApiIfPresent() {
+        if (!this.plugin.getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            return;
         }
-
-        this.plugin.getServer().getPluginManager().registerEvents(this.adminMenuListener, this.plugin);
+        this.placeholderExpansion = new WildEconomyExpansion(
+                this.plugin,
+                this.economyService,
+                this.baltopService,
+                this.supplierStatsService,
+                this.economyConfig
+        );
+        this.placeholderExpansion.register();
     }
 
     private void logActiveVaultEconomyProvider() {
@@ -635,7 +373,7 @@ public final class ServiceRegistry {
 
     public void registerTasks() {
         this.platformExecutor.runGlobalRepeating(
-                new com.splatage.wild_economy.scheduler.StockTurnoverTask(this.stockTurnoverService),
+                new StockTurnoverTask(this.stockTurnoverService),
                 this.globalConfig.turnoverIntervalTicks(),
                 this.globalConfig.turnoverIntervalTicks()
         );
