@@ -1,3 +1,16 @@
+# historical note
+
+This document captures the **stage 1 problem map** from an earlier point in the architecture review.
+
+It is still useful as historical context, but it is **not** the current architecture handoff.
+
+Use these documents for the current state instead:
+
+- `docs/wild_economy_architecture_audit_handoff.md`
+- `docs/current_architecture_status_and_remaining_scope.md`
+
+---
+
 # wild_economy current architecture issue register (stage 1)
 
 This document is the corrected current-repo issue register for the uploaded repository zip `wild_economy-main (5).zip`.
