@@ -320,7 +320,7 @@ public final class ServiceRegistry {
             throw new IllegalStateException("Failed to load layout.yml", exception);
         }
 
-        final CatalogLoader catalogLoader = new CatalogLoader(new LayoutPlacementResolver(this.layoutBlueprint));
+        final CatalogLoader catalogLoader = new CatalogLoader();
         this.exchangeCatalog = Objects.requireNonNull(
                 catalogLoader.load(this.exchangeItemsConfig),
                 "exchangeCatalog"
@@ -375,7 +375,8 @@ public final class ServiceRegistry {
             this.exchangeCatalog,
             this.stockService,
             this.pricingService,
-            this.layoutBlueprint
+            this.layoutBlueprint,
+            new LayoutPlacementResolver(this.layoutBlueprint)
         );
 
         final ExchangeBuyService rawBuyService = new ExchangeBuyServiceImpl(

@@ -17,6 +17,7 @@ import com.splatage.wild_economy.exchange.stock.StockService;
 import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
 import com.splatage.wild_economy.gui.layout.LayoutChildDefinition;
 import com.splatage.wild_economy.gui.layout.LayoutGroupDefinition;
+import com.splatage.wild_economy.gui.layout.LayoutPlacementResolver;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -31,11 +32,13 @@ class ExchangeBrowseServiceImplTest {
         final ExchangeCatalog catalog = catalog(playerStockedEntry());
         final PricingService pricingService = new PricingServiceImpl(catalog);
         final StockSnapshot snapshot = new StockSnapshot(ITEM_KEY, 75L, 100L, 0.75D, StockState.HEALTHY);
+        final LayoutBlueprint layoutBlueprint = layoutBlueprint();
         final ExchangeBrowseServiceImpl browseService = new ExchangeBrowseServiceImpl(
             catalog,
             new FixedSnapshotStockService(snapshot),
             pricingService,
-            layoutBlueprint()
+            layoutBlueprint,
+            new LayoutPlacementResolver(layoutBlueprint)
         );
 
         final ExchangeItemView itemView = browseService.getItemView(ITEM_KEY);
@@ -52,11 +55,13 @@ class ExchangeBrowseServiceImplTest {
         final ExchangeCatalog catalog = catalog(unlimitedBuyEntry());
         final PricingService pricingService = new PricingServiceImpl(catalog);
         final StockSnapshot snapshot = new StockSnapshot(ITEM_KEY, 12L, 100L, 0.12D, StockState.HEALTHY);
+        final LayoutBlueprint layoutBlueprint = layoutBlueprint();
         final ExchangeBrowseServiceImpl browseService = new ExchangeBrowseServiceImpl(
             catalog,
             new FixedSnapshotStockService(snapshot),
             pricingService,
-            layoutBlueprint()
+            layoutBlueprint,
+            new LayoutPlacementResolver(layoutBlueprint)
         );
 
         final ExchangeCatalogView view = browseService.browseLayout("blocks", "logs", 0, 10).getFirst();
@@ -78,8 +83,6 @@ class ExchangeBrowseServiceImplTest {
             "Oak Log",
             ItemCategory.BUILDING_MATERIALS,
             GeneratedItemCategory.WOODS,
-            "blocks",
-            "logs",
             ItemPolicyMode.PLAYER_STOCKED,
             new BigDecimal("4.00"),
             100L,
@@ -103,8 +106,6 @@ class ExchangeBrowseServiceImplTest {
             "Oak Log",
             ItemCategory.BUILDING_MATERIALS,
             GeneratedItemCategory.WOODS,
-            "blocks",
-            "logs",
             ItemPolicyMode.UNLIMITED_BUY,
             new BigDecimal("4.00"),
             100L,

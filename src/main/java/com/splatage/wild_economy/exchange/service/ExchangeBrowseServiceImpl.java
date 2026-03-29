@@ -10,6 +10,8 @@ import com.splatage.wild_economy.exchange.pricing.PricingService;
 import com.splatage.wild_economy.exchange.stock.StockService;
 import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
 import com.splatage.wild_economy.gui.layout.LayoutChildDefinition;
+import com.splatage.wild_economy.gui.layout.LayoutPlacement;
+import com.splatage.wild_economy.gui.layout.LayoutPlacementResolver;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,17 +23,20 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
     private final StockService stockService;
     private final PricingService pricingService;
     private final LayoutBlueprint layoutBlueprint;
+    private final LayoutPlacementResolver layoutPlacementResolver;
 
     public ExchangeBrowseServiceImpl(
         final ExchangeCatalog exchangeCatalog,
         final StockService stockService,
         final PricingService pricingService,
-        final LayoutBlueprint layoutBlueprint
+        final LayoutBlueprint layoutBlueprint,
+        final LayoutPlacementResolver layoutPlacementResolver
     ) {
         this.exchangeCatalog = Objects.requireNonNull(exchangeCatalog, "exchangeCatalog");
         this.stockService = Objects.requireNonNull(stockService, "stockService");
         this.pricingService = Objects.requireNonNull(pricingService, "pricingService");
         this.layoutBlueprint = Objects.requireNonNull(layoutBlueprint, "layoutBlueprint");
+        this.layoutPlacementResolver = Objects.requireNonNull(layoutPlacementResolver, "layoutPlacementResolver");
     }
 
     @Override
@@ -130,16 +135,31 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
         final String layoutGroupKey,
         final String layoutChildKey
     ) {
-        return layoutChildKey == null
-            ? this.exchangeCatalog.byLayoutGroup(layoutGroupKey)
-            : this.exchangeCatalog.byLayoutGroupAndChild(layoutGroupKey, layoutChildKey);
+        if (layoutGroupKey == null || layoutGroupKey.isBlank()) {
+            return List.of();
+        }
+
+        final List<ExchangeCatalogEntry> matches = new ArrayList<>();
+        for (final ExchangeCatalogEntry entry : this.exchangeCatalog.allEntries()) {
+            final LayoutPlacement placement = this.layoutPlacementResolver.resolve(entry.itemKey());
+            if (!layoutGroupKey.equalsIgnoreCase(placement.groupKey())) {
+                continue;
+            }
+            if (layoutChildKey != null && !layoutChildKey.isBlank()) {
+                if (!layoutChildKey.equalsIgnoreCase(placement.childKey())) {
+                    continue;
+                }
+            }
+            matches.add(entry);
+        }
+        return List.copyOf(matches);
     }
 
     private boolean hasVisibleEntries(
         final String layoutGroupKey,
         final String layoutChildKey
     ) {
-        for (final ExchangeCatalogEntry entry : this.exchangeCatalog.byLayoutGroupAndChild(layoutGroupKey, layoutChildKey)) {
+        for (final ExchangeCatalogEntry entry : this.indexedEntries(layoutGroupKey, layoutChildKey)) {
             final StockSnapshot snapshot = this.stockService.getSnapshot(entry.itemKey());
             if (this.isPurchasableNow(entry, snapshot)) {
                 return true;
