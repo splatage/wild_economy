@@ -179,8 +179,7 @@ final class ExchangeBootstrap {
                 pricingService,
                 economyGateway,
                 transactionLogService,
-                supplierStatsService,
-                supplierStatsRepository
+                supplierStatsService
         );
 
         final ExchangeBuyService exchangeBuyService = new FoliaSafeExchangeBuyService(rawBuyService);
