@@ -1,0 +1,19 @@
+currency:
+  singular: Coin
+  plural: Coins
+  symbol: "$"
+  fractional-digits: 2
+  use-symbol-in-formatting: true
+
+accounts:
+  auto-create-on-join: true
+  auto-create-on-first-transaction: true
+
+cache:
+  online-refresh-seconds: 30
+  offline-cache-seconds: 60
+  refresh-on-join: true
+  refresh-before-sensitive-operations: true
+
+admin:
+  log-balance-adjustments: true

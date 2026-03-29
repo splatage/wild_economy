@@ -1,0 +1,179 @@
+name: wild_economy
+version: ${version}
+main: com.splatage.wild_economy.WildEconomyPlugin
+api-version: '1.20'
+folia-supported: true
+author: splatage
+description: Curated Exchange-first economy plugin for Minecraft
+
+softdepend:
+  - Vault
+  - Essentials
+  - PlaceholderAPI
+
+libraries:
+  - org.xerial:sqlite-jdbc:3.51.3.0
+  - com.mysql:mysql-connector-j:9.6.0
+  - com.zaxxer:HikariCP:7.0.2
+
+commands:
+  shop:
+    description: Open the shop or use sell commands.
+    usage: /shop [sellhand|sellall|sellcontainer] or /sell preview [container]
+    aliases: [exchange]
+    permission: wild_economy.shop
+
+  sell:
+    description: Preview the current Exchange sell value of your inventory.
+    usage: /sell preview [container]
+    permission: wild_economy.shop.sell
+
+  worth:
+    description: Alias for /sell preview.
+    usage: /worth [container]
+    permission: wild_economy.shop.sell
+
+  sellhand:
+    description: Sell the item in your hand to the Exchange.
+    usage: /sellhand
+    permission: wild_economy.shop.sell
+
+  sellall:
+    description: Sell all sellable items in your inventory to the Exchange.
+    usage: /sellall
+    permission: wild_economy.shop.sell
+
+  sellcontainer:
+    description: Sell the contents of a looked-at container or held shulker box.
+    usage: /sellcontainer
+    permission: wild_economy.shop.sellcontainer
+
+  balance:
+    description: View your balance or another player's balance.
+    usage: /balance [player]
+    aliases: [bal]
+    permission: wild_economy.balance
+
+  pay:
+    description: Pay another player.
+    usage: /pay <player> <amount>
+    permission: wild_economy.pay
+
+  baltop:
+    description: View the top balances.
+    usage: /baltop [page]
+    permission: wild_economy.baltop
+
+  eco:
+    description: Admin economy commands.
+    usage: /eco <balance|give|take|set|reset>
+    permission: wild_economy.admin.eco
+
+  shoptop:
+    description: View top suppliers.
+    usage: /shoptop [alltime|player <name> [alltime]]
+    permission: wild_economy.shop.top
+
+  shopadmin:
+    description: Admin commands for wild_economy.
+    usage: /shopadmin
+    permission: wild_economy.admin.view
+
+permissions:
+  wild_economy.shop:
+    description: Allows use of player shop commands.
+    default: true
+
+  wild_economy.shop.sell:
+    description: Allows selling to the Exchange.
+    default: true
+
+  wild_economy.shop.sellcontainer:
+    description: Allows selling the contents of supported containers.
+    default: true
+
+  wild_economy.shop.buy:
+    description: Allows buying from the Exchange.
+    default: true
+
+  wild_economy.shop.top:
+    description: Allows viewing supplier leaderboards.
+    default: true
+
+  wild_economy.balance:
+    description: Allows viewing your own balance.
+    default: true
+
+  wild_economy.balance.others:
+    description: Allows viewing another player's balance.
+    default: op
+
+  wild_economy.pay:
+    description: Allows paying another player.
+    default: true
+
+  wild_economy.baltop:
+    description: Allows viewing baltop.
+    default: true
+
+  wild_economy.admin:
+    description: Allows full administrative use of wild_economy.
+    default: op
+    children:
+      wild_economy.admin.view: true
+      wild_economy.admin.reload: true
+      wild_economy.admin.apply: true
+      wild_economy.admin.override: true
+      wild_economy.admin.eco: true
+
+  wild_economy.admin.view:
+    description: Allows viewing admin catalog reports and the admin review GUI.
+    default: op
+
+  wild_economy.admin.reload:
+    description: Allows reloading managed configs and wild_economy runtime state.
+    default: op
+    children:
+      wild_economy.admin.view: true
+
+  wild_economy.admin.apply:
+    description: Allows publishing the generated live catalog.
+    default: op
+    children:
+      wild_economy.admin.view: true
+
+  wild_economy.admin.override:
+    description: Allows editing manual catalog overrides from the admin GUI.
+    default: op
+    children:
+      wild_economy.admin.view: true
+
+  wild_economy.admin.eco:
+    description: Allows use of admin economy commands.
+    default: op
+    children:
+      wild_economy.admin.eco.balance: true
+      wild_economy.admin.eco.give: true
+      wild_economy.admin.eco.take: true
+      wild_economy.admin.eco.set: true
+      wild_economy.admin.eco.reset: true
+
+  wild_economy.admin.eco.balance:
+    description: Allows viewing another player's balance via /eco balance.
+    default: op
+
+  wild_economy.admin.eco.give:
+    description: Allows giving money via /eco give.
+    default: op
+
+  wild_economy.admin.eco.take:
+    description: Allows taking money via /eco take.
+    default: op
+
+  wild_economy.admin.eco.set:
+    description: Allows setting balances via /eco set.
+    default: op
+
+  wild_economy.admin.eco.reset:
+    description: Allows resetting balances via /eco reset.
+    default: op

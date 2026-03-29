@@ -1,0 +1,54 @@
+stock-profiles:
+  exchange_default:
+    stock-cap: 3456
+    turnover-amount-per-interval: 0
+    low-stock-threshold: 64
+    overflow-threshold: 3456
+
+  high_volume_bulk:
+    stock-cap: 3456
+    turnover-amount-per-interval: 256
+    low-stock-threshold: 256
+    overflow-threshold: 3456
+
+  ore_precious:
+    stock-cap: 1500
+    turnover-amount-per-interval: 0
+    low-stock-threshold: 16
+    overflow-threshold: 1500
+
+  sell_only_cleanup:
+    stock-cap: 0
+    turnover-amount-per-interval: 0
+    low-stock-threshold: 0
+    overflow-threshold: 1
+
+  unlimited_buy_utility:
+    stock-cap: 0
+    turnover-amount-per-interval: 0
+    low-stock-threshold: 0
+    overflow-threshold: 1
+
+  farm_bulk_aggressive:
+    stock-cap: 6912
+    turnover-amount-per-interval: 256
+    low-stock-threshold: 1024
+    overflow-threshold: 6912
+
+  progression_guarded:
+    stock-cap: 64
+    turnover-amount-per-interval: 0
+    low-stock-threshold: 16
+    overflow-threshold: 64
+
+  loot_prestige:
+    stock-cap: 64
+    turnover-amount-per-interval: 0
+    low-stock-threshold: 16
+    overflow-threshold: 64
+
+  disabled_placeholder:
+    stock-cap: 0
+    turnover-amount-per-interval: 0
+    low-stock-threshold: 0
+    overflow-threshold: 1
