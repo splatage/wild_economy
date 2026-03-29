@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS ${economy_prefix}economy_name_cache (
     INDEX idx_${economy_prefix}economy_name_cache_last_name (last_name)
 );
 
-CREATE TABLE IF NOT EXISTS ${economy_prefix}schema_version (
+CREATE TABLE IF NOT EXISTS ${economy_prefix}economy_schema_version (
     version INT NOT NULL PRIMARY KEY,
     applied_at BIGINT NOT NULL
 );

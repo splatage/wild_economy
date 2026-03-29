@@ -21,7 +21,7 @@ public enum MigrationDomain {
     }
 
     public String schemaVersionTableName(final DatabaseConfig databaseConfig) {
-        return this.tablePrefix(databaseConfig) + "schema_version";
+        return this.tablePrefix(databaseConfig) + this.resourceDirectoryName + "_schema_version";
     }
 
     public Map<String, String> placeholders(final DatabaseConfig databaseConfig) {

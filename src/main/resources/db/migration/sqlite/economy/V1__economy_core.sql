@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS ${economy_prefix}economy_name_cache (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS ${economy_prefix}schema_version (
+CREATE TABLE IF NOT EXISTS ${economy_prefix}economy_schema_version (
     version INTEGER NOT NULL PRIMARY KEY,
     applied_at INTEGER NOT NULL
 );

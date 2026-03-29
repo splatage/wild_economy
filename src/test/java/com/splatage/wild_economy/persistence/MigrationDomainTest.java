@@ -26,8 +26,31 @@ class MigrationDomainTest {
     );
 
     @Test
-    void storeDomainUsesStorePrefixForSchemaVersionTable() {
-        assertEquals("store_schema_version", MigrationDomain.STORE.schemaVersionTableName(DATABASE_CONFIG));
+    void schemaVersionTablesAreDomainSpecific() {
+        assertEquals("benchmark_exchange_schema_version", MigrationDomain.EXCHANGE.schemaVersionTableName(DATABASE_CONFIG));
+        assertEquals("network_economy_schema_version", MigrationDomain.ECONOMY.schemaVersionTableName(DATABASE_CONFIG));
+        assertEquals("store_store_schema_version", MigrationDomain.STORE.schemaVersionTableName(DATABASE_CONFIG));
+    }
+
+    @Test
+    void exchangeAndStoreRemainDistinctEvenWhenPrefixesMatch() {
+        final DatabaseConfig sharedPrefixConfig = new DatabaseConfig(
+                "sqlite",
+                "plugins/wild_economy/data.db",
+                "localhost",
+                3306,
+                "minecraft",
+                "user",
+                "password",
+                false,
+                10,
+                "network_",
+                "benchmark_",
+                "benchmark_"
+        );
+
+        assertEquals("benchmark_exchange_schema_version", MigrationDomain.EXCHANGE.schemaVersionTableName(sharedPrefixConfig));
+        assertEquals("benchmark_store_schema_version", MigrationDomain.STORE.schemaVersionTableName(sharedPrefixConfig));
     }
 
     @Test
@@ -37,8 +60,16 @@ class MigrationDomainTest {
 
     @Test
     void storeFoundationMigrationsExistUnderDedicatedStoreDomain() {
-        assertTrue(Files.exists(Path.of("src/main/resources/db/migration/mysql/store/V1__store_foundation.sql")));
-        assertTrue(Files.exists(Path.of("src/main/resources/db/migration/sqlite/store/V1__store_foundation.sql")));
+        final Path mysqlStore = Path.of("src/main/resources/db/migration/mysql/store/V1__store_foundation.sql");
+        final Path sqliteStore = Path.of("src/main/resources/db/migration/sqlite/store/V1__store_foundation.sql");
+        assertTrue(Files.exists(mysqlStore));
+        assertTrue(Files.exists(sqliteStore));
+        try {
+            assertTrue(Files.readString(mysqlStore).contains("${store_prefix}store_schema_version"));
+            assertTrue(Files.readString(sqliteStore).contains("${store_prefix}store_schema_version"));
+        } catch (final java.io.IOException exception) {
+            throw new AssertionError(exception);
+        }
     }
 
     @Test

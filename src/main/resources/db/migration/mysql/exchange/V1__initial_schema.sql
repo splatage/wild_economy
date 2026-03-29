@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS ${exchange_prefix}exchange_transactions (
     meta_json TEXT NULL
 );
 
-CREATE TABLE IF NOT EXISTS ${exchange_prefix}schema_version (
+CREATE TABLE IF NOT EXISTS ${exchange_prefix}exchange_schema_version (
     version INT NOT NULL PRIMARY KEY,
     applied_at BIGINT NOT NULL
 );
