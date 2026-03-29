@@ -7,7 +7,6 @@ import com.splatage.wild_economy.exchange.domain.SellContainerResult;
 import com.splatage.wild_economy.exchange.domain.SellHandResult;
 import com.splatage.wild_economy.exchange.domain.SellPreviewResult;
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Objects;
 import org.bukkit.entity.Player;
 
@@ -65,26 +64,6 @@ public final class ExchangeServiceImpl implements ExchangeService {
         final BigDecimal quotedUnitPrice
     ) {
         return this.exchangeBuyService.buyQuoted(player, itemKey, amount, quotedUnitPrice);
-    }
-
-    @Override
-    public List<ExchangeCatalogView> browseLayout(
-        final String layoutGroupKey,
-        final String layoutChildKey,
-        final int page,
-        final int pageSize
-    ) {
-        return this.exchangeBrowseService.browseLayout(layoutGroupKey, layoutChildKey, page, pageSize);
-    }
-
-    @Override
-    public int countVisibleItems(final String layoutGroupKey, final String layoutChildKey) {
-        return this.exchangeBrowseService.countVisibleItems(layoutGroupKey, layoutChildKey);
-    }
-
-    @Override
-    public List<String> listVisibleChildKeys(final String layoutGroupKey) {
-        return this.exchangeBrowseService.listVisibleChildKeys(layoutGroupKey);
     }
 
     @Override

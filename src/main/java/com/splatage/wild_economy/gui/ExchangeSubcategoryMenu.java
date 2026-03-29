@@ -1,6 +1,6 @@
 package com.splatage.wild_economy.gui;
 
-import com.splatage.wild_economy.exchange.service.ExchangeService;
+import com.splatage.wild_economy.gui.browse.ExchangeLayoutBrowseService;
 import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
 import com.splatage.wild_economy.gui.layout.LayoutChildDefinition;
 import com.splatage.wild_economy.gui.layout.LayoutGroupDefinition;
@@ -19,19 +19,19 @@ public final class ExchangeSubcategoryMenu {
 
     private static final int[] SUBCATEGORY_SLOTS = {11, 12, 13, 14, 15, 19, 20, 23, 24};
 
-    private final ExchangeService exchangeService;
+    private final ExchangeLayoutBrowseService exchangeLayoutBrowseService;
     private final PlayerInfoItemFactory playerInfoItemFactory;
     private final LayoutBlueprint layoutBlueprint;
     private final LayoutIconResolver layoutIconResolver;
     private ShopMenuRouter shopMenuRouter;
 
     public ExchangeSubcategoryMenu(
-        final ExchangeService exchangeService,
+        final ExchangeLayoutBrowseService exchangeLayoutBrowseService,
         final PlayerInfoItemFactory playerInfoItemFactory,
         final LayoutBlueprint layoutBlueprint,
         final LayoutIconResolver layoutIconResolver
     ) {
-        this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
+        this.exchangeLayoutBrowseService = Objects.requireNonNull(exchangeLayoutBrowseService, "exchangeLayoutBrowseService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
         this.layoutBlueprint = Objects.requireNonNull(layoutBlueprint, "layoutBlueprint");
         this.layoutIconResolver = Objects.requireNonNull(layoutIconResolver, "layoutIconResolver");
@@ -92,7 +92,7 @@ public final class ExchangeSubcategoryMenu {
     }
 
     private List<LayoutChildDefinition> visibleChildren(final String layoutGroupKey) {
-        final List<String> visibleChildKeys = this.exchangeService.listVisibleChildKeys(layoutGroupKey);
+        final List<String> visibleChildKeys = this.exchangeLayoutBrowseService.listVisibleChildKeys(layoutGroupKey);
         final List<LayoutChildDefinition> visibleChildren = new ArrayList<>();
         for (final LayoutChildDefinition child : this.layoutBlueprint.orderedChildren(layoutGroupKey)) {
             if (visibleChildKeys.contains(child.key())) {

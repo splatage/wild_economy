@@ -1,6 +1,6 @@
 package com.splatage.wild_economy.gui;
 
-import com.splatage.wild_economy.exchange.service.ExchangeService;
+import com.splatage.wild_economy.gui.browse.ExchangeLayoutBrowseService;
 import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
 import com.splatage.wild_economy.gui.layout.LayoutGroupDefinition;
 import com.splatage.wild_economy.gui.layout.LayoutIconResolver;
@@ -18,7 +18,7 @@ public final class ExchangeRootMenu {
     private static final int[] GROUP_SLOTS = {10, 11, 12, 13, 14, 15, 16};
 
     private final PlayerInfoItemFactory playerInfoItemFactory;
-    private final ExchangeService exchangeService;
+    private final ExchangeLayoutBrowseService exchangeLayoutBrowseService;
     private final LayoutBlueprint layoutBlueprint;
     private final LayoutIconResolver layoutIconResolver;
     private final TopSupplierMenu topSupplierMenu;
@@ -26,14 +26,14 @@ public final class ExchangeRootMenu {
     private ShopMenuRouter shopMenuRouter;
 
     public ExchangeRootMenu(
-       final ExchangeService exchangeService,
+       final ExchangeLayoutBrowseService exchangeLayoutBrowseService,
        final PlayerInfoItemFactory playerInfoItemFactory,
        final LayoutBlueprint layoutBlueprint,
        final LayoutIconResolver layoutIconResolver,
        final TopSupplierMenu topSupplierMenu,
        final MarketActivityMenu marketActivityMenu
     ) {
-        this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
+        this.exchangeLayoutBrowseService = Objects.requireNonNull(exchangeLayoutBrowseService, "exchangeLayoutBrowseService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
         this.layoutBlueprint = Objects.requireNonNull(layoutBlueprint, "layoutBlueprint");
         this.layoutIconResolver = Objects.requireNonNull(layoutIconResolver, "layoutIconResolver");
@@ -93,8 +93,8 @@ public final class ExchangeRootMenu {
     }
 
     private void openGroup(final Player player, final String layoutGroupKey) {
-        final int visibleCount = this.exchangeService.countVisibleItems(layoutGroupKey, null);
-        final List<String> visibleChildren = this.exchangeService.listVisibleChildKeys(layoutGroupKey);
+        final int visibleCount = this.exchangeLayoutBrowseService.countVisibleItems(layoutGroupKey, null);
+        final List<String> visibleChildren = this.exchangeLayoutBrowseService.listVisibleChildKeys(layoutGroupKey);
 
         if (visibleCount > 45 && visibleChildren.size() > 1) {
             this.shopMenuRouter.openSubcategory(player, layoutGroupKey);
@@ -107,7 +107,7 @@ public final class ExchangeRootMenu {
     private List<LayoutGroupDefinition> visibleGroups() {
         final List<LayoutGroupDefinition> groups = new ArrayList<>();
         for (final LayoutGroupDefinition group : this.layoutBlueprint.orderedGroups()) {
-            if (this.exchangeService.countVisibleItems(group.key(), null) > 0) {
+            if (this.exchangeLayoutBrowseService.countVisibleItems(group.key(), null) > 0) {
                 groups.add(group);
             }
         }

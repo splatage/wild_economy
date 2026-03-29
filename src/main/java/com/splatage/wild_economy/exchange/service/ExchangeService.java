@@ -7,7 +7,6 @@ import com.splatage.wild_economy.exchange.domain.SellContainerResult;
 import com.splatage.wild_economy.exchange.domain.SellHandResult;
 import com.splatage.wild_economy.exchange.domain.SellPreviewResult;
 import java.math.BigDecimal;
-import java.util.List;
 import org.bukkit.entity.Player;
 
 public interface ExchangeService {
@@ -25,17 +24,6 @@ public interface ExchangeService {
     BuyResult buy(Player player, ItemKey itemKey, int amount);
 
     BuyResult buyQuoted(Player player, ItemKey itemKey, int amount, BigDecimal quotedUnitPrice);
-
-    List<ExchangeCatalogView> browseLayout(
-        String layoutGroupKey,
-        String layoutChildKey,
-        int page,
-        int pageSize
-    );
-
-    int countVisibleItems(String layoutGroupKey, String layoutChildKey);
-
-    List<String> listVisibleChildKeys(String layoutGroupKey);
 
     ExchangeItemView getItemView(ItemKey itemKey);
 }

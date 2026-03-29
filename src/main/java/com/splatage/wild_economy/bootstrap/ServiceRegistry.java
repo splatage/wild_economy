@@ -120,6 +120,8 @@ import com.splatage.wild_economy.gui.admin.AdminOverrideEditMenu;
 import com.splatage.wild_economy.gui.admin.AdminReviewBucketMenu;
 import com.splatage.wild_economy.gui.admin.AdminRootMenu;
 import com.splatage.wild_economy.gui.admin.AdminRuleImpactMenu;
+import com.splatage.wild_economy.gui.browse.ExchangeLayoutBrowseService;
+import com.splatage.wild_economy.gui.browse.ExchangeLayoutBrowseServiceImpl;
 import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
 import com.splatage.wild_economy.gui.layout.LayoutBlueprintLoader;
 import com.splatage.wild_economy.gui.layout.LayoutIconResolver;
@@ -160,6 +162,7 @@ public final class ServiceRegistry {
     private StockTurnoverService stockTurnoverService;
     private MarketActivityService marketActivityService;
     private ExchangeBrowseService exchangeBrowseService;
+    private ExchangeLayoutBrowseService exchangeLayoutBrowseService;
     private ExchangeBuyService exchangeBuyService;
     private ExchangeSellService exchangeSellService;
     private ExchangeService exchangeService;
@@ -374,7 +377,12 @@ public final class ServiceRegistry {
         this.exchangeBrowseService = new ExchangeBrowseServiceImpl(
             this.exchangeCatalog,
             this.stockService,
-            this.pricingService,
+            this.pricingService
+        );
+        this.exchangeLayoutBrowseService = new ExchangeLayoutBrowseServiceImpl(
+            this.exchangeCatalog,
+            this.exchangeBrowseService,
+            this.stockService,
             this.layoutBlueprint,
             new LayoutPlacementResolver(this.layoutBlueprint)
         );
@@ -408,15 +416,15 @@ public final class ServiceRegistry {
         final TopSupplierMenu topSupplierMenu = new TopSupplierMenu(this.supplierStatsService, playerInfoItemFactory);
         final MarketActivityMenu marketActivityMenu = new MarketActivityMenu(this.marketActivityService, playerInfoItemFactory);
         final ExchangeRootMenu rootMenu = new ExchangeRootMenu(
-                this.exchangeService,
+                this.exchangeLayoutBrowseService,
                 playerInfoItemFactory,
                 this.layoutBlueprint,
                 layoutIconResolver,
                 topSupplierMenu,
                 marketActivityMenu
         );
-        final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeService, playerInfoItemFactory, this.layoutBlueprint, layoutIconResolver);
-        final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeService, playerInfoItemFactory, this.layoutBlueprint);
+        final ExchangeSubcategoryMenu subcategoryMenu = new ExchangeSubcategoryMenu(this.exchangeLayoutBrowseService, playerInfoItemFactory, this.layoutBlueprint, layoutIconResolver);
+        final ExchangeBrowseMenu browseMenu = new ExchangeBrowseMenu(this.exchangeLayoutBrowseService, playerInfoItemFactory, this.layoutBlueprint);
         final ExchangeItemDetailMenu itemDetailMenu = new ExchangeItemDetailMenu(this.exchangeService, this.platformExecutor, playerInfoItemFactory);
         final StoreRootMenu storeRootMenu = new StoreRootMenu(this.storeService, playerInfoItemFactory);
         final StoreCategoryMenu storeCategoryMenu = new StoreCategoryMenu(this.storeService, playerInfoItemFactory);
