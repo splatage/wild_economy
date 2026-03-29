@@ -290,6 +290,14 @@ public final class ServiceRegistry {
         );
         economyMigrationManager.migrate();
 
+        final MigrationManager storeMigrationManager = new MigrationManager(
+                this.databaseProvider,
+                this.databaseConfig,
+                schemaVersionRepository,
+                MigrationDomain.STORE
+        );
+        storeMigrationManager.migrate();
+
         this.exchangeStockRepository = switch (this.databaseProvider.dialect()) {
             case SQLITE -> new SqliteExchangeStockRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
             case MYSQL -> new MysqlExchangeStockRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
