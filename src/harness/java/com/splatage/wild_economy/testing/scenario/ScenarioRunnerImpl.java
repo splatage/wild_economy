@@ -8,6 +8,7 @@ import com.splatage.wild_economy.testing.scenario.impl.MixedEconomyScenario;
 import com.splatage.wild_economy.testing.scenario.impl.SellHeavyScenario;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -33,11 +34,12 @@ public final class ScenarioRunnerImpl implements ScenarioRunner {
     }
 
     @Override
-    public List<ScenarioResult> run(
+    public ScenarioRunReport run(
             final HarnessBootstrap.HarnessComponents components,
             final SeedPlan seedPlan,
             final int operations,
             final int concurrency,
+            final long durationSeconds,
             final ScenarioMix mix
     ) {
         if (operations <= 0) {
@@ -46,12 +48,19 @@ public final class ScenarioRunnerImpl implements ScenarioRunner {
         if (concurrency <= 0) {
             throw new IllegalArgumentException("Scenario concurrency must be positive");
         }
+        if (durationSeconds < 0L) {
+            throw new IllegalArgumentException("Scenario durationSeconds cannot be negative");
+        }
 
         final ScenarioContext context = ScenarioContext.create(components, seedPlan);
         final Map<String, ScenarioAccumulator> accumulators = new ConcurrentHashMap<>();
         for (final Scenario scenario : this.scenarios) {
             accumulators.put(scenario.name(), new ScenarioAccumulator());
         }
+
+        final long startedAt = System.nanoTime();
+        final long durationNanos = durationSeconds <= 0L ? Long.MAX_VALUE : TimeUnit.SECONDS.toNanos(durationSeconds);
+        final long deadlineNanos = durationSeconds <= 0L ? Long.MAX_VALUE : safeAdd(startedAt, durationNanos);
 
         final AtomicLong threadCounter = new AtomicLong(1L);
         final ExecutorService executor = Executors.newFixedThreadPool(concurrency, runnable -> {
@@ -67,6 +76,9 @@ public final class ScenarioRunnerImpl implements ScenarioRunner {
             futures.add(executor.submit(() -> {
                 final Random random = new Random(workerSeed);
                 while (true) {
+                    if (System.nanoTime() >= deadlineNanos) {
+                        return;
+                    }
                     final long operationIndex = operationCounter.getAndIncrement();
                     if (operationIndex >= operations) {
                         return;
@@ -79,15 +91,15 @@ public final class ScenarioRunnerImpl implements ScenarioRunner {
                         case 2 -> context.nextSellSelection(random);
                         default -> context.nextMixedSelection(random);
                     };
-                    final long startedAt = System.nanoTime();
+                    final long opStartedAt = System.nanoTime();
                     ScenarioExecutionResult executionResult;
                     try {
                         executionResult = scenario.execute(context, selection);
                     } catch (final RuntimeException exception) {
                         executionResult = ScenarioExecutionResult.failed(exception.getClass().getSimpleName() + ": " + exception.getMessage());
                     }
-                    final long durationNanos = System.nanoTime() - startedAt;
-                    accumulators.get(scenario.name()).record(executionResult, durationNanos);
+                    final long opDurationNanos = System.nanoTime() - opStartedAt;
+                    accumulators.get(scenario.name()).record(executionResult, opDurationNanos);
                 }
             }));
         }
@@ -105,13 +117,35 @@ public final class ScenarioRunnerImpl implements ScenarioRunner {
             throw new IllegalStateException("Scenario runner failed", exception);
         }
 
+        final long finishedAt = System.nanoTime();
         components.stockService().flushDirtyNow();
         components.storeRuntimeStateService().flushDirtyNow();
 
-        return accumulators.entrySet().stream()
+        final List<ScenarioResult> scenarioResults = accumulators.entrySet().stream()
                 .map(entry -> entry.getValue().toResult(entry.getKey()))
                 .sorted(Comparator.comparing(ScenarioResult::scenarioName))
                 .toList();
+        final long completedOperations = scenarioResults.stream().mapToLong(ScenarioResult::operations).sum();
+        final ScenarioRunReport.StopReason stopReason = completedOperations >= operations
+                ? ScenarioRunReport.StopReason.OPERATIONS
+                : ScenarioRunReport.StopReason.DURATION;
+
+        return new ScenarioRunReport(
+                operations,
+                concurrency,
+                durationSeconds,
+                completedOperations,
+                finishedAt - startedAt,
+                stopReason,
+                scenarioResults
+        );
+    }
+
+    private static long safeAdd(final long left, final long right) {
+        if (left > Long.MAX_VALUE - right) {
+            return Long.MAX_VALUE;
+        }
+        return left + right;
     }
 
     private static final class ScenarioAccumulator {
@@ -121,6 +155,8 @@ public final class ScenarioRunnerImpl implements ScenarioRunner {
         private final LongAdder failures = new LongAdder();
         private final LongAdder totalDurationNanos = new LongAdder();
         private final AtomicLong maxDurationNanos = new AtomicLong(0L);
+        private final ConcurrentHashMap<String, LongAdder> rejectionReasons = new ConcurrentHashMap<>();
+        private final ConcurrentHashMap<String, LongAdder> failureReasons = new ConcurrentHashMap<>();
         private volatile String sampleRejection;
         private volatile String sampleFailure;
 
@@ -134,15 +170,22 @@ public final class ScenarioRunnerImpl implements ScenarioRunner {
             }
             if (executionResult.rejected()) {
                 this.expectedRejections.increment();
+                this.incrementReason(this.rejectionReasons, executionResult.rejectionReason());
                 if (this.sampleRejection == null && executionResult.rejectionReason() != null) {
                     this.sampleRejection = executionResult.rejectionReason();
                 }
                 return;
             }
             this.failures.increment();
+            this.incrementReason(this.failureReasons, executionResult.failureReason());
             if (this.sampleFailure == null && executionResult.failureReason() != null) {
                 this.sampleFailure = executionResult.failureReason();
             }
+        }
+
+        private void incrementReason(final ConcurrentHashMap<String, LongAdder> reasons, final String reason) {
+            final String key = reason == null || reason.isBlank() ? "(unspecified)" : reason;
+            reasons.computeIfAbsent(key, ignored -> new LongAdder()).increment();
         }
 
         private ScenarioResult toResult(final String scenarioName) {
@@ -155,8 +198,26 @@ public final class ScenarioRunnerImpl implements ScenarioRunner {
                     this.totalDurationNanos.sum(),
                     this.maxDurationNanos.get(),
                     this.sampleRejection,
-                    this.sampleFailure
+                    this.sampleFailure,
+                    toCountMap(this.rejectionReasons),
+                    toCountMap(this.failureReasons)
             );
+        }
+
+        private static Map<String, Long> toCountMap(final ConcurrentHashMap<String, LongAdder> reasons) {
+            final List<Map.Entry<String, LongAdder>> entries = new ArrayList<>(reasons.entrySet());
+            entries.sort((left, right) -> {
+                final int countComparison = Long.compare(right.getValue().sum(), left.getValue().sum());
+                if (countComparison != 0) {
+                    return countComparison;
+                }
+                return left.getKey().compareToIgnoreCase(right.getKey());
+            });
+            final Map<String, Long> counts = new LinkedHashMap<>();
+            for (final Map.Entry<String, LongAdder> entry : entries) {
+                counts.put(entry.getKey(), entry.getValue().sum());
+            }
+            return counts;
         }
     }
 }

@@ -12,11 +12,12 @@ import com.splatage.wild_economy.exchange.domain.TransactionType;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
 import com.splatage.wild_economy.store.model.StorePurchaseStatus;
-import com.splatage.wild_economy.store.state.DirtyEntitlementGrant;
-import com.splatage.wild_economy.store.state.StorePurchaseAuditRecord;
+import com.splatage.wild_economy.testing.TestProfile;
 import com.splatage.wild_economy.testing.support.HarnessSqlSupport;
 import com.splatage.wild_economy.testing.support.SeedPlayer;
 import com.splatage.wild_economy.testing.support.SeedPlayerFactory;
+import com.splatage.wild_economy.store.state.DirtyEntitlementGrant;
+import com.splatage.wild_economy.store.state.StorePurchaseAuditRecord;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.temporal.WeekFields;
@@ -50,10 +51,11 @@ public final class SeedGeneratorImpl implements SeedGenerator {
         }
 
         final List<SeedPlayer> players = this.seedPlayerFactory.createPlayers(seedPlan, components.economyConfig().fractionalDigits());
+        final List<ExchangeCatalogEntry> catalogEntries = this.sortedCatalogEntries(components);
         final int ledgerEntries = this.seedEconomy(players, components, seedPlan, random);
-        final int stockRows = this.seedStock(components, random);
-        final int exchangeTransactions = this.seedExchangeTransactions(players, components, seedPlan, random);
-        final int supplierContributions = this.seedSupplierContributions(players, components, seedPlan, random);
+        final StockSeedSummary stockSummary = this.seedStock(catalogEntries, components, seedPlan, random);
+        final int exchangeTransactions = this.seedExchangeTransactions(players, catalogEntries, components, seedPlan, random);
+        final int supplierContributions = this.seedSupplierContributions(players, catalogEntries, components, seedPlan, random);
         final SeedStoreResult storeResult = this.seedStore(players, components, seedPlan, random);
 
         components.stockService().flushDirtyNow();
@@ -63,9 +65,15 @@ public final class SeedGeneratorImpl implements SeedGenerator {
         return new SeedRunReport(
                 players.size(),
                 ledgerEntries,
-                stockRows,
+                catalogEntries.size(),
+                this.countBuyEnabled(catalogEntries),
+                this.countSellEnabled(catalogEntries),
+                this.countPositiveSellQuoteEntries(catalogEntries, components),
+                stockSummary.totalRowsSeeded(),
+                stockSummary.rowsWithPositiveStock(),
                 exchangeTransactions,
                 supplierContributions,
+                components.storeProductsConfig().products().size(),
                 storeResult.entitlementsSeeded(),
                 storeResult.purchasesSeeded(),
                 durationMillis
@@ -99,15 +107,25 @@ public final class SeedGeneratorImpl implements SeedGenerator {
         return players.size();
     }
 
-    private int seedStock(final HarnessBootstrap.HarnessComponents components, final Random random) {
-        final List<ExchangeCatalogEntry> entries = new ArrayList<>(components.exchangeCatalog().allEntries());
-        entries.sort(Comparator.comparing(entry -> entry.itemKey().value()));
+    private StockSeedSummary seedStock(
+            final List<ExchangeCatalogEntry> entries,
+            final HarnessBootstrap.HarnessComponents components,
+            final SeedPlan seedPlan,
+            final Random random
+    ) {
+        if (entries.isEmpty()) {
+            return new StockSeedSummary(0, 0);
+        }
+
         final Map<ItemKey, Long> targetStocks = new LinkedHashMap<>();
+        int positiveStockRows = 0;
         for (int index = 0; index < entries.size(); index++) {
             final ExchangeCatalogEntry entry = entries.get(index);
-            final int bucket = index % 6;
-            final long targetStock = this.resolveStockForBucket(entry, bucket, random);
+            final long targetStock = this.resolveTargetStock(entry, index, random, seedPlan.profile());
             targetStocks.put(entry.itemKey(), targetStock);
+            if (targetStock > 0L) {
+                positiveStockRows++;
+            }
             final long currentStock = components.stockService().getSnapshot(entry.itemKey()).stockCount();
             if (targetStock > currentStock) {
                 final long delta = targetStock - currentStock;
@@ -118,21 +136,78 @@ public final class SeedGeneratorImpl implements SeedGenerator {
             }
         }
         components.exchangeStockRepository().flushStocks(targetStocks);
-        return entries.size();
+        return new StockSeedSummary(entries.size(), positiveStockRows);
     }
 
-    private long resolveStockForBucket(final ExchangeCatalogEntry entry, final int bucket, final Random random) {
+    private long resolveTargetStock(
+            final ExchangeCatalogEntry entry,
+            final int index,
+            final Random random,
+            final TestProfile profile
+    ) {
         final long cap = entry.stockCap();
+        final int bucketSpan = switch (profile) {
+            case SMOKE -> 6;
+            case QA -> 8;
+            case PERF, SOAK -> 10;
+        };
+        final int bucket = Math.floorMod(index, bucketSpan);
+
         if (cap <= 0L) {
-            return switch (bucket) {
-                case 0 -> 0L;
-                case 1 -> 2L + random.nextInt(6);
-                case 2 -> 32L + random.nextInt(96);
-                case 3 -> 256L + random.nextInt(512);
-                case 4 -> 1024L + random.nextInt(2048);
-                default -> 48L + random.nextInt(128);
+            return switch (profile) {
+                case SMOKE -> this.unboundedSmokeTarget(bucket, random);
+                case QA -> this.unboundedQaTarget(bucket, random);
+                case PERF, SOAK -> this.unboundedPerfTarget(bucket, random);
             };
         }
+
+        return switch (profile) {
+            case SMOKE -> this.boundedSmokeTarget(cap, bucket, random);
+            case QA -> this.boundedQaTarget(cap, bucket, random);
+            case PERF, SOAK -> this.boundedPerfTarget(cap, bucket, random);
+        };
+    }
+
+    private long unboundedSmokeTarget(final int bucket, final Random random) {
+        return switch (bucket) {
+            case 0 -> 0L;
+            case 1 -> 2L + random.nextInt(6);
+            case 2 -> 32L + random.nextInt(96);
+            case 3 -> 256L + random.nextInt(512);
+            case 4 -> 1024L + random.nextInt(2048);
+            default -> 48L + random.nextInt(128);
+        };
+    }
+
+    private long unboundedQaTarget(final int bucket, final Random random) {
+        return switch (bucket) {
+            case 0 -> 1L + random.nextInt(4);
+            case 1 -> 8L + random.nextInt(24);
+            case 2 -> 32L + random.nextInt(96);
+            case 3 -> 128L + random.nextInt(192);
+            case 4 -> 256L + random.nextInt(384);
+            case 5 -> 512L + random.nextInt(768);
+            case 6 -> 1024L + random.nextInt(1024);
+            default -> 64L + random.nextInt(128);
+        };
+    }
+
+    private long unboundedPerfTarget(final int bucket, final Random random) {
+        return switch (bucket) {
+            case 0 -> 4L + random.nextInt(12);
+            case 1 -> 16L + random.nextInt(48);
+            case 2 -> 64L + random.nextInt(128);
+            case 3 -> 192L + random.nextInt(256);
+            case 4 -> 512L + random.nextInt(512);
+            case 5 -> 1024L + random.nextInt(1024);
+            case 6 -> 2048L + random.nextInt(1024);
+            case 7 -> 4096L + random.nextInt(2048);
+            case 8 -> 256L + random.nextInt(256);
+            default -> 96L + random.nextInt(192);
+        };
+    }
+
+    private long boundedSmokeTarget(final long cap, final int bucket, final Random random) {
         return switch (bucket) {
             case 0 -> 0L;
             case 1 -> Math.max(1L, Math.min(cap, 1L + random.nextInt((int) Math.max(2L, Math.min(cap, 4L)))));
@@ -143,13 +218,44 @@ public final class SeedGeneratorImpl implements SeedGenerator {
         };
     }
 
+    private long boundedQaTarget(final long cap, final int bucket, final Random random) {
+        return switch (bucket) {
+            case 0 -> Math.max(1L, Math.round(cap * (0.03D + (random.nextDouble() * 0.04D))));
+            case 1 -> Math.max(1L, Math.round(cap * (0.08D + (random.nextDouble() * 0.07D))));
+            case 2 -> Math.max(1L, Math.round(cap * (0.18D + (random.nextDouble() * 0.10D))));
+            case 3 -> Math.max(1L, Math.round(cap * (0.35D + (random.nextDouble() * 0.10D))));
+            case 4 -> Math.max(1L, Math.round(cap * (0.55D + (random.nextDouble() * 0.10D))));
+            case 5 -> Math.max(1L, Math.round(cap * (0.75D + (random.nextDouble() * 0.10D))));
+            case 6 -> Math.max(1L, Math.round(cap * (0.92D + (random.nextDouble() * 0.08D))));
+            default -> Math.max(1L, Math.round(cap * (0.12D + (random.nextDouble() * 0.06D))));
+        };
+    }
+
+    private long boundedPerfTarget(final long cap, final int bucket, final Random random) {
+        return switch (bucket) {
+            case 0 -> Math.max(1L, Math.round(cap * (0.05D + (random.nextDouble() * 0.05D))));
+            case 1 -> Math.max(1L, Math.round(cap * (0.12D + (random.nextDouble() * 0.08D))));
+            case 2 -> Math.max(1L, Math.round(cap * (0.25D + (random.nextDouble() * 0.10D))));
+            case 3 -> Math.max(1L, Math.round(cap * (0.45D + (random.nextDouble() * 0.10D))));
+            case 4 -> Math.max(1L, Math.round(cap * (0.65D + (random.nextDouble() * 0.10D))));
+            case 5 -> Math.max(1L, Math.round(cap * (0.82D + (random.nextDouble() * 0.08D))));
+            case 6 -> Math.max(1L, Math.round(cap * (0.96D + (random.nextDouble() * 0.04D))));
+            case 7 -> Math.max(1L, Math.round(cap * (1.05D + (random.nextDouble() * 0.08D))));
+            case 8 -> Math.max(1L, Math.round(cap * (0.55D + (random.nextDouble() * 0.05D))));
+            default -> Math.max(1L, Math.round(cap * (0.18D + (random.nextDouble() * 0.08D))));
+        };
+    }
+
     private int seedExchangeTransactions(
             final List<SeedPlayer> players,
+            final List<ExchangeCatalogEntry> entries,
             final HarnessBootstrap.HarnessComponents components,
             final SeedPlan seedPlan,
             final Random random
     ) {
-        final List<ExchangeCatalogEntry> entries = List.copyOf(components.exchangeCatalog().allEntries());
+        if (entries.isEmpty()) {
+            return 0;
+        }
         final int total = seedPlan.exchangeTransactionCount();
         for (int index = 0; index < total; index++) {
             final SeedPlayer player = players.get(random.nextInt(players.size()));
@@ -192,11 +298,14 @@ public final class SeedGeneratorImpl implements SeedGenerator {
 
     private int seedSupplierContributions(
             final List<SeedPlayer> players,
+            final List<ExchangeCatalogEntry> entries,
             final HarnessBootstrap.HarnessComponents components,
             final SeedPlan seedPlan,
             final Random random
     ) {
-        final List<ExchangeCatalogEntry> entries = List.copyOf(components.exchangeCatalog().allEntries());
+        if (entries.isEmpty()) {
+            return 0;
+        }
         final String currentWeekKey = this.weekKey(seedPlan.nowEpochSecond());
         final int total = Math.max(1, seedPlan.exchangeTransactionCount() / 2);
         for (int index = 0; index < total; index++) {
@@ -276,6 +385,50 @@ public final class SeedGeneratorImpl implements SeedGenerator {
         return new SeedStoreResult(entitlementCount, purchases.size());
     }
 
+    private List<ExchangeCatalogEntry> sortedCatalogEntries(final HarnessBootstrap.HarnessComponents components) {
+        final List<ExchangeCatalogEntry> entries = new ArrayList<>(components.exchangeCatalog().allEntries());
+        entries.sort(Comparator.comparing(entry -> entry.itemKey().value()));
+        return entries;
+    }
+
+    private int countBuyEnabled(final List<ExchangeCatalogEntry> entries) {
+        int count = 0;
+        for (final ExchangeCatalogEntry entry : entries) {
+            if (entry.buyEnabled()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int countSellEnabled(final List<ExchangeCatalogEntry> entries) {
+        int count = 0;
+        for (final ExchangeCatalogEntry entry : entries) {
+            if (entry.sellEnabled()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int countPositiveSellQuoteEntries(
+            final List<ExchangeCatalogEntry> entries,
+            final HarnessBootstrap.HarnessComponents components
+    ) {
+        int count = 0;
+        for (final ExchangeCatalogEntry entry : entries) {
+            final SellQuote quote = components.pricingService().quoteSell(
+                    entry.itemKey(),
+                    1,
+                    components.stockService().getSnapshot(entry.itemKey())
+            );
+            if (quote.totalPrice().signum() > 0) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private void addStockInChunks(
             final HarnessBootstrap.HarnessComponents components,
             final ItemKey itemKey,
@@ -311,5 +464,8 @@ public final class SeedGeneratorImpl implements SeedGenerator {
     }
 
     private record SeedStoreResult(int entitlementsSeeded, int purchasesSeeded) {
+    }
+
+    private record StockSeedSummary(int totalRowsSeeded, int rowsWithPositiveStock) {
     }
 }

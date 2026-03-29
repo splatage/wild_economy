@@ -12,4 +12,7 @@ public record SeedPlan(
         long nowEpochSecond,
         boolean resetFirst
 ) {
+    public boolean isLargeProfile() {
+        return this.profile == TestProfile.QA || this.profile == TestProfile.PERF || this.profile == TestProfile.SOAK;
+    }
 }

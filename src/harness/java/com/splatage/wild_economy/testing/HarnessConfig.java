@@ -75,6 +75,7 @@ public record HarnessConfig(
         return new HarnessScenarioSettings(
                 scenarioSection.getInt("operations", 1_000),
                 scenarioSection.getInt("concurrency", 1),
+                scenarioSection.getLong("duration-seconds", 0L),
                 new ScenarioMix(
                         mixSection.getInt("browse-heavy", 40),
                         mixSection.getInt("buy-heavy", 25),

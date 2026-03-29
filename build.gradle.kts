@@ -65,6 +65,8 @@ dependencies {
     testRuntimeOnly("org.xerial:sqlite-jdbc:3.51.3.0")
     testRuntimeOnly("com.mysql:mysql-connector-j:9.6.0")
     testRuntimeOnly("com.zaxxer:HikariCP:7.0.2")
+
+    add(harnessSourceSet.runtimeOnlyConfigurationName, "org.slf4j:slf4j-simple:2.0.16")
 }
 
 tasks.withType<JavaCompile>().configureEach {
