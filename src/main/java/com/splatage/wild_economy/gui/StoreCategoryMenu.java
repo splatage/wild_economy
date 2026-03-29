@@ -4,6 +4,7 @@ import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
 import com.splatage.wild_economy.store.service.StoreService;
+import com.splatage.wild_economy.store.state.StoreOwnershipState;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -35,6 +36,8 @@ public final class StoreCategoryMenu {
     }
 
     public void open(final Player player, final String categoryId, final int page) {
+        this.storeService.ensurePlayerLoadedAsync(player.getUniqueId());
+
         final StoreCategory category = this.resolveCategory(categoryId);
         final ShopMenuHolder holder = ShopMenuHolder.storeCategory(categoryId, page);
         final Inventory inventory = holder.createInventory(54, "Store - " + category.displayName());
@@ -111,13 +114,14 @@ public final class StoreCategoryMenu {
                 lore.add("Type: XP_WITHDRAWAL");
                 lore.add("Throw to redeem");
             } else {
-                final boolean owned = product.entitlementKey() != null
-                        && !product.entitlementKey().isBlank()
-                        && this.storeService.ownsEntitlement(player.getUniqueId(), product.entitlementKey());
+                final StoreOwnershipState ownershipState = this.storeService.getOwnershipState(
+                        player.getUniqueId(),
+                        product.entitlementKey()
+                );
 
                 lore.add("Price: " + product.price().minorUnits());
                 lore.add("Type: " + product.type().name());
-                lore.add(owned ? "Owned: Yes" : "Owned: No");
+                lore.add(this.ownershipLine(ownershipState));
             }
             lore.add("Click to view");
 
@@ -126,6 +130,15 @@ public final class StoreCategoryMenu {
         }
 
         return stack;
+    }
+
+    private String ownershipLine(final StoreOwnershipState ownershipState) {
+        return switch (ownershipState) {
+            case OWNED -> "Owned: Yes";
+            case LOADING -> "Owned: Loading...";
+            case LOAD_FAILED -> "Owned: Unavailable";
+            case NOT_OWNED -> "Owned: No";
+        };
     }
 
     private ItemStack button(final Material material, final String name) {

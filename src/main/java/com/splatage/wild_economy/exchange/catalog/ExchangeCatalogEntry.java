@@ -11,8 +11,6 @@ public record ExchangeCatalogEntry(
         String displayName,
         ItemCategory category,
         GeneratedItemCategory generatedCategory,
-        String layoutGroupKey,
-        String layoutChildKey,
         ItemPolicyMode policyMode,
         BigDecimal baseWorth,
         long stockCap,

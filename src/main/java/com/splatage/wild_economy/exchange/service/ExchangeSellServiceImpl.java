@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Barrel;
@@ -100,11 +99,12 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
     }
 
     @Override
-    public SellHandResult sellHand(final UUID playerId) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+    public SellHandResult sellHand(final Player player) {
+        if (player == null || !player.isOnline()) {
             return new SellHandResult(false, null, RejectionReason.INTERNAL_ERROR, "Player is not online");
         }
+
+        final var playerId = player.getUniqueId();
 
         final HeldItemPlanning heldPlanning = this.planHeldItem(player.getInventory().getItemInMainHand());
         if (!heldPlanning.success()) {
@@ -132,9 +132,8 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
     }
 
     @Override
-    public SellPreviewResult previewInventorySell(final UUID playerId) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+    public SellPreviewResult previewInventorySell(final Player player) {
+        if (player == null || !player.isOnline()) {
             return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), "Player is not online");
         }
 
@@ -157,9 +156,8 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
     }
 
     @Override
-    public SellPreviewResult previewContainerSell(final UUID playerId) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+    public SellPreviewResult previewContainerSell(final Player player) {
+        if (player == null || !player.isOnline()) {
             return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), "Player is not online");
         }
 
@@ -193,11 +191,12 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
     }
 
     @Override
-    public SellAllResult sellAll(final UUID playerId) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+    public SellAllResult sellAll(final Player player) {
+        if (player == null || !player.isOnline()) {
             return new SellAllResult(false, List.of(), BigDecimal.ZERO, List.of(), "Player is not online");
         }
+
+        final var playerId = player.getUniqueId();
 
         final SalePlanning planning = this.planSalesFromInventory(
             player.getInventory(),
@@ -239,11 +238,12 @@ public final class ExchangeSellServiceImpl implements ExchangeSellService {
     }
 
     @Override
-    public SellContainerResult sellContainer(final UUID playerId) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+    public SellContainerResult sellContainer(final Player player) {
+        if (player == null || !player.isOnline()) {
             return new SellContainerResult(false, List.of(), BigDecimal.ZERO, List.of(), null, "Player is not online");
         }
+
+        final var playerId = player.getUniqueId();
 
         final Block targetBlock = player.getTargetBlockExact(CONTAINER_TARGET_RANGE);
         final SupportedContainerTarget blockTarget = this.resolveSupportedBlockTarget(targetBlock);

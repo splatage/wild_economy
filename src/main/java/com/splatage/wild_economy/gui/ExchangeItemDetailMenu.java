@@ -121,7 +121,7 @@ public final class ExchangeItemDetailMenu {
 
         this.platformExecutor.runOnPlayer(player, () -> {
             final BuyResult result = this.exchangeService.buyQuoted(
-                player.getUniqueId(),
+                player,
                 itemKey,
                 amount,
                 holder.quotedUnitPrice()

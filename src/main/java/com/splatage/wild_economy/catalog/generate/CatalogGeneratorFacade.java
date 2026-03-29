@@ -14,8 +14,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class CatalogGeneratorFacade {
 
-    private static final int DEFAULT_MAX_AUTO_INCLUSION_DEPTH = 1;
-
     private final JavaPlugin plugin;
 
     public CatalogGeneratorFacade(final JavaPlugin plugin) {
@@ -33,7 +31,7 @@ public final class CatalogGeneratorFacade {
         final CatalogGenerationService service = new CatalogGenerationService(
             new BukkitMaterialScanner(rootValueLoader),
             new DefaultCategoryClassifier(),
-            new DefaultPolicySuggestionService(DEFAULT_MAX_AUTO_INCLUSION_DEPTH),
+            new DefaultPolicySuggestionService(),
             derivationService
         );
 

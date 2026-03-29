@@ -26,3 +26,9 @@ CREATE INDEX IF NOT EXISTS idx_${store_prefix}store_purchases_player_created_at
 
 CREATE INDEX IF NOT EXISTS idx_${store_prefix}store_purchases_product_status
     ON ${store_prefix}store_purchases (product_id, status);
+
+CREATE TABLE IF NOT EXISTS ${store_prefix}store_schema_version (
+    version INTEGER NOT NULL PRIMARY KEY,
+    applied_at INTEGER NOT NULL
+);
+

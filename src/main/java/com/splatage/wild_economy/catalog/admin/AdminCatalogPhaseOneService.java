@@ -35,7 +35,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class AdminCatalogPhaseOneService {
 
-    private static final int DEFAULT_MAX_AUTO_INCLUSION_DEPTH = 1;
     private static final DateTimeFormatter SNAPSHOT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss");
     private final JavaPlugin plugin;
 
@@ -61,7 +60,7 @@ public final class AdminCatalogPhaseOneService {
         final RootAnchoredDerivationService derivationService = new RootAnchoredDerivationService(recipeGraph, rootValues);
         final BukkitMaterialScanner materialScanner = new BukkitMaterialScanner(rootValues);
         final DefaultCategoryClassifier classifier = new DefaultCategoryClassifier();
-        final DefaultPolicySuggestionService basePolicyService = new DefaultPolicySuggestionService(DEFAULT_MAX_AUTO_INCLUSION_DEPTH);
+        final DefaultPolicySuggestionService basePolicyService = new DefaultPolicySuggestionService();
 
         final List<AdminCatalogPolicyRule> rules = this.loadPolicyRules(new File(dataFolder, "policy-rules.yml"));
         final Map<CatalogPolicy, AdminCatalogPolicyProfile> policyProfiles = AdminCatalogPolicyProfileLoader.load(new File(dataFolder, "policy-profiles.yml"));

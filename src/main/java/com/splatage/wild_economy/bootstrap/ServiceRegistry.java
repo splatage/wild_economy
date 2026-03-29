@@ -54,7 +54,10 @@ import com.splatage.wild_economy.store.repository.mysql.MysqlStorePurchaseReposi
 import com.splatage.wild_economy.store.repository.sqlite.SqliteStoreEntitlementRepository;
 import com.splatage.wild_economy.store.repository.sqlite.SqliteStorePurchaseRepository;
 import com.splatage.wild_economy.store.service.StoreService;
+import com.splatage.wild_economy.store.listener.StorePlayerSessionListener;
 import com.splatage.wild_economy.store.service.StoreServiceImpl;
+import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
+import com.splatage.wild_economy.store.state.StoreRuntimeStateServiceImpl;
 import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.vault.WildEconomyVaultProvider;
 import com.splatage.wild_economy.xp.listener.XpBottleRedeemListener;
@@ -169,7 +172,9 @@ public final class ServiceRegistry {
     private EconomyService economyService;
     private BaltopService baltopService;
     private EconomyPlayerSessionListener economyPlayerSessionListener;
+    private StorePlayerSessionListener storePlayerSessionListener;
     private StoreProductsConfig storeProductsConfig;
+    private StoreRuntimeStateService storeRuntimeStateService;
     private StoreService storeService;
     private WildEconomyVaultProvider vaultEconomyProvider;
     private WildEconomyExpansion placeholderExpansion;
@@ -247,13 +252,20 @@ public final class ServiceRegistry {
 
         final ProductActionExecutor productActionExecutor = new SimpleProductActionExecutor();
 
+        this.storeRuntimeStateService = new StoreRuntimeStateServiceImpl(
+                storeEntitlementRepository,
+                storePurchaseRepository,
+                transactionRunner,
+                this.plugin.getLogger(),
+                this.databaseProvider.dialect(),
+                this.databaseConfig.mysqlMaximumPoolSize()
+        );
+
         this.storeService = new StoreServiceImpl(
                 this.storeProductsConfig,
                 this.economyService,
-                storeEntitlementRepository,
-                storePurchaseRepository,
+                this.storeRuntimeStateService,
                 productActionExecutor,
-                transactionRunner,
                 this.xpBottleService
         );
 
@@ -278,6 +290,14 @@ public final class ServiceRegistry {
         );
         economyMigrationManager.migrate();
 
+        final MigrationManager storeMigrationManager = new MigrationManager(
+                this.databaseProvider,
+                this.databaseConfig,
+                schemaVersionRepository,
+                MigrationDomain.STORE
+        );
+        storeMigrationManager.migrate();
+
         this.exchangeStockRepository = switch (this.databaseProvider.dialect()) {
             case SQLITE -> new SqliteExchangeStockRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
             case MYSQL -> new MysqlExchangeStockRepository(this.databaseProvider, this.databaseConfig.exchangeTablePrefix());
@@ -300,7 +320,7 @@ public final class ServiceRegistry {
             throw new IllegalStateException("Failed to load layout.yml", exception);
         }
 
-        final CatalogLoader catalogLoader = new CatalogLoader(new LayoutPlacementResolver(this.layoutBlueprint));
+        final CatalogLoader catalogLoader = new CatalogLoader();
         this.exchangeCatalog = Objects.requireNonNull(
                 catalogLoader.load(this.exchangeItemsConfig),
                 "exchangeCatalog"
@@ -351,7 +371,13 @@ public final class ServiceRegistry {
         );
 
         this.stockTurnoverService = new StockTurnoverServiceImpl(this.exchangeCatalog, this.stockService, this.transactionLogService);
-        this.exchangeBrowseService = new ExchangeBrowseServiceImpl(this.exchangeCatalog, this.stockService, this.layoutBlueprint);
+        this.exchangeBrowseService = new ExchangeBrowseServiceImpl(
+            this.exchangeCatalog,
+            this.stockService,
+            this.pricingService,
+            this.layoutBlueprint,
+            new LayoutPlacementResolver(this.layoutBlueprint)
+        );
 
         final ExchangeBuyService rawBuyService = new ExchangeBuyServiceImpl(
                 this.exchangeCatalog,
@@ -464,6 +490,8 @@ public final class ServiceRegistry {
         );
         this.economyPlayerSessionListener = new EconomyPlayerSessionListener(this.plugin, this.economyService);
         this.plugin.getServer().getPluginManager().registerEvents(this.economyPlayerSessionListener, this.plugin);
+        this.storePlayerSessionListener = new StorePlayerSessionListener(this.storeRuntimeStateService);
+        this.plugin.getServer().getPluginManager().registerEvents(this.storePlayerSessionListener, this.plugin);
 
         this.xpBottleRedeemListener = new XpBottleRedeemListener(this.xpBottleService);
         this.plugin.getServer().getPluginManager().registerEvents(this.xpBottleRedeemListener, this.plugin);
@@ -609,6 +637,10 @@ public final class ServiceRegistry {
             HandlerList.unregisterAll(this.economyPlayerSessionListener);
             this.economyPlayerSessionListener = null;
         }
+        if (this.storePlayerSessionListener != null) {
+            HandlerList.unregisterAll(this.storePlayerSessionListener);
+            this.storePlayerSessionListener = null;
+        }
         if (this.xpBottleRedeemListener != null) {
             HandlerList.unregisterAll(this.xpBottleRedeemListener);
             this.xpBottleRedeemListener = null;
@@ -648,6 +680,10 @@ public final class ServiceRegistry {
             this.stockService.shutdown();
             this.stockService = null;
         }
+        if (this.storeRuntimeStateService != null) {
+            this.storeRuntimeStateService.shutdown();
+            this.storeRuntimeStateService = null;
+        }
         if (this.economyService != null) {
             for (final Player onlinePlayer : this.plugin.getServer().getOnlinePlayers()) {
                 this.economyService.flushPlayerSession(onlinePlayer.getUniqueId(), onlinePlayer.getName());
@@ -671,6 +707,7 @@ public final class ServiceRegistry {
         this.stockTurnoverService = null;
         this.foliaContainerSellCoordinator = null;
         this.economyGateway = null;
+        this.storeRuntimeStateService = null;
         this.storeService = null;
         this.storeProductsConfig = null;
         this.xpBottleService = null;

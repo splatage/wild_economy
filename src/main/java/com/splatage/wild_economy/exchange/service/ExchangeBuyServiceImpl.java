@@ -24,10 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
@@ -98,30 +96,31 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
     }
 
     @Override
-    public BuyResult buy(final UUID playerId, final ItemKey itemKey, final int amount) {
-        return this.buyInternal(playerId, itemKey, amount, null);
+    public BuyResult buy(final Player player, final ItemKey itemKey, final int amount) {
+        return this.buyInternal(player, itemKey, amount, null);
     }
 
     @Override
     public BuyResult buyQuoted(
-        final UUID playerId,
+        final Player player,
         final ItemKey itemKey,
         final int amount,
         final BigDecimal quotedUnitPrice
     ) {
-        return this.buyInternal(playerId, itemKey, amount, quotedUnitPrice);
+        return this.buyInternal(player, itemKey, amount, quotedUnitPrice);
     }
 
     private BuyResult buyInternal(
-        final UUID playerId,
+        final Player player,
         final ItemKey itemKey,
         final int amount,
         final BigDecimal quotedUnitPrice
     ) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+        if (player == null || !player.isOnline()) {
             return new BuyResult(false, itemKey, 0, null, null, RejectionReason.INTERNAL_ERROR, "Player is not online");
         }
+
+        final var playerId = player.getUniqueId();
 
         if (amount <= 0 || amount > MAX_BUY_AMOUNT) {
             return new BuyResult(

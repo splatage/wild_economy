@@ -5,7 +5,6 @@ import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.RejectionReason;
 import java.math.BigDecimal;
 import java.util.Objects;
-import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -18,9 +17,8 @@ public final class FoliaSafeExchangeBuyService implements ExchangeBuyService {
     }
 
     @Override
-    public BuyResult buy(final UUID playerId, final ItemKey itemKey, final int amount) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+    public BuyResult buy(final Player player, final ItemKey itemKey, final int amount) {
+        if (player == null || !player.isOnline()) {
             return new BuyResult(
                 false,
                 itemKey,
@@ -43,18 +41,17 @@ public final class FoliaSafeExchangeBuyService implements ExchangeBuyService {
             );
         }
 
-        return this.delegate.buy(playerId, itemKey, amount);
+        return this.delegate.buy(player, itemKey, amount);
     }
 
     @Override
     public BuyResult buyQuoted(
-        final UUID playerId,
+        final Player player,
         final ItemKey itemKey,
         final int amount,
         final BigDecimal quotedUnitPrice
     ) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+        if (player == null || !player.isOnline()) {
             return new BuyResult(
                 false,
                 itemKey,
@@ -77,6 +74,6 @@ public final class FoliaSafeExchangeBuyService implements ExchangeBuyService {
             );
         }
 
-        return this.delegate.buyQuoted(playerId, itemKey, amount, quotedUnitPrice);
+        return this.delegate.buyQuoted(player, itemKey, amount, quotedUnitPrice);
     }
 }

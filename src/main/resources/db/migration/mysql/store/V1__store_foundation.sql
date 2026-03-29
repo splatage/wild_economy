@@ -20,3 +20,9 @@ CREATE TABLE IF NOT EXISTS ${store_prefix}store_purchases (
     INDEX idx_${store_prefix}store_purchases_player_created_at (player_uuid, created_at),
     INDEX idx_${store_prefix}store_purchases_product_status (product_id, status)
 );
+
+CREATE TABLE IF NOT EXISTS ${store_prefix}store_schema_version (
+    version INT NOT NULL PRIMARY KEY,
+    applied_at BIGINT NOT NULL
+);
+

@@ -2,10 +2,15 @@ package com.splatage.wild_economy.store.repository.sqlite;
 
 import com.splatage.wild_economy.persistence.DatabaseProvider;
 import com.splatage.wild_economy.store.repository.StoreEntitlementRepository;
+import com.splatage.wild_economy.store.state.DirtyEntitlementGrant;
+import com.splatage.wild_economy.store.state.StoreEntitlementRecord;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -20,28 +25,39 @@ public final class SqliteStoreEntitlementRepository implements StoreEntitlementR
     }
 
     @Override
-    public boolean hasEntitlement(final UUID playerId, final String entitlementKey) {
-        final String sql = "SELECT 1 FROM " + this.entitlementsTableName + " WHERE player_uuid = ? AND entitlement_key = ?";
+    public Map<String, StoreEntitlementRecord> loadPlayerEntitlements(final UUID playerId) {
+        final String sql = "SELECT entitlement_key, product_id, granted_at FROM " + this.entitlementsTableName + " WHERE player_uuid = ?";
+        final Map<String, StoreEntitlementRecord> entitlements = new LinkedHashMap<>();
         try (Connection connection = this.databaseProvider.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, playerId.toString());
-            statement.setString(2, entitlementKey);
             try (ResultSet resultSet = statement.executeQuery()) {
-                return resultSet.next();
+                while (resultSet.next()) {
+                    final StoreEntitlementRecord record = new StoreEntitlementRecord(
+                            resultSet.getString("entitlement_key"),
+                            resultSet.getString("product_id"),
+                            resultSet.getLong("granted_at")
+                    );
+                    entitlements.put(record.entitlementKey(), record);
+                }
             }
+            connection.commit();
+            return entitlements;
         } catch (final SQLException exception) {
-            throw new IllegalStateException("Failed to check store entitlement for " + playerId, exception);
+            throw new IllegalStateException("Failed to load store entitlements for " + playerId, exception);
         }
     }
 
     @Override
-    public void upsert(
+    public void upsertBatch(
         final Connection connection,
         final UUID playerId,
-        final String entitlementKey,
-        final String productId,
-        final long grantedAtEpochSecond
+        final Collection<DirtyEntitlementGrant> grants
     ) {
+        if (grants.isEmpty()) {
+            return;
+        }
+
         final String sql = """
             INSERT INTO %s (player_uuid, entitlement_key, product_id, granted_at)
             VALUES (?, ?, ?, ?)
@@ -51,13 +67,16 @@ public final class SqliteStoreEntitlementRepository implements StoreEntitlementR
             """.formatted(this.entitlementsTableName);
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, playerId.toString());
-            statement.setString(2, entitlementKey);
-            statement.setString(3, productId);
-            statement.setLong(4, grantedAtEpochSecond);
-            statement.executeUpdate();
+            for (final DirtyEntitlementGrant grant : grants) {
+                statement.setString(1, playerId.toString());
+                statement.setString(2, grant.entitlementKey());
+                statement.setString(3, grant.productId());
+                statement.setLong(4, grant.grantedAtEpochSecond());
+                statement.addBatch();
+            }
+            statement.executeBatch();
         } catch (final SQLException exception) {
-            throw new IllegalStateException("Failed to upsert store entitlement for " + playerId, exception);
+            throw new IllegalStateException("Failed to batch upsert store entitlements for " + playerId, exception);
         }
     }
 }

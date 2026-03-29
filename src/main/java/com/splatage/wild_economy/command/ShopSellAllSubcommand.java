@@ -26,7 +26,7 @@ public final class ShopSellAllSubcommand implements CommandExecutor {
         }
 
         this.platformExecutor.runOnPlayer(player, () -> {
-            final SellAllResult result = this.exchangeService.sellAll(player.getUniqueId());
+            final SellAllResult result = this.exchangeService.sellAll(player);
             ExchangeMessageFormatter.sendSellAll(player, result);
         });
 

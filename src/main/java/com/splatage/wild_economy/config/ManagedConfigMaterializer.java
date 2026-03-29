@@ -34,7 +34,7 @@ public final class ManagedConfigMaterializer {
         ),
         new ManagedConfigFile(
             "layout.yml",
-            "Review GUI browse structure in layout.yml; this file is consumed directly by the GUI rather than the catalog generator."
+            "Review GUI browse structure in layout.yml; this file is authoritative for presentation only and remains separate from catalogue/classification truth."
         ),
         new ManagedConfigFile(
             "messages.yml",

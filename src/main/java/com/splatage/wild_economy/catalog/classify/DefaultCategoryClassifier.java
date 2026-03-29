@@ -2,6 +2,7 @@ package com.splatage.wild_economy.catalog.classify;
 
 import com.splatage.wild_economy.catalog.model.CatalogCategory;
 import com.splatage.wild_economy.catalog.model.ItemFacts;
+import com.splatage.wild_economy.catalog.policy.CatalogSafetyExclusions;
 import java.util.Set;
 
 public final class DefaultCategoryClassifier implements CategoryClassifier {
@@ -62,21 +63,6 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
         "shulker_shell"
     );
 
-    private static final Set<String> WOOD_FAMILY_PREFIXES = Set.of(
-        "oak",
-        "spruce",
-        "birch",
-        "jungle",
-        "acacia",
-        "dark_oak",
-        "mangrove",
-        "cherry",
-        "pale_oak",
-        "bamboo",
-        "crimson",
-        "warped"
-    );
-
     public DefaultCategoryClassifier() {
     }
 
@@ -84,35 +70,23 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
     public CatalogCategory classify(final ItemFacts facts) {
         final String key = facts.key();
 
-        if (isWood(key)) {
-            return CatalogCategory.WOODS;
-        }
-        if (isRedstone(key)) {
-            return CatalogCategory.REDSTONE;
-        }
-        if (isStone(key)) {
-            return CatalogCategory.STONE;
-        }
-        if (isOreOrMineral(key)) {
-            return CatalogCategory.ORES_AND_MINERALS;
-        }
-        if (isFarming(key)) {
-            return CatalogCategory.FARMING;
+        if (CatalogSafetyExclusions.isHardDisabled(key)) {
+            return CatalogCategory.MISC;
         }
         if (isFood(key, facts.edible())) {
             return CatalogCategory.FOOD;
         }
+        if (isFarming(key)) {
+            return CatalogCategory.FARMING;
+        }
         if (isMobDrop(key)) {
             return CatalogCategory.MOB_DROPS;
         }
-        if (isNether(key)) {
-            return CatalogCategory.NETHER;
+        if (isOreOrMineral(key)) {
+            return CatalogCategory.ORES_AND_MINERALS;
         }
-        if (isEnd(key)) {
-            return CatalogCategory.END;
-        }
-        if (isBrewing(key)) {
-            return CatalogCategory.BREWING;
+        if (isRedstone(key)) {
+            return CatalogCategory.REDSTONE;
         }
         if (isTool(key)) {
             return CatalogCategory.TOOLS;
@@ -122,6 +96,21 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
         }
         if (isTransport(key)) {
             return CatalogCategory.TRANSPORT;
+        }
+        if (isBrewing(key)) {
+            return CatalogCategory.BREWING;
+        }
+        if (isNether(key)) {
+            return CatalogCategory.NETHER;
+        }
+        if (isEnd(key)) {
+            return CatalogCategory.END;
+        }
+        if (isWood(key)) {
+            return CatalogCategory.WOODS;
+        }
+        if (isStone(key)) {
+            return CatalogCategory.STONE;
         }
         if (isDecoration(key)) {
             return CatalogCategory.DECORATION;
@@ -134,56 +123,26 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
         return key.endsWith("_log")
             || key.endsWith("_wood")
             || key.endsWith("_planks")
-            || key.endsWith("_sapling")
-            || key.endsWith("_leaves")
-            || key.endsWith("_hanging_sign")
-            || key.endsWith("_sign")
-            || key.endsWith("_boat")
-            || key.endsWith("_chest_boat")
-            || key.endsWith("_raft")
-            || key.endsWith("_chest_raft")
-            || key.endsWith("_shelf")
-            || key.contains("mangrove")
-            || key.contains("bamboo_block")
-            || key.contains("bamboo_planks")
-            || key.contains("bamboo_mosaic")
-            || key.contains("stripped_")
-            || isWoodFamilyCrafted(key);
-    }
-
-    private boolean isWoodFamilyCrafted(final String key) {
-        for (final String prefix : WOOD_FAMILY_PREFIXES) {
-            if (!key.startsWith(prefix + "_")) {
-                continue;
-            }
-            return key.endsWith("_button")
-                || key.endsWith("_door")
-                || key.endsWith("_fence")
-                || key.endsWith("_fence_gate")
-                || key.endsWith("_trapdoor")
-                || key.endsWith("_pressure_plate")
-                || key.endsWith("_slab")
-                || key.endsWith("_stairs")
-                || key.endsWith("_shelf");
-        }
-        return false;
+            || key.endsWith("_stem")
+            || key.endsWith("_hyphae")
+            || key.startsWith("stripped_");
     }
 
     private boolean isStone(final String key) {
-        return key.contains("stone")
-            || key.contains("cobble")
-            || key.contains("deepslate")
-            || key.contains("tuff")
-            || key.contains("andesite")
-            || key.contains("granite")
-            || key.contains("diorite")
-            || key.contains("blackstone")
-            || key.contains("basalt")
-            || key.contains("calcite")
-            || key.contains("dripstone")
-            || key.contains("brick")
-            || key.equals("smooth_quartz")
-            || key.equals("quartz_bricks");
+        return key.equals("stone")
+            || key.equals("cobblestone")
+            || key.equals("smooth_stone")
+            || key.endsWith("_stone")
+            || key.equals("deepslate")
+            || key.equals("cobbled_deepslate")
+            || key.equals("tuff")
+            || key.equals("andesite")
+            || key.equals("granite")
+            || key.equals("diorite")
+            || key.equals("blackstone")
+            || key.equals("basalt")
+            || key.equals("calcite")
+            || key.equals("dripstone_block");
     }
 
     private boolean isOreOrMineral(final String key) {
@@ -200,19 +159,7 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
             || key.equals("amethyst_shard")
             || key.equals("quartz")
             || key.equals("netherite_scrap")
-            || key.equals("netherite_ingot")
-            || key.endsWith("_block") && (
-                key.startsWith("iron_")
-                    || key.startsWith("gold_")
-                    || key.startsWith("diamond_")
-                    || key.startsWith("emerald_")
-                    || key.startsWith("lapis_")
-                    || key.startsWith("redstone_")
-                    || key.startsWith("copper_")
-                    || key.startsWith("coal_")
-                    || key.startsWith("amethyst_")
-                    || key.startsWith("netherite_")
-            );
+            || key.equals("netherite_ingot");
     }
 
     private boolean isFarming(final String key) {
@@ -224,11 +171,10 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
             || key.equals("pumpkin_seeds")
             || key.equals("torchflower_seeds")
             || key.equals("pitcher_pod")
-            || key.contains("crop")
-            || key.contains("farmland")
+            || key.endsWith("_sapling")
+            || key.endsWith("_propagule")
             || key.contains("cocoa")
-            || key.contains("vine")
-            || key.contains("propagule");
+            || key.equals("vine");
     }
 
     private boolean isFood(final String key, final boolean edible) {
@@ -244,8 +190,7 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
     }
 
     private boolean isMobDrop(final String key) {
-        return MOB_DROP_EXACT.contains(key)
-            || key.endsWith("_spawn_egg");
+        return MOB_DROP_EXACT.contains(key);
     }
 
     private boolean isNether(final String key) {
@@ -256,11 +201,7 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
             || key.contains("netherrack")
             || key.contains("crimson")
             || key.contains("warped")
-            || key.contains("soul_")
-            || key.contains("blackstone")
-            || key.contains("ancient_debris")
-            || key.contains("shroomlight")
-            || key.contains("glowstone");
+            || key.contains("soul_");
     }
 
     private boolean isEnd(final String key) {
@@ -268,39 +209,23 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
             || key.contains("chorus")
             || key.contains("purpur")
             || key.contains("shulker")
-            || key.contains("elytra")
-            || key.contains("dragon_");
-    }
-
-    private boolean isRedstone(final String key) {
-        return key.equals("redstone")
-            || key.contains("repeater")
-            || key.contains("comparator")
-            || key.contains("observer")
-            || key.contains("piston")
-            || key.contains("hopper")
-            || key.contains("dropper")
-            || key.contains("dispenser")
-            || key.contains("daylight_detector")
-            || key.contains("target")
-            || key.contains("lectern")
-            || key.contains("tripwire")
-            || key.contains("pressure_plate")
-            || key.contains("redstone_lamp")
-            || key.contains("sculk_sensor")
-            || key.contains("calibrated_sculk_sensor");
+            || key.contains("dragon")
+            || key.equals("elytra");
     }
 
     private boolean isBrewing(final String key) {
         return key.contains("potion")
             || key.contains("brewing")
             || key.contains("cauldron")
-            || key.contains("blaze_powder")
-            || key.contains("ghast_tear")
             || key.contains("glistering_melon")
+            || key.contains("blaze_powder")
+            || key.contains("blaze_rod")
             || key.contains("nether_wart")
+            || key.contains("ghast_tear")
+            || key.contains("rabbit_foot")
+            || key.contains("phantom_membrane")
             || key.contains("dragon_breath")
-            || key.contains("phantom_membrane");
+            || key.contains("magma_cream");
     }
 
     private boolean isTool(final String key) {
@@ -309,15 +234,12 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
             || key.endsWith("_shovel")
             || key.endsWith("_hoe")
             || key.endsWith("_shears")
-            || key.endsWith("_bucket")
-            || key.equals("flint_and_steel")
-            || key.equals("fishing_rod")
-            || key.equals("carrot_on_a_stick")
-            || key.equals("warped_fungus_on_a_stick")
-            || key.equals("brush")
-            || key.equals("spyglass")
-            || key.equals("clock")
-            || key.equals("compass")
+            || key.endsWith("_brush")
+            || key.endsWith("_flint_and_steel")
+            || key.endsWith("_fishing_rod")
+            || key.endsWith("_spyglass")
+            || key.endsWith("_clock")
+            || key.endsWith("_compass")
             || key.equals("recovery_compass");
     }
 
@@ -327,43 +249,56 @@ public final class DefaultCategoryClassifier implements CategoryClassifier {
             || key.endsWith("_chestplate")
             || key.endsWith("_leggings")
             || key.endsWith("_boots")
+            || key.equals("shield")
             || key.equals("bow")
             || key.equals("crossbow")
             || key.equals("trident")
-            || key.equals("shield")
-            || key.equals("arrow")
-            || key.equals("spectral_arrow")
-            || key.equals("tipped_arrow")
-            || key.contains("mace");
+            || key.equals("mace")
+            || key.equals("totem_of_undying");
     }
 
     private boolean isTransport(final String key) {
-        return key.contains("minecart")
-            || key.contains("rail")
-            || key.contains("boat")
-            || key.contains("raft")
+        return key.endsWith("_boat")
+            || key.endsWith("_chest_boat")
+            || key.endsWith("_raft")
+            || key.endsWith("_chest_raft")
+            || key.contains("minecart")
             || key.equals("saddle")
-            || key.equals("lead");
+            || key.equals("elytra")
+            || key.equals("carrot_on_a_stick")
+            || key.equals("warped_fungus_on_a_stick");
     }
 
     private boolean isDecoration(final String key) {
-        return key.contains("banner")
-            || key.contains("bed")
-            || key.contains("carpet")
-            || key.contains("painting")
-            || key.contains("flower_pot")
-            || key.contains("candle")
-            || key.contains("lantern")
-            || key.contains("glass")
-            || key.contains("terracotta")
-            || key.contains("concrete")
-            || key.contains("coral")
-            || key.contains("pottery_sherd")
-            || key.contains("head")
-            || key.contains("skull")
-            || key.contains("frame")
-            || key.contains("amethyst_cluster")
-            || key.contains("sea_pickle");
+        return key.endsWith("_sign")
+            || key.endsWith("_hanging_sign")
+            || key.endsWith("_banner")
+            || key.equals("painting")
+            || key.equals("item_frame")
+            || key.equals("glow_item_frame")
+            || key.equals("flower_pot")
+            || key.endsWith("_candle")
+            || key.endsWith("_carpet");
+    }
+
+    private boolean isRedstone(final String key) {
+        return key.equals("redstone")
+            || key.equals("repeater")
+            || key.equals("comparator")
+            || key.equals("observer")
+            || key.equals("hopper")
+            || key.equals("dispenser")
+            || key.equals("dropper")
+            || key.equals("piston")
+            || key.equals("sticky_piston")
+            || key.equals("lever")
+            || key.endsWith("_button")
+            || key.endsWith("_pressure_plate")
+            || key.equals("daylight_detector")
+            || key.equals("tripwire_hook")
+            || key.equals("target")
+            || key.equals("lightning_rod")
+            || key.equals("sculk_sensor")
+            || key.equals("calibrated_sculk_sensor");
     }
 }
-

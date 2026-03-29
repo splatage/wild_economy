@@ -8,23 +8,23 @@ import com.splatage.wild_economy.exchange.domain.SellHandResult;
 import com.splatage.wild_economy.exchange.domain.SellPreviewResult;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
+import org.bukkit.entity.Player;
 
 public interface ExchangeService {
 
-    SellHandResult sellHand(UUID playerId);
+    SellHandResult sellHand(Player player);
 
-    SellAllResult sellAll(UUID playerId);
+    SellAllResult sellAll(Player player);
 
-    SellContainerResult sellContainer(UUID playerId);
+    SellContainerResult sellContainer(Player player);
 
-    SellPreviewResult previewInventorySell(UUID playerId);
+    SellPreviewResult previewInventorySell(Player player);
 
-    SellPreviewResult previewContainerSell(UUID playerId);
+    SellPreviewResult previewContainerSell(Player player);
 
-    BuyResult buy(UUID playerId, ItemKey itemKey, int amount);
+    BuyResult buy(Player player, ItemKey itemKey, int amount);
 
-    BuyResult buyQuoted(UUID playerId, ItemKey itemKey, int amount, BigDecimal quotedUnitPrice);
+    BuyResult buyQuoted(Player player, ItemKey itemKey, int amount, BigDecimal quotedUnitPrice);
 
     List<ExchangeCatalogView> browseLayout(
         String layoutGroupKey,

@@ -8,7 +8,6 @@ import com.splatage.wild_economy.exchange.domain.SellPreviewResult;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
@@ -34,9 +33,8 @@ public final class FoliaSafeExchangeSellService implements ExchangeSellService {
     }
 
     @Override
-    public SellHandResult sellHand(final UUID playerId) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+    public SellHandResult sellHand(final Player player) {
+        if (player == null || !player.isOnline()) {
             return new SellHandResult(false, null, RejectionReason.INTERNAL_ERROR, "Player is not online");
         }
 
@@ -44,13 +42,12 @@ public final class FoliaSafeExchangeSellService implements ExchangeSellService {
             return new SellHandResult(false, null, RejectionReason.INTERNAL_ERROR, OFF_THREAD_MESSAGE);
         }
 
-        return this.delegate.sellHand(playerId);
+        return this.delegate.sellHand(player);
     }
 
     @Override
-    public SellAllResult sellAll(final UUID playerId) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+    public SellAllResult sellAll(final Player player) {
+        if (player == null || !player.isOnline()) {
             return new SellAllResult(false, List.of(), BigDecimal.ZERO, List.of(), "Player is not online");
         }
 
@@ -58,13 +55,12 @@ public final class FoliaSafeExchangeSellService implements ExchangeSellService {
             return new SellAllResult(false, List.of(), BigDecimal.ZERO, List.of(), OFF_THREAD_MESSAGE);
         }
 
-        return this.delegate.sellAll(playerId);
+        return this.delegate.sellAll(player);
     }
 
     @Override
-    public SellContainerResult sellContainer(final UUID playerId) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+    public SellContainerResult sellContainer(final Player player) {
+        if (player == null || !player.isOnline()) {
             return new SellContainerResult(false, List.of(), BigDecimal.ZERO, List.of(), null, "Player is not online");
         }
 
@@ -84,13 +80,12 @@ public final class FoliaSafeExchangeSellService implements ExchangeSellService {
             );
         }
 
-        return this.delegate.sellContainer(playerId);
+        return this.delegate.sellContainer(player);
     }
 
     @Override
-    public SellPreviewResult previewInventorySell(final UUID playerId) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+    public SellPreviewResult previewInventorySell(final Player player) {
+        if (player == null || !player.isOnline()) {
             return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), "Player is not online");
         }
 
@@ -98,14 +93,13 @@ public final class FoliaSafeExchangeSellService implements ExchangeSellService {
             return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), OFF_THREAD_MESSAGE);
         }
 
-        return this.delegate.previewInventorySell(playerId);
+        return this.delegate.previewInventorySell(player);
     }
 
 
     @Override
-    public SellPreviewResult previewContainerSell(final UUID playerId) {
-        final Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
+    public SellPreviewResult previewContainerSell(final Player player) {
+        if (player == null || !player.isOnline()) {
             return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), "Player is not online");
         }
 
@@ -118,7 +112,7 @@ public final class FoliaSafeExchangeSellService implements ExchangeSellService {
             return new SellPreviewResult(false, List.of(), BigDecimal.ZERO, List.of(), CROSS_REGION_CONTAINER_MESSAGE);
         }
 
-        return this.delegate.previewContainerSell(playerId);
+        return this.delegate.previewContainerSell(player);
     }
 
     private boolean isSupportedContainerTarget(final Block targetBlock) {

@@ -5,7 +5,8 @@ import java.util.Map;
 
 public enum MigrationDomain {
     EXCHANGE("exchange", "exchange_prefix"),
-    ECONOMY("economy", "economy_prefix");
+    ECONOMY("economy", "economy_prefix"),
+    STORE("store", "store_prefix");
 
     private final String resourceDirectoryName;
     private final String placeholderKey;
@@ -20,7 +21,7 @@ public enum MigrationDomain {
     }
 
     public String schemaVersionTableName(final DatabaseConfig databaseConfig) {
-        return this.tablePrefix(databaseConfig) + "schema_version";
+        return this.tablePrefix(databaseConfig) + this.resourceDirectoryName + "_schema_version";
     }
 
     public Map<String, String> placeholders(final DatabaseConfig databaseConfig) {
@@ -35,6 +36,7 @@ public enum MigrationDomain {
         return switch (this) {
             case EXCHANGE -> databaseConfig.exchangeTablePrefix();
             case ECONOMY -> databaseConfig.economyTablePrefix();
+            case STORE -> databaseConfig.storeTablePrefix();
         };
     }
 }
