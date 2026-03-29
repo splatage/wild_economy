@@ -7,48 +7,81 @@ layout:
           label: Farm
           item-key-patterns:
           - '*_sapling'
+          - '*_propagule'
           - '*_seeds'
           - '*_berries'
+          item-keys:
           - bamboo
-          - bamboo_block
           - cactus
-          - carrot
+          - cactus_flower
           - cocoa_beans
+          - chorus_flower
+          - chorus_fruit
+          - crimson_fungus
+          - crimson_roots
           - kelp
           - melon
-          - melon_slice
-          - melon_seeds
+          - nether_sprouts
           - nether_wart
-          - potato
+          - pitcher_pod
           - pumpkin
-          - pumpkin_seeds
           - sugar_cane
-          - sweet_berries
-          - torchflower_seeds
-          - wheat
-          - wheat_seeds
-          - beetroot
-          - beetroot_seeds
-          - chorus_fruit
-          - chorus_flower
+          - twisting_vines
+          - vine
+          - warped_fungus
+          - warped_roots
+          - weeping_vines
+          - bee_nest
+          - beehive
+          note: Crop, bee, and propagation items
+        PLANTS:
+          label: Plants / Garden
+          note: Live flora, roots, mushrooms, and growables that browse better as
+            agriculture than decoration
+          item-keys:
+          - allium
+          - azalea
+          - azure_bluet
+          - big_dripleaf
+          - blue_orchid
+          - brown_mushroom
+          - brown_mushroom_block
+          - bush
+          - closed_eyeblossom
+          - cornflower
+          - dandelion
+          - dead_bush
+          - fern
+          - firefly_bush
+          - flowering_azalea
+          - hanging_roots
+          - large_fern
+          - leaf_litter
+          - mangrove_roots
+          - muddy_mangrove_roots
+          - open_eyeblossom
+          - red_mushroom
+          - red_mushroom_block
+          - rose_bush
+          - sea_pickle
         FOOD:
           label: Food
           item-key-patterns:
           - '*_stew'
           - '*_soup'
           - '*_pie'
-          - '*_apple'
-          - '*_fish'
-          - '*_beef'
-          - '*_porkchop'
-          - '*_mutton'
-          - '*_rabbit'
-          - '*_chicken'
+          - cooked_*
+          item-keys:
+          - apple
           - baked_potato
+          - beef
+          - beetroot
           - beetroot_soup
           - bread
           - cake
-          - cooked_*
+          - carrot
+          - chicken
+          - cod
           - cookie
           - dried_kelp
           - enchanted_golden_apple
@@ -56,62 +89,63 @@ layout:
           - golden_apple
           - golden_carrot
           - honey_bottle
+          - melon_slice
+          - mutton
           - mushroom_stew
           - poisonous_potato
+          - porkchop
+          - potato
           - pufferfish
           - pumpkin_pie
+          - rabbit
           - rabbit_stew
-          - rotten_flesh
+          - salmon
           - suspicious_stew
+          - sweet_berries
+          - wheat
     MINING_MINERALS:
       label: Mining / Minerals
       item-key-patterns:
       - '*_ore'
-      - ancient_debris
-      - coal
-      - coal_block
       - raw_*
       - raw_*_block
       - '*_ingot'
       - '*_nugget'
       - '*_gem'
+      - '*_cluster'
+      - '*_bud'
+      item-keys:
+      - ancient_debris
+      - amethyst_block
+      - amethyst_shard
+      - budding_amethyst
+      - charcoal
+      - coal
+      - coal_block
+      - copper_block
       - diamond
       - diamond_block
       - emerald
       - emerald_block
-      - lapis_lazuli
-      - lapis_block
-      - redstone
-      - redstone_block
-      - quartz
-      - quartz_block
-      - quartz_bricks
-      - quartz_pillar
-      - smooth_quartz
-      - amethyst_shard
-      - amethyst_block
-      - budding_amethyst
-      - '*_cluster'
-      - '*_bud'
-      - calcite
-      - dripstone_block
-      - pointed_dripstone
-      - glowstone
-      - glowstone_dust
       - flint
-      - obsidian
-      - crying_obsidian
+      - glowstone_dust
+      - gold_block
+      - iron_block
+      - lapis_block
+      - lapis_lazuli
+      - netherite_block
+      - netherite_scrap
+      - quartz
     MOB_DROPS:
       label: Mob Drops
-      item-key-patterns:
-      - blue_egg
-      - brown_egg
-      - turtle_egg
-      - sniffer_egg
+      item-keys:
+      - armadillo_scute
       - blaze_powder
       - blaze_rod
+      - blue_egg
       - bone
       - bone_meal
+      - brown_egg
       - breeze_rod
       - egg
       - ender_pearl
@@ -124,7 +158,6 @@ layout:
       - ink_sac
       - leather
       - magma_cream
-      - membrane
       - phantom_membrane
       - prismarine_crystals
       - prismarine_shard
@@ -134,8 +167,10 @@ layout:
       - scute
       - shulker_shell
       - slime_ball
+      - sniffer_egg
       - spider_eye
       - string
+      - turtle_egg
       - turtle_scute
       - wither_rose
     BUILDING_MATERIALS:
@@ -143,71 +178,68 @@ layout:
       children:
         STONE:
           label: Stone
-          note: Limited to shallow / first-level derivation
-          item-key-patterns:
-          - stone
-          - cobblestone
-          - cobbled_deepslate
-          - blackstone
-          - basalt
-          - smooth_basalt
-          - tuff
+          icon: stone
+          note: Raw and shallow stone-family materials, including base polished forms
+            and resin feedstock
+          item-keys:
           - andesite
-          - diorite
-          - granite
+          - basalt
+          - blackstone
+          - calcite
+          - cobbled_deepslate
+          - cobblestone
+          - crying_obsidian
           - deepslate
+          - diorite
+          - dripstone_block
           - end_stone
+          - gilded_blackstone
+          - glowstone
+          - granite
+          - lodestone
+          - magma_block
+          - mossy_cobblestone
           - netherrack
+          - obsidian
+          - pointed_dripstone
+          - prismarine
+          - quartz_block
+          - red_sandstone
+          - sandstone
           - soul_sand
           - soul_soil
-          - sandstone
-          - red_sandstone
+          - stone
           - terracotta
-          - white_terracotta
-          - orange_terracotta
-          - magenta_terracotta
-          - light_blue_terracotta
-          - yellow_terracotta
-          - lime_terracotta
-          - pink_terracotta
-          - gray_terracotta
-          - light_gray_terracotta
-          - cyan_terracotta
-          - purple_terracotta
-          - blue_terracotta
-          - brown_terracotta
-          - green_terracotta
-          - red_terracotta
-          - black_terracotta
-          - chiseled_*stone
-          - smooth_*stone
-          - polished_*stone
-          - cut_*stone
-          - '*_bricks'
-          - 'polished*e'
-
+          - tuff
+          - polished_andesite
+          - polished_basalt
+          - polished_blackstone
+          - polished_deepslate
+          - polished_diorite
+          - polished_granite
+          - polished_tuff
+          - resin_clump
         WOOD:
-          label: Wood
-          note: Limited to shallow / first-level derivation
+          label: Woods
+          note: Logs, leaves, stems, stripped forms, and planks
           item-key-patterns:
           - '*_log'
           - '*_wood'
           - '*_stem'
           - '*_hyphae'
-          - stripped_*_log
-          - stripped_*_wood
-          - stripped_*_stem
-          - stripped_*_hyphae
+          - '*_leaves'
+          - stripped_*
           - '*_planks'
-        CONTRUCTION:
-          label: Contruction
-          note: Deeper crafting-chain building outputs
-          icon: 'glass'
+          item-keys:
+          - bamboo_block
+        CONSTRUCTION:
+          label: Construction
+          icon: oak_door
+          note: Built forms and deeper building outputs
           item-key-patterns:
           - chiseled_*
-          - smooth_*
-          - polished_*
           - cut_*
+          - smooth_*
           - '*_slab'
           - '*_stairs'
           - '*_wall'
@@ -218,25 +250,47 @@ layout:
           - '*_bars'
           - '*_grate'
           - '*_bricks'
+          - '*_brick'
+          - '*_pillar'
+          - '*_tile'
+          - '*_tiles'
+          item-keys:
+          - bamboo_mosaic
           - brick
           - bricks
-          - '*_pillar'
-          - stone_bricks
-          - deepslate_bricks
-          - deepslate_tiles
-          - nether_bricks
-          - red_nether_bricks
-          - mud_bricks
+          - cut_copper
+          - exposed_chiseled_copper
+          - exposed_copper
+          - exposed_cut_copper
+          - nether_brick
+          - oxidized_chiseled_copper
+          - oxidized_copper
+          - oxidized_cut_copper
           - purpur_block
           - purpur_pillar
-          - bamboo_mosaic
+          - resin_brick
+          - stone_bricks
+          - waxed_chiseled_copper
+          - waxed_copper
+          - waxed_cut_copper
+          - waxed_exposed_chiseled_copper
+          - waxed_exposed_copper
+          - waxed_exposed_cut_copper
+          - waxed_oxidized_chiseled_copper
+          - waxed_oxidized_copper
+          - waxed_oxidized_cut_copper
+          - waxed_weathered_chiseled_copper
+          - waxed_weathered_copper
+          - waxed_weathered_cut_copper
+          - weathered_chiseled_copper
+          - weathered_copper
+          - weathered_cut_copper
         OTHER_BUILDING:
-          label: Other building
-          note: Deeper crafting-chain building outputs
+          label: Coloured / Glass
+          note: Decorative building palettes
+          icon: white_stained_glass
           item-key-patterns:
           - '*_pane'
-          - glass
-          - tinted_glass
           - '*_concrete'
           - '*_concrete_powder'
           - '*_glazed_terracotta'
@@ -244,10 +298,10 @@ layout:
           - '*_carpet'
           - '*_stained_glass'
           - '*_stained_glass_pane'
-          - '*_tile'
-          - '*_tiles'
+          item-keys:
+          - glass
           - packed_mud
-          - bookshelf
+          - tinted_glass
     REDSTONE_UTILITIES:
       label: Redstone / Utilities
       children:
@@ -255,61 +309,63 @@ layout:
           label: Brewing / Enchanting
           item-key-patterns:
           - '*_potion'
-          - potion
-          - splash_potion
-          - lingering_potion
-          - glass_bottle
-          - experience_bottle
+          item-keys:
+          - anvil
           - brewing_stand
-          - cauldron
-          - blaze_powder
-          - blaze_rod
-          - nether_wart
-          - ghast_tear
-          - magma_cream
-          - glistering_melon_slice
-          - fermented_spider_eye
-          - phantom_membrane
+          - chipped_anvil
+          - damaged_anvil
           - dragon_breath
           - enchanted_book
           - enchanting_table
-          - lapis_lazuli
-          - anvil
-          - chipped_anvil
-          - damaged_anvil
+          - experience_bottle
+          - glass_bottle
           - grindstone
+          - potion
           - smithing_table
         REDSTONE:
           label: Redstone
-          note: Creative-inventory style filing takes priority
+          note: Functional redstone components
           item-key-patterns:
-          - redstone
-          - redstone_block
-          - redstone_torch
-          - repeater
+          - '*_button'
+          - '*_pressure_plate'
+          item-keys:
+          - calibrated_sculk_sensor
           - comparator
-          - observer
+          - crafter
+          - daylight_detector
           - dispenser
           - dropper
           - hopper
-          - target
-          - daylight_detector
-          - calibrated_sculk_sensor
-          - sculk_sensor
-          - tripwire_hook
           - lever
-          - '*_button'
-          - '*_pressure_plate'
-          - piston
-          - sticky_piston
-          - note_block
-          - jukebox
-          - lectern
           - lightning_rod
-          - crafter
-          - detector_rail
-          - powered_rail
-          - activator_rail
+          - note_block
+          - observer
+          - piston
+          - redstone
+          - redstone_block
+          - redstone_lamp
+          - redstone_torch
+          - repeater
+          - sculk_sensor
+          - sticky_piston
+          - target
+          - tripwire_hook
+        VILLAGE:
+          label: Village / Workstations
+          icon: emerald
+          item-keys:
+          - barrel
+          - blast_furnace
+          - cartography_table
+          - cauldron
+          - composter
+          - crafting_table
+          - fletching_table
+          - furnace
+          - lectern
+          - loom
+          - smoker
+          - stonecutter
         TRANSPORT:
           label: Transport
           item-key-patterns:
@@ -318,17 +374,18 @@ layout:
           - '*_raft'
           - '*_chest_raft'
           - '*_minecart'
-          - minecart
-          - rail
-          - detector_rail
-          - powered_rail
+          item-keys:
           - activator_rail
-          - saddle
           - carrot_on_a_stick
-          - warped_fungus_on_a_stick
+          - detector_rail
           - elytra
-          - lead
           - firework_rocket
+          - lead
+          - minecart
+          - powered_rail
+          - rail
+          - saddle
+          - warped_fungus_on_a_stick
     COMBAT_ADVENTURE:
       label: Combat / Adventure
       children:
@@ -338,14 +395,15 @@ layout:
           - '*_sword'
           - '*_bow'
           - '*_spear'
+          item-keys:
+          - arrow
           - bow
           - crossbow
-          - trident
           - mace
-          - arrow
           - spectral_arrow
           - tipped_arrow
           - totem_of_undying
+          - trident
         TOOLS:
           label: Tools
           item-key-patterns:
@@ -353,19 +411,23 @@ layout:
           - '*_axe'
           - '*_shovel'
           - '*_hoe'
-          - shears
+          - '*_bucket'
+          item-keys:
           - brush
-          - fishing_rod
-          - flint_and_steel
+          - bucket
           - clock
           - compass
-          - recovery_compass
-          - spyglass
-          - bucket
-          - water_bucket
+          - fishing_rod
+          - flint_and_steel
           - lava_bucket
           - powder_snow_bucket
-          - '*_bucket'
+          - recovery_compass
+          - shears
+          - spyglass
+          - water_bucket
+          - filled_map
+          - ominous_bottle
+          note: Functional tools, buckets, navigation, and adventure utility
         ARMOR:
           label: Armor
           item-key-patterns:
@@ -374,8 +436,10 @@ layout:
           - '*_leggings'
           - '*_boots'
           - '*_horse_armor'
-          - shield
           - '*_armor_trim_smithing_template'
+          item-keys:
+          - netherite_upgrade_smithing_template
+          - shield
     MISC:
       label: Misc
       children:
@@ -384,58 +448,108 @@ layout:
           item-key-patterns:
           - '*_banner'
           - '*_banner_pattern'
+          - '*_bed'
+          - '*_coral'
+          - '*_coral_block'
+          - '*_coral_fan'
           - '*_sign'
           - '*_hanging_sign'
-          - painting
-          - item_frame
-          - glow_item_frame
-          - armor_stand
-          - flower_pot
-          - decorated_pot
-          - '*_pottery_sherd'
-          - end_rod
-          - candle
           - '*_candle'
-          - '*lantern'
-          - soul_lantern
-          - torch
-          - soul_torch
-          - head
           - '*_head'
           - '*_skull'
+          - '*_pottery_sherd'
+          - '*_lantern'
+          item-keys:
+          - armor_stand
+          - bell
+          - campfire
+          - carved_pumpkin
+          - candle
+          - copper_bulb
+          - copper_chain
+          - copper_golem_statue
+          - copper_torch
+          - decorated_pot
           - dragon_head
+          - end_rod
+          - exposed_copper_bulb
+          - exposed_copper_chain
+          - exposed_copper_golem_statue
+          - exposed_lightning_rod
+          - flower_pot
+          - glow_item_frame
+          - item_frame
+          - jack_o_lantern
+          - lantern
+          - oxidized_copper_bulb
+          - oxidized_copper_chain
+          - oxidized_copper_golem_statue
+          - painting
+          - soul_campfire
+          - soul_lantern
+          - soul_torch
+          - torch
+          - weathered_copper_bulb
+          - weathered_copper_chain
+          - weathered_copper_golem_statue
+          - waxed_copper_bulb
+          - waxed_copper_chain
+          - waxed_copper_golem_statue
+          - waxed_exposed_copper_bulb
+          - waxed_exposed_copper_chain
+          - waxed_exposed_copper_golem_statue
+          - waxed_oxidized_copper_bulb
+          - waxed_oxidized_copper_chain
+          - waxed_oxidized_copper_golem_statue
+          - waxed_weathered_copper_bulb
+          - waxed_weathered_copper_chain
+          - waxed_weathered_copper_golem_statue
         SOUNDS:
           label: Sound
           icon: music_disc_blocks
           item-key-patterns:
-          - music*
-          - disc*
-          - goat_horn_*
+          - music_disc_*
+          - disc_fragment_*
           - goat_horn
+          - goat_horn_*
         STORAGE:
           label: Storage
           icon: shulker_box
           item-key-patterns:
-          - '*shulker_box'
-          - '*bundle'
-          - '*chest'
-          - '*shelf'
+          - '*_shulker_box'
+          - '*_bundle'
+          - '*_chest'
+          - '*_shelf'
         DYE:
           label: Dyes
           icon: white_dye
           item-key-patterns:
-          - '*dye'
-
+          - '*_dye'
         OTHER:
           label: Other
+          note: Fallback bucket for anything not matched earlier
+          icon: bucket
           item-key-patterns:
+          - '*'
+          item-keys:
+          - beacon
+          - blue_ice
+          - book
+          - bowl
+          - clay
+          - clay_ball
+          - coarse_dirt
+          - conduit
           - echo_shard
-          - nautilus_shell
+          - end_crystal
+          - ender_eye
+          - fire_charge
+          - firework_star
           - heart_of_the_sea
-          - trial_key
-          - ominous_trial_key
           - heavy_core
           - name_tag
+          - nautilus_shell
           - nether_star
-          - dragon_egg
-          - book
+          - ominous_trial_key
+          - popped_chorus_fruit
+          - trial_key
