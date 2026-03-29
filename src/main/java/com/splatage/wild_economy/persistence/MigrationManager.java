@@ -111,10 +111,10 @@ public final class MigrationManager {
 
     private List<String> discoverMigrationResourceNames(final String resourceDirectory) {
         final URL directoryUrl = this.getClass().getClassLoader().getResource(resourceDirectory);
-        final List<String> discovered;
+        final List<String> discoveredRaw;
 
         if (directoryUrl != null) {
-            discovered = switch (directoryUrl.getProtocol()) {
+            discoveredRaw = switch (directoryUrl.getProtocol()) {
                 case "file" -> this.discoverFromDirectoryUrl(directoryUrl);
                 case "jar" -> this.discoverFromJarUrl(directoryUrl, resourceDirectory);
                 default -> throw new IllegalStateException(
@@ -122,13 +122,14 @@ public final class MigrationManager {
                 );
             };
         } else {
-            discovered = this.discoverFromCodeSource(resourceDirectory);
+            discoveredRaw = this.discoverFromCodeSource(resourceDirectory);
         }
 
-        if (discovered.isEmpty()) {
+        if (discoveredRaw.isEmpty()) {
             throw new IllegalStateException("No migration resources found under /" + resourceDirectory);
         }
 
+        final List<String> discovered = new ArrayList<>(discoveredRaw);
         discovered.sort(Comparator.comparingInt(this::extractVersion));
         return discovered;
     }
