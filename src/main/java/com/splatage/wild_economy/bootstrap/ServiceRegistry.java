@@ -457,6 +457,7 @@ public final class ServiceRegistry {
         marketActivityMenu.setShopMenuRouter(this.shopMenuRouter);
 
         this.shopMenuListener = new ShopMenuListener(
+                this.exchangeLayoutBrowseService,
                 rootMenu,
                 subcategoryMenu,
                 browseMenu,
@@ -687,6 +688,10 @@ public final class ServiceRegistry {
         if (this.stockService != null) {
             this.stockService.shutdown();
             this.stockService = null;
+        }
+        if (this.exchangeLayoutBrowseService != null) {
+            this.exchangeLayoutBrowseService.shutdown();
+            this.exchangeLayoutBrowseService = null;
         }
         if (this.storeRuntimeStateService != null) {
             this.storeRuntimeStateService.shutdown();

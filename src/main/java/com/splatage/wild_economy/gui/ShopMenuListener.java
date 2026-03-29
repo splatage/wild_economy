@@ -1,13 +1,18 @@
 package com.splatage.wild_economy.gui;
 
+import com.splatage.wild_economy.gui.browse.ExchangeLayoutBrowseService;
 import java.util.Objects;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 
 public final class ShopMenuListener implements Listener {
 
+    private final ExchangeLayoutBrowseService exchangeLayoutBrowseService;
     private final ExchangeRootMenu exchangeRootMenu;
     private final ExchangeSubcategoryMenu exchangeSubcategoryMenu;
     private final ExchangeBrowseMenu exchangeBrowseMenu;
@@ -20,6 +25,7 @@ public final class ShopMenuListener implements Listener {
     private final MarketActivityMenu marketActivityMenu;
 
     public ShopMenuListener(
+        final ExchangeLayoutBrowseService exchangeLayoutBrowseService,
         final ExchangeRootMenu exchangeRootMenu,
         final ExchangeSubcategoryMenu exchangeSubcategoryMenu,
         final ExchangeBrowseMenu exchangeBrowseMenu,
@@ -31,6 +37,7 @@ public final class ShopMenuListener implements Listener {
         final TopSupplierMenu topSupplierMenu,
         final MarketActivityMenu marketActivityMenu
     ) {
+        this.exchangeLayoutBrowseService = Objects.requireNonNull(exchangeLayoutBrowseService, "exchangeLayoutBrowseService");
         this.exchangeRootMenu = Objects.requireNonNull(exchangeRootMenu, "exchangeRootMenu");
         this.exchangeSubcategoryMenu = Objects.requireNonNull(exchangeSubcategoryMenu, "exchangeSubcategoryMenu");
         this.exchangeBrowseMenu = Objects.requireNonNull(exchangeBrowseMenu, "exchangeBrowseMenu");
@@ -41,6 +48,28 @@ public final class ShopMenuListener implements Listener {
         this.xpBottleMenu = Objects.requireNonNull(xpBottleMenu, "xpBottleMenu");
         this.topSupplierMenu = Objects.requireNonNull(topSupplierMenu, "topSupplierMenu");
         this.marketActivityMenu = Objects.requireNonNull(marketActivityMenu, "marketActivityMenu");
+    }
+
+    @EventHandler
+    public void onInventoryOpen(final InventoryOpenEvent event) {
+        final ShopMenuHolder holder = ShopMenuRouter.getShopMenuHolder(event.getView().getTopInventory());
+        if (holder == null || !this.isExchangeView(holder)) {
+            return;
+        }
+        if (event.getPlayer() instanceof Player player) {
+            this.exchangeLayoutBrowseService.handleExchangeViewOpened(player.getUniqueId());
+        }
+    }
+
+    @EventHandler
+    public void onInventoryClose(final InventoryCloseEvent event) {
+        final ShopMenuHolder holder = ShopMenuRouter.getShopMenuHolder(event.getView().getTopInventory());
+        if (holder == null || !this.isExchangeView(holder)) {
+            return;
+        }
+        if (event.getPlayer() instanceof Player player) {
+            this.exchangeLayoutBrowseService.handleExchangeViewClosed(player.getUniqueId());
+        }
     }
 
     @EventHandler
@@ -91,7 +120,8 @@ public final class ShopMenuListener implements Listener {
         }
     }
 
-@EventHandler
+
+    @EventHandler
     public void onInventoryDrag(final InventoryDragEvent event) {
         if (this.topSupplierMenu.isTopSupplierInventory(event.getView().getTopInventory())
             || this.marketActivityMenu.isMarketActivityInventory(event.getView().getTopInventory())) {
@@ -117,5 +147,12 @@ public final class ShopMenuListener implements Listener {
                 return;
             }
         }
+    }
+
+    private boolean isExchangeView(final ShopMenuHolder holder) {
+        return switch (holder.viewType()) {
+            case ROOT, SUBCATEGORY, BROWSE, DETAIL -> true;
+            default -> false;
+        };
     }
 }

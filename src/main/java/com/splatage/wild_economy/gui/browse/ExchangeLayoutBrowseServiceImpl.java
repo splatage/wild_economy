@@ -10,15 +10,23 @@ import com.splatage.wild_economy.exchange.service.ExchangeItemView;
 import com.splatage.wild_economy.exchange.stock.StockService;
 import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
 import com.splatage.wild_economy.gui.layout.LayoutChildDefinition;
+import com.splatage.wild_economy.gui.layout.LayoutGroupDefinition;
 import com.splatage.wild_economy.gui.layout.LayoutPlacement;
 import com.splatage.wild_economy.gui.layout.LayoutPlacementResolver;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public final class ExchangeLayoutBrowseServiceImpl implements ExchangeLayoutBrowseService {
+
+    private static final long PREWARM_DELAY_MILLIS = 50L;
 
     private final ExchangeCatalog exchangeCatalog;
     private final ExchangeBrowseService exchangeBrowseService;
@@ -28,7 +36,11 @@ public final class ExchangeLayoutBrowseServiceImpl implements ExchangeLayoutBrow
     private final Map<LayoutScopeKey, List<ExchangeCatalogEntry>> indexedEntriesCache;
     private final Map<LayoutScopeKey, List<ExchangeCatalogView>> visibleEntriesCache;
     private final Map<String, List<String>> visibleChildKeysCache;
+    private final Set<UUID> activeViewerIds;
+    private final ScheduledExecutorService prewarmScheduler;
     private volatile long cachedStockRevision;
+    private volatile long scheduledPrewarmRevision;
+    private volatile boolean shutdown;
 
     public ExchangeLayoutBrowseServiceImpl(
         final ExchangeCatalog exchangeCatalog,
@@ -45,7 +57,15 @@ public final class ExchangeLayoutBrowseServiceImpl implements ExchangeLayoutBrow
         this.indexedEntriesCache = new ConcurrentHashMap<>();
         this.visibleEntriesCache = new ConcurrentHashMap<>();
         this.visibleChildKeysCache = new ConcurrentHashMap<>();
+        this.activeViewerIds = ConcurrentHashMap.newKeySet();
+        this.prewarmScheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
+            final Thread thread = new Thread(runnable, "wild-economy-layout-browse-prewarm");
+            thread.setDaemon(true);
+            return thread;
+        });
         this.cachedStockRevision = Long.MIN_VALUE;
+        this.scheduledPrewarmRevision = Long.MIN_VALUE;
+        this.shutdown = false;
     }
 
     @Override
@@ -84,6 +104,31 @@ public final class ExchangeLayoutBrowseServiceImpl implements ExchangeLayoutBrow
             return List.of();
         }
         return this.visibleChildKeysCache.computeIfAbsent(layoutGroupKey, this::computeVisibleChildKeys);
+    }
+
+
+    @Override
+    public void handleExchangeViewOpened(final UUID playerId) {
+        if (playerId == null || this.shutdown) {
+            return;
+        }
+        this.activeViewerIds.add(playerId);
+    }
+
+    @Override
+    public void handleExchangeViewClosed(final UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        this.activeViewerIds.remove(playerId);
+        this.scheduleDeferredPrewarmIfDirty();
+    }
+
+    @Override
+    public void shutdown() {
+        this.shutdown = true;
+        this.activeViewerIds.clear();
+        this.prewarmScheduler.shutdownNow();
     }
 
     private List<ExchangeCatalogEntry> indexedEntries(
@@ -161,6 +206,75 @@ public final class ExchangeLayoutBrowseServiceImpl implements ExchangeLayoutBrow
             }
         }
         return List.copyOf(visibleChildren);
+    }
+
+    private void scheduleDeferredPrewarmIfDirty() {
+        if (this.shutdown || !this.activeViewerIds.isEmpty()) {
+            return;
+        }
+
+        final long currentRevision = this.stockService.cacheRevision();
+        if (currentRevision == this.cachedStockRevision) {
+            return;
+        }
+
+        synchronized (this) {
+            if (this.shutdown || !this.activeViewerIds.isEmpty()) {
+                return;
+            }
+            final long revisionToPrewarm = this.stockService.cacheRevision();
+            if (revisionToPrewarm == this.cachedStockRevision || this.scheduledPrewarmRevision == revisionToPrewarm) {
+                return;
+            }
+            this.scheduledPrewarmRevision = revisionToPrewarm;
+            this.prewarmScheduler.schedule(
+                () -> this.runDeferredPrewarm(revisionToPrewarm),
+                PREWARM_DELAY_MILLIS,
+                TimeUnit.MILLISECONDS
+            );
+        }
+    }
+
+    private void runDeferredPrewarm(final long expectedRevision) {
+        if (this.shutdown) {
+            return;
+        }
+
+        if (!this.activeViewerIds.isEmpty()) {
+            this.clearScheduledRevision(expectedRevision);
+            return;
+        }
+
+        final long currentRevision = this.stockService.cacheRevision();
+        if (currentRevision != expectedRevision) {
+            this.clearScheduledRevision(expectedRevision);
+            if (currentRevision != this.cachedStockRevision && this.activeViewerIds.isEmpty()) {
+                this.scheduleDeferredPrewarmIfDirty();
+            }
+            return;
+        }
+
+        try {
+            this.prewarmVisibleBrowseCaches();
+        } finally {
+            this.clearScheduledRevision(expectedRevision);
+        }
+    }
+
+    private void clearScheduledRevision(final long expectedRevision) {
+        synchronized (this) {
+            if (this.scheduledPrewarmRevision == expectedRevision) {
+                this.scheduledPrewarmRevision = Long.MIN_VALUE;
+            }
+        }
+    }
+
+    private void prewarmVisibleBrowseCaches() {
+        this.resetCachesIfRevisionChanged();
+        for (final LayoutGroupDefinition group : this.layoutBlueprint.orderedGroups()) {
+            this.countVisibleItems(group.key(), null);
+            this.listVisibleChildKeys(group.key());
+        }
     }
 
     private void resetCachesIfRevisionChanged() {
