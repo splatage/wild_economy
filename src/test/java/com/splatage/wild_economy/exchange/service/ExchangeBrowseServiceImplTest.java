@@ -21,6 +21,7 @@ import com.splatage.wild_economy.gui.layout.LayoutPlacementResolver;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class ExchangeBrowseServiceImplTest {
@@ -71,6 +72,30 @@ class ExchangeBrowseServiceImplTest {
             view.buyPrice(),
             "Browse layout pricing should come from the canonical pricing service"
         );
+    }
+
+
+    @Test
+    void browseLayout_reusesCachedVisibleEntriesWithinSameStockRevision() {
+        final ExchangeCatalog catalog = catalog(playerStockedEntry());
+        final PricingService pricingService = new PricingServiceImpl(catalog);
+        final CountingStockService stockService = new CountingStockService(
+            new StockSnapshot(ITEM_KEY, 75L, 100L, 0.75D, StockState.HEALTHY)
+        );
+        final LayoutBlueprint layoutBlueprint = layoutBlueprint();
+        final ExchangeBrowseServiceImpl browseService = new ExchangeBrowseServiceImpl(
+            catalog,
+            stockService,
+            pricingService,
+            layoutBlueprint,
+            new LayoutPlacementResolver(layoutBlueprint)
+        );
+
+        final List<ExchangeCatalogView> first = browseService.browseLayout("blocks", "logs", 0, 10);
+        final List<ExchangeCatalogView> second = browseService.browseLayout("blocks", "logs", 0, 10);
+
+        assertEquals(1, stockService.snapshotCalls(), "Stock snapshot should be resolved once for the cached browse result");
+        assertEquals(first, second, "Browse results should be stable across repeated calls within the same stock revision");
     }
 
     private static ExchangeCatalog catalog(final ExchangeCatalogEntry entry) {
@@ -194,6 +219,11 @@ class ExchangeBrowseServiceImplTest {
         }
 
         @Override
+        public long cacheRevision() {
+            return 0L;
+        }
+
+        @Override
         public StockMetricsSnapshot metricsSnapshot() {
             throw new UnsupportedOperationException();
         }
@@ -203,4 +233,68 @@ class ExchangeBrowseServiceImplTest {
             throw new UnsupportedOperationException();
         }
     }
+    private static final class CountingStockService implements StockService {
+        private final StockSnapshot snapshot;
+        private final AtomicInteger snapshotCalls = new AtomicInteger();
+
+        private CountingStockService(final StockSnapshot snapshot) {
+            this.snapshot = snapshot;
+        }
+
+        int snapshotCalls() {
+            return this.snapshotCalls.get();
+        }
+
+        @Override
+        public StockSnapshot getSnapshot(final ItemKey itemKey) {
+            this.snapshotCalls.incrementAndGet();
+            return this.snapshot;
+        }
+
+        @Override
+        public long getAvailableRoom(final ItemKey itemKey) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void addStock(final ItemKey itemKey, final int amount) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean tryConsume(final ItemKey itemKey, final int amount) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public int consumeUpTo(final ItemKey itemKey, final int amount) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void removeStock(final ItemKey itemKey, final int amount) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void flushDirtyNow() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long cacheRevision() {
+            return 0L;
+        }
+
+        @Override
+        public StockMetricsSnapshot metricsSnapshot() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void shutdown() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
 }

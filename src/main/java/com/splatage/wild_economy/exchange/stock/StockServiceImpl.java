@@ -22,6 +22,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -45,6 +46,7 @@ public final class StockServiceImpl implements StockService {
     private final LongAdder totalFlushedItems;
     private final LongAdder totalFlushOperations;
     private final LongAdder totalFlushFailures;
+    private final AtomicLong cacheRevision;
     private volatile long lastFlushDurationMillis;
     private volatile int lastFlushItemCount;
 
@@ -69,6 +71,7 @@ public final class StockServiceImpl implements StockService {
         this.totalFlushedItems = new LongAdder();
         this.totalFlushOperations = new LongAdder();
         this.totalFlushFailures = new LongAdder();
+        this.cacheRevision = new AtomicLong(0L);
         this.preloadCache();
         this.startFlushScheduler();
     }
@@ -102,6 +105,7 @@ public final class StockServiceImpl implements StockService {
         }
         this.stockCache.merge(itemKey, (long) amount, Long::sum);
         this.dirtyKeys.add(itemKey);
+        this.cacheRevision.incrementAndGet();
     }
 
     @Override
@@ -121,6 +125,7 @@ public final class StockServiceImpl implements StockService {
         });
         if (consumed.get()) {
             this.dirtyKeys.add(itemKey);
+            this.cacheRevision.incrementAndGet();
         }
         return consumed.get();
     }
@@ -140,6 +145,7 @@ public final class StockServiceImpl implements StockService {
         });
         if (consumed.get() > 0) {
             this.dirtyKeys.add(itemKey);
+            this.cacheRevision.incrementAndGet();
         }
         return consumed.get();
     }
@@ -178,6 +184,12 @@ public final class StockServiceImpl implements StockService {
                 }
             }
         }
+    }
+
+
+    @Override
+    public long cacheRevision() {
+        return this.cacheRevision.get();
     }
 
     @Override

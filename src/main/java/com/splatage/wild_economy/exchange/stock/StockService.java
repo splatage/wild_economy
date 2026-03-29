@@ -17,6 +17,8 @@ public interface StockService {
 
     void removeStock(ItemKey itemKey, int amount);
 
+    long cacheRevision();
+
     void flushDirtyNow();
 
     StockMetricsSnapshot metricsSnapshot();
