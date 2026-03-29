@@ -5,7 +5,7 @@ plugins {
 
 group = "com.splatage"
 
-val baseVersion = "0.1"
+val baseVersion = "0.2"
 val buildNumber = System.getenv("BUILD_NUMBER")
 val releaseBuild = System.getenv("RELEASE") == "true"
 
