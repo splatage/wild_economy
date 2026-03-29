@@ -28,6 +28,26 @@ repositories {
     maven("https://repo.helpch.at/releases/")
 }
 
+val mainSourceSet = sourceSets.named("main")
+val harnessSourceSet = sourceSets.create("harness") {
+    compileClasspath += mainSourceSet.get().output
+    runtimeClasspath += output + mainSourceSet.get().output
+}
+
+configurations.named(harnessSourceSet.implementationConfigurationName) {
+    extendsFrom(configurations.getByName("implementation"), configurations.getByName("compileOnly"))
+}
+configurations.named(harnessSourceSet.compileOnlyConfigurationName) {
+    extendsFrom(configurations.getByName("compileOnly"))
+}
+configurations.named(harnessSourceSet.runtimeOnlyConfigurationName) {
+    extendsFrom(
+        configurations.getByName("runtimeOnly"),
+        configurations.getByName("testRuntimeOnly"),
+        configurations.getByName("compileOnly")
+    )
+}
+
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
 
@@ -45,6 +65,8 @@ dependencies {
     testRuntimeOnly("org.xerial:sqlite-jdbc:3.51.3.0")
     testRuntimeOnly("com.mysql:mysql-connector-j:9.6.0")
     testRuntimeOnly("com.zaxxer:HikariCP:7.0.2")
+
+    add(harnessSourceSet.runtimeOnlyConfigurationName, "org.slf4j:slf4j-simple:2.0.16")
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -71,6 +93,14 @@ tasks.shadowJar {
     archiveClassifier.set("")
 }
 
+tasks.register<JavaExec>("runHarness") {
+    group = "verification"
+    description = "Runs the benchmark harness CLI against the configured dataset."
+    classpath = harnessSourceSet.runtimeClasspath
+    mainClass.set("com.splatage.wild_economy.testing.BenchmarkHarnessCli")
+}
+
 tasks.build {
+    dependsOn(tasks.named(harnessSourceSet.classesTaskName))
     dependsOn(tasks.shadowJar)
 }

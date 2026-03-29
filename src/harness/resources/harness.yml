@@ -1,0 +1,61 @@
+enabled: true
+allow-reset: true
+required-prefix-marker: test_
+default-profile: smoke
+profiles:
+  smoke:
+    player-count: 100
+    random-seed: 1001
+    exchange-transaction-count: 400
+    store-purchase-count: 40
+    entitlement-grant-count: 20
+    scenario:
+      operations: 1000
+      concurrency: 2
+      mix:
+        browse-heavy: 40
+        buy-heavy: 25
+        sell-heavy: 25
+        mixed-economy: 10
+  qa:
+    player-count: 3000
+    random-seed: 2001
+    exchange-transaction-count: 12000
+    store-purchase-count: 600
+    entitlement-grant-count: 300
+    scenario:
+      operations: 10000
+      concurrency: 8
+      mix:
+        browse-heavy: 40
+        buy-heavy: 25
+        sell-heavy: 25
+        mixed-economy: 10
+  perf:
+    player-count: 25000
+    random-seed: 3001
+    exchange-transaction-count: 100000
+    store-purchase-count: 4000
+    entitlement-grant-count: 2000
+    scenario:
+      operations: 100000
+      concurrency: 16
+      mix:
+        browse-heavy: 40
+        buy-heavy: 25
+        sell-heavy: 25
+        mixed-economy: 10
+  soak:
+    player-count: 25000
+    random-seed: 4001
+    exchange-transaction-count: 75000
+    store-purchase-count: 3000
+    entitlement-grant-count: 1500
+    scenario:
+      operations: 150000
+      concurrency: 8
+      mix:
+        browse-heavy: 40
+        buy-heavy: 25
+        sell-heavy: 25
+        mixed-economy: 10

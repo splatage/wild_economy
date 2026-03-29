@@ -165,7 +165,8 @@ public final class ServiceRegistry {
         MigrationBootstrap.migrateAll(this.databaseProvider, this.databaseConfig, schemaVersionRepository);
 
         final ExchangeBootstrap.Components exchangeComponents = ExchangeBootstrap.create(
-                this.plugin,
+                this.plugin.getDataFolder(),
+                this.plugin.getLogger(),
                 this.databaseProvider,
                 this.databaseConfig,
                 this.exchangeItemsConfig,

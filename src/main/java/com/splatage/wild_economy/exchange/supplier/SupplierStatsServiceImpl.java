@@ -10,9 +10,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -174,10 +172,12 @@ public final class SupplierStatsServiceImpl implements SupplierStatsService {
             return Optional.empty();
         }
 
-        for (final Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-            if (onlinePlayer.getName().equalsIgnoreCase(playerName)) {
-                this.knownNames.put(onlinePlayer.getUniqueId(), onlinePlayer.getName());
-                return Optional.of(onlinePlayer.getUniqueId());
+        if (this.isBukkitAvailable()) {
+            for (final Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                if (onlinePlayer.getName().equalsIgnoreCase(playerName)) {
+                    this.knownNames.put(onlinePlayer.getUniqueId(), onlinePlayer.getName());
+                    return Optional.of(onlinePlayer.getUniqueId());
+                }
             }
         }
 
@@ -279,19 +279,28 @@ public final class SupplierStatsServiceImpl implements SupplierStatsService {
     }
 
     private String resolveDisplayName(final UUID playerId) {
-        final Player onlinePlayer = Bukkit.getPlayer(playerId);
-        if (onlinePlayer != null) {
-            this.knownNames.put(playerId, onlinePlayer.getName());
-            return onlinePlayer.getName();
+        if (this.isBukkitAvailable()) {
+            final Player onlinePlayer = Bukkit.getPlayer(playerId);
+            if (onlinePlayer != null) {
+                this.knownNames.put(playerId, onlinePlayer.getName());
+                return onlinePlayer.getName();
+            }
         }
         return this.knownNames.getOrDefault(playerId, playerId.toString());
     }
 
     private void capturePlayerName(final UUID playerId) {
+        if (!this.isBukkitAvailable()) {
+            return;
+        }
         final Player onlinePlayer = Bukkit.getPlayer(playerId);
         if (onlinePlayer != null) {
             this.knownNames.put(playerId, onlinePlayer.getName());
         }
+    }
+
+    private boolean isBukkitAvailable() {
+        return Bukkit.getServer() != null;
     }
 
     private String displayName(final ItemKey itemKey) {

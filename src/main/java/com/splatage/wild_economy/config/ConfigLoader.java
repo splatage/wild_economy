@@ -1,6 +1,5 @@
 package com.splatage.wild_economy.config;
 
-import com.splatage.wild_economy.WildEconomyPlugin;
 import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
@@ -38,14 +37,24 @@ public final class ConfigLoader {
             "requires-player-stock-to-buy"
     };
 
-    private final WildEconomyPlugin plugin;
+    private final File dataFolder;
+    private final FileConfiguration rootConfig;
 
-    public ConfigLoader(final WildEconomyPlugin plugin) {
-        this.plugin = plugin;
+    public ConfigLoader(final com.splatage.wild_economy.WildEconomyPlugin plugin) {
+        this(plugin.getDataFolder(), plugin.getConfig());
+    }
+
+    public ConfigLoader(final File dataFolder) {
+        this(dataFolder, YamlConfiguration.loadConfiguration(new File(dataFolder, "config.yml")));
+    }
+
+    public ConfigLoader(final File dataFolder, final FileConfiguration rootConfig) {
+        this.dataFolder = dataFolder;
+        this.rootConfig = rootConfig;
     }
 
     public GlobalConfig loadGlobalConfig() {
-        final FileConfiguration config = this.plugin.getConfig();
+        final FileConfiguration config = this.rootConfig;
         return new GlobalConfig(
                 config.getLong("turnover.interval-ticks", 72000L),
                 config.getInt("gui.page-size", 45),
@@ -504,7 +513,7 @@ public final class ConfigLoader {
     }
 
     private FileConfiguration loadYaml(final String resourceName) {
-        final File file = new File(this.plugin.getDataFolder(), resourceName);
+        final File file = new File(this.dataFolder, resourceName);
         if (!file.isFile()) {
             throw new IllegalStateException(
                     "Required config file '" + resourceName + "' is missing at " + file.getAbsolutePath() + ".\n"
