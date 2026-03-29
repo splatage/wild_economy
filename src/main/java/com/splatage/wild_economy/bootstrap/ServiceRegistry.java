@@ -371,7 +371,12 @@ public final class ServiceRegistry {
         );
 
         this.stockTurnoverService = new StockTurnoverServiceImpl(this.exchangeCatalog, this.stockService, this.transactionLogService);
-        this.exchangeBrowseService = new ExchangeBrowseServiceImpl(this.exchangeCatalog, this.stockService, this.layoutBlueprint);
+        this.exchangeBrowseService = new ExchangeBrowseServiceImpl(
+            this.exchangeCatalog,
+            this.stockService,
+            this.pricingService,
+            this.layoutBlueprint
+        );
 
         final ExchangeBuyService rawBuyService = new ExchangeBuyServiceImpl(
                 this.exchangeCatalog,

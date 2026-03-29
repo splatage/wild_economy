@@ -6,11 +6,11 @@ import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
 import com.splatage.wild_economy.exchange.domain.StockSnapshot;
 import com.splatage.wild_economy.exchange.domain.StockState;
+import com.splatage.wild_economy.exchange.pricing.PricingService;
 import com.splatage.wild_economy.exchange.stock.StockService;
 import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
 import com.splatage.wild_economy.gui.layout.LayoutChildDefinition;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -19,15 +19,18 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
 
     private final ExchangeCatalog exchangeCatalog;
     private final StockService stockService;
+    private final PricingService pricingService;
     private final LayoutBlueprint layoutBlueprint;
 
     public ExchangeBrowseServiceImpl(
         final ExchangeCatalog exchangeCatalog,
         final StockService stockService,
+        final PricingService pricingService,
         final LayoutBlueprint layoutBlueprint
     ) {
         this.exchangeCatalog = Objects.requireNonNull(exchangeCatalog, "exchangeCatalog");
         this.stockService = Objects.requireNonNull(stockService, "stockService");
+        this.pricingService = Objects.requireNonNull(pricingService, "pricingService");
         this.layoutBlueprint = Objects.requireNonNull(layoutBlueprint, "layoutBlueprint");
     }
 
@@ -162,49 +165,6 @@ public final class ExchangeBrowseServiceImpl implements ExchangeBrowseService {
         final ExchangeCatalogEntry entry,
         final StockSnapshot snapshot
     ) {
-        if (entry.policyMode() != ItemPolicyMode.PLAYER_STOCKED) {
-            return this.money(entry.eco().buyPriceLowStock());
-        }
-
-        return this.resolveEnvelopeUnitPrice(
-            this.money(entry.eco().buyPriceLowStock()),
-            this.money(entry.eco().buyPriceHighStock()),
-            entry.eco().minStockInclusive(),
-            entry.eco().maxStockInclusive(),
-            snapshot.stockCount()
-        );
-    }
-
-    private BigDecimal resolveEnvelopeUnitPrice(
-        final BigDecimal lowStockPrice,
-        final BigDecimal highStockPrice,
-        final long minStock,
-        final long maxStock,
-        final long stock
-    ) {
-        if (stock <= minStock) {
-            return lowStockPrice;
-        }
-        if (stock >= maxStock) {
-            return highStockPrice;
-        }
-        if (maxStock <= minStock) {
-            return lowStockPrice;
-        }
-
-        final BigDecimal range = BigDecimal.valueOf(maxStock - minStock);
-        final BigDecimal offset = BigDecimal.valueOf(stock - minStock);
-        final BigDecimal fraction = offset.divide(range, 8, RoundingMode.HALF_UP);
-        final BigDecimal spread = highStockPrice.subtract(lowStockPrice);
-
-        return lowStockPrice
-            .add(spread.multiply(fraction))
-            .setScale(2, RoundingMode.HALF_UP);
-    }
-
-    private BigDecimal money(final BigDecimal value) {
-        return value == null
-            ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
-            : value.setScale(2, RoundingMode.HALF_UP);
+        return this.pricingService.quoteBuy(entry.itemKey(), 1, snapshot).unitPrice();
     }
 }
