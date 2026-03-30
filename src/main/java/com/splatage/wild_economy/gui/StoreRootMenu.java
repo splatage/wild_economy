@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.gui;
 
+import com.splatage.wild_economy.store.eligibility.StoreEligibilityResult;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.service.StoreService;
 import java.util.Comparator;
@@ -36,16 +37,17 @@ public final class StoreRootMenu {
         final ShopMenuHolder holder = ShopMenuHolder.storeRoot();
         final Inventory inventory = holder.createInventory(INVENTORY_SIZE, "Shop - Store");
 
-        for (final StoreCategory category : this.sortedCategories()) {
+        for (final StoreCategory category : this.sortedCategories(player)) {
             this.validateSlot(category);
+            final StoreEligibilityResult eligibility = this.storeService.getCategoryEligibility(player, category.categoryId());
             inventory.setItem(
                     category.slot(),
-                    this.button(this.resolveMaterial(category.iconKey()), category.displayName())
+                    this.button(this.resolveMaterial(category.iconKey()), category.displayName(), eligibility)
             );
         }
 
         inventory.setItem(21, this.playerInfoItemFactory.create(player));
-        inventory.setItem(26, this.button(Material.BARRIER, "Close"));
+        inventory.setItem(26, this.button(Material.BARRIER, "Close", null));
 
         player.openInventory(inventory);
     }
@@ -62,7 +64,7 @@ public final class StoreRootMenu {
             return;
         }
 
-        for (final StoreCategory category : this.sortedCategories()) {
+        for (final StoreCategory category : this.sortedCategories(player)) {
             this.validateSlot(category);
             if (category.slot() == rawSlot) {
                 this.shopMenuRouter.openStoreCategory(player, category.categoryId(), 0);
@@ -71,8 +73,8 @@ public final class StoreRootMenu {
         }
     }
 
-    private List<StoreCategory> sortedCategories() {
-        return this.storeService.getCategories().stream()
+    private List<StoreCategory> sortedCategories(final Player player) {
+        return this.storeService.getVisibleCategories(player).stream()
                 .sorted(Comparator.comparingInt(StoreCategory::slot))
                 .toList();
     }
@@ -87,11 +89,20 @@ public final class StoreRootMenu {
         }
     }
 
-    private ItemStack button(final Material material, final String name) {
+    private ItemStack button(final Material material, final String name, final StoreEligibilityResult eligibility) {
         final ItemStack stack = new ItemStack(material);
         final ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(name);
+            if (eligibility != null && !eligibility.acquirable()) {
+                final List<String> lore = new java.util.ArrayList<>();
+                lore.add("Locked");
+                lore.addAll(eligibility.progressLines());
+                if (eligibility.inspirationalMessage() != null && !eligibility.inspirationalMessage().isBlank()) {
+                    lore.add(eligibility.inspirationalMessage());
+                }
+                meta.setLore(lore);
+            }
             stack.setItemMeta(meta);
         }
         return stack;

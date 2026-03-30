@@ -2,6 +2,7 @@ package com.splatage.wild_economy.gui;
 
 import com.splatage.wild_economy.config.EconomyConfig;
 import com.splatage.wild_economy.economy.EconomyFormatter;
+import com.splatage.wild_economy.store.eligibility.StoreEligibilityResult;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
@@ -44,11 +45,11 @@ public final class StoreCategoryMenu {
     public void open(final Player player, final String categoryId, final int page) {
         this.storeService.ensurePlayerLoadedAsync(player.getUniqueId());
 
-        final StoreCategory category = this.resolveCategory(categoryId);
+        final StoreCategory category = this.resolveCategory(player, categoryId);
         final ShopMenuHolder holder = ShopMenuHolder.storeCategory(categoryId, page);
         final Inventory inventory = holder.createInventory(54, "Store - " + category.displayName());
 
-        final List<StoreProduct> products = this.storeService.getProducts(categoryId);
+        final List<StoreProduct> products = this.storeService.getVisibleProducts(player, categoryId);
         final int start = Math.max(0, page) * PAGE_SIZE;
 
         for (int slot = 0; slot < PAGE_SIZE; slot++) {
@@ -79,7 +80,7 @@ public final class StoreCategoryMenu {
 
         final int rawSlot = event.getRawSlot();
         if (rawSlot >= 0 && rawSlot < PAGE_SIZE) {
-            final List<StoreProduct> products = this.storeService.getProducts(categoryId);
+            final List<StoreProduct> products = this.storeService.getVisibleProducts(player, categoryId);
             final int index = Math.max(0, page) * PAGE_SIZE + rawSlot;
             if (index >= 0 && index < products.size()) {
                 this.shopMenuRouter.openStoreDetail(player, categoryId, page, products.get(index).productId());
@@ -95,7 +96,7 @@ public final class StoreCategoryMenu {
             }
             case 49 -> this.shopMenuRouter.goBack(player);
             case 53 -> {
-                final List<StoreProduct> products = this.storeService.getProducts(categoryId);
+                final List<StoreProduct> products = this.storeService.getVisibleProducts(player, categoryId);
                 final int nextStart = (page + 1) * PAGE_SIZE;
                 if (nextStart < products.size()) {
                     this.shopMenuRouter.openStoreCategory(player, categoryId, page + 1);
@@ -113,6 +114,7 @@ public final class StoreCategoryMenu {
 
         if (meta != null) {
             meta.setDisplayName(product.displayName());
+            final StoreEligibilityResult eligibility = this.storeService.getProductEligibility(player, product.productId());
 
             final List<String> lore = new ArrayList<>();
             lore.addAll(this.shortLore(product));
@@ -132,6 +134,14 @@ public final class StoreCategoryMenu {
                 lore.add("Price: " + EconomyFormatter.format(product.price(), this.economyConfig));
                 lore.add("Type: " + product.type().name());
                 lore.add(this.ownershipLine(ownershipState));
+            }
+            if (!eligibility.acquirable()) {
+                lore.add("");
+                lore.add("Status: Locked");
+                lore.addAll(eligibility.progressLines());
+                if (eligibility.inspirationalMessage() != null && !eligibility.inspirationalMessage().isBlank()) {
+                    lore.add(eligibility.inspirationalMessage());
+                }
             }
             lore.add("Click to view");
 
@@ -167,8 +177,8 @@ public final class StoreCategoryMenu {
         return stack;
     }
 
-    private StoreCategory resolveCategory(final String categoryId) {
-        return this.storeService.getCategories().stream()
+    private StoreCategory resolveCategory(final Player player, final String categoryId) {
+        return this.storeService.getVisibleCategories(player).stream()
                 .filter(category -> category.categoryId().equals(categoryId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Unknown store category: " + categoryId));

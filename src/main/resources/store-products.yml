@@ -1,4 +1,15 @@
 categories:
+  vip:
+    display-name: "VIP"
+    icon: TOTEM_OF_UNDYING
+    slot: 10
+    visibility-when-unmet: HIDE
+    locked-message: "Support the server to unlock this section."
+    requirements:
+      all-of:
+        - type: PERMISSION
+          node: "wild.store.vip"
+
   ranks:
     display-name: "Ranks"
     icon: NETHER_STAR
@@ -26,13 +37,15 @@ categories:
 
 products:
   vip_rank:
-    category: ranks
+    category: vip
     type: PERMANENT_UNLOCK
     display-name: "&6VIP"
     icon: GOLD_INGOT
     price: 25000.00
     entitlement-key: "rank.vip"
     confirm: true
+    visibility-when-unmet: SHOW_LOCKED
+    locked-message: "Work toward server support access to unlock this reward tier."
     actions:
       - type: CONSOLE_COMMAND
         command: "lp user {player} parent add vip"

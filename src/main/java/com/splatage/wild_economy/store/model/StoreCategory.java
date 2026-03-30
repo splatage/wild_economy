@@ -1,12 +1,16 @@
 package com.splatage.wild_economy.store.model;
 
+import java.util.List;
 import java.util.Objects;
 
 public record StoreCategory(
     String categoryId,
     String displayName,
     String iconKey,
-    int slot
+    int slot,
+    List<StoreRequirement> requirements,
+    StoreVisibilityWhenUnmet visibilityWhenUnmet,
+    String lockedMessage
 ) {
     public StoreCategory {
         if (categoryId == null || categoryId.isBlank()) {
@@ -21,6 +25,7 @@ public record StoreCategory(
         if (slot < 0) {
             throw new IllegalArgumentException("slot cannot be negative");
         }
-        Objects.requireNonNull(categoryId, "categoryId");
+        requirements = List.copyOf(Objects.requireNonNull(requirements, "requirements"));
+        visibilityWhenUnmet = Objects.requireNonNull(visibilityWhenUnmet, "visibilityWhenUnmet");
     }
 }

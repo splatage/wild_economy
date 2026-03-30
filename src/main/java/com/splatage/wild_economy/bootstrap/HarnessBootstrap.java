@@ -69,6 +69,7 @@ public final class HarnessBootstrap {
                 databaseConfig,
                 transactionRunner,
                 storeProductsConfig,
+                globalConfig,
                 economyComponents.economyService(),
                 xpBottleService,
                 logger

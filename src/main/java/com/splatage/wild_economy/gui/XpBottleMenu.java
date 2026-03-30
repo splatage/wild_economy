@@ -1,9 +1,12 @@
 package com.splatage.wild_economy.gui;
 
+import com.splatage.wild_economy.store.eligibility.StoreEligibilityResult;
+import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
 import com.splatage.wild_economy.store.model.StorePurchaseResult;
 import com.splatage.wild_economy.store.service.StoreService;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -35,13 +38,25 @@ public final class XpBottleMenu {
     }
 
     public void open(final Player player) {
+        final StoreCategory category = this.resolveCategory();
+        if (category != null) {
+            final StoreEligibilityResult categoryEligibility = this.storeService.getCategoryEligibility(player, category.categoryId());
+            if (!categoryEligibility.visible()) {
+                player.sendMessage(categoryEligibility.blockedMessage() == null
+                        ? "This section is not available right now."
+                        : categoryEligibility.blockedMessage());
+                this.shopMenuRouter.goBack(player);
+                return;
+            }
+        }
+
         final ShopMenuHolder holder = ShopMenuHolder.storeXpBottles();
         final Inventory inventory = holder.createInventory(27, "Store - XP Bottles");
 
         inventory.setItem(11, this.previewItem());
-        inventory.setItem(13, this.purchaseItem(this.productByIndex(0)));
-        inventory.setItem(14, this.purchaseItem(this.productByIndex(1)));
-        inventory.setItem(15, this.purchaseItem(this.productByIndex(2)));
+        inventory.setItem(13, this.purchaseItem(player, this.productByIndex(player, 0)));
+        inventory.setItem(14, this.purchaseItem(player, this.productByIndex(player, 1)));
+        inventory.setItem(15, this.purchaseItem(player, this.productByIndex(player, 2)));
         inventory.setItem(21, this.playerInfoItemFactory.create(player));
         inventory.setItem(22, this.button(Material.BARRIER, "Back", List.of("Return to the Store")));
 
@@ -56,9 +71,9 @@ public final class XpBottleMenu {
         }
 
         switch (event.getRawSlot()) {
-            case 13 -> this.purchase(player, this.productByIndex(0));
-            case 14 -> this.purchase(player, this.productByIndex(1));
-            case 15 -> this.purchase(player, this.productByIndex(2));
+            case 13 -> this.purchase(player, this.productByIndex(player, 0));
+            case 14 -> this.purchase(player, this.productByIndex(player, 1));
+            case 15 -> this.purchase(player, this.productByIndex(player, 2));
             case 22 -> this.shopMenuRouter.goBack(player);
             default -> {
             }
@@ -77,8 +92,8 @@ public final class XpBottleMenu {
         this.open(player);
     }
 
-    private StoreProduct productByIndex(final int index) {
-        final List<StoreProduct> xpProducts = this.storeService.getProducts(XP_BOTTLES_CATEGORY_ID).stream()
+    private StoreProduct productByIndex(final Player player, final int index) {
+        final List<StoreProduct> xpProducts = this.storeService.getVisibleProducts(player, XP_BOTTLES_CATEGORY_ID).stream()
                 .filter(product -> product.type() == StoreProductType.XP_WITHDRAWAL)
                 .sorted(Comparator.comparingInt(StoreProduct::xpCostPoints))
                 .toList();
@@ -105,7 +120,7 @@ public final class XpBottleMenu {
         return stack;
     }
 
-    private ItemStack purchaseItem(final StoreProduct product) {
+    private ItemStack purchaseItem(final Player player, final StoreProduct product) {
         if (product == null) {
             return this.button(
                     Material.GRAY_STAINED_GLASS_PANE,
@@ -114,14 +129,20 @@ public final class XpBottleMenu {
             );
         }
 
-        return this.button(
-                Material.GREEN_STAINED_GLASS_PANE,
-                product.displayName(),
-                List.of(
-                        "XP Cost: " + product.xpCostPoints(),
-                        "Click to purchase"
-                )
-        );
+        final StoreEligibilityResult eligibility = this.storeService.getProductEligibility(player, product.productId());
+
+        final List<String> lore = new ArrayList<>();
+        lore.add("XP Cost: " + product.xpCostPoints());
+        if (!eligibility.acquirable()) {
+            lore.addAll(eligibility.progressLines());
+            if (eligibility.inspirationalMessage() != null && !eligibility.inspirationalMessage().isBlank()) {
+                lore.add(eligibility.inspirationalMessage());
+            }
+            return this.button(Material.GRAY_STAINED_GLASS_PANE, product.displayName(), lore);
+        }
+
+        lore.add("Click to purchase");
+        return this.button(Material.GREEN_STAINED_GLASS_PANE, product.displayName(), lore);
     }
 
     private ItemStack button(final Material material, final String name, final List<String> lore) {
@@ -133,5 +154,12 @@ public final class XpBottleMenu {
             stack.setItemMeta(meta);
         }
         return stack;
+    }
+
+    private StoreCategory resolveCategory() {
+        return this.storeService.getCategories().stream()
+            .filter(category -> XP_BOTTLES_CATEGORY_ID.equals(category.categoryId()))
+            .findFirst()
+            .orElse(null);
     }
 }

@@ -1,6 +1,7 @@
 package com.splatage.wild_economy.bootstrap;
 
 import com.splatage.wild_economy.config.DatabaseConfig;
+import com.splatage.wild_economy.config.GlobalConfig;
 import com.splatage.wild_economy.config.StoreProductsConfig;
 import com.splatage.wild_economy.economy.service.EconomyService;
 import com.splatage.wild_economy.persistence.DatabaseProvider;
@@ -13,6 +14,8 @@ import com.splatage.wild_economy.store.repository.mysql.MysqlStoreEntitlementRep
 import com.splatage.wild_economy.store.repository.mysql.MysqlStorePurchaseRepository;
 import com.splatage.wild_economy.store.repository.sqlite.SqliteStoreEntitlementRepository;
 import com.splatage.wild_economy.store.repository.sqlite.SqliteStorePurchaseRepository;
+import com.splatage.wild_economy.store.eligibility.StoreEligibilityService;
+import com.splatage.wild_economy.store.eligibility.StoreEligibilityServiceImpl;
 import com.splatage.wild_economy.store.service.StoreService;
 import com.splatage.wild_economy.store.service.StoreServiceImpl;
 import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
@@ -30,6 +33,7 @@ final class StoreBootstrap {
             final DatabaseConfig databaseConfig,
             final TransactionRunner transactionRunner,
             final StoreProductsConfig storeProductsConfig,
+            final GlobalConfig globalConfig,
             final EconomyService economyService,
             final XpBottleService xpBottleService,
             final Logger logger
@@ -55,12 +59,18 @@ final class StoreBootstrap {
                 databaseConfig.mysqlMaximumPoolSize()
         );
 
+        final StoreEligibilityService storeEligibilityService = new StoreEligibilityServiceImpl(
+                storeRuntimeStateService,
+                globalConfig.tieredTrackPurchaseCooldownSeconds()
+        );
+
         final StoreService storeService = new StoreServiceImpl(
                 storeProductsConfig,
                 economyService,
                 storeRuntimeStateService,
                 productActionExecutor,
-                xpBottleService
+                xpBottleService,
+                storeEligibilityService
         );
 
         return new Components(storeRuntimeStateService, storeService, storeEntitlementRepository, storePurchaseRepository);

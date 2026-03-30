@@ -13,6 +13,7 @@ import com.splatage.wild_economy.economy.model.MoneyAmount;
 import com.splatage.wild_economy.economy.service.EconomyService;
 import com.splatage.wild_economy.store.action.ProductActionExecutor;
 import com.splatage.wild_economy.store.action.StoreActionExecutionResult;
+import com.splatage.wild_economy.store.eligibility.StoreEligibilityServiceImpl;
 import com.splatage.wild_economy.store.model.StoreAction;
 import com.splatage.wild_economy.store.model.StoreActionType;
 import com.splatage.wild_economy.store.model.StoreCategory;
@@ -20,16 +21,23 @@ import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
 import com.splatage.wild_economy.store.model.StorePurchaseResult;
 import com.splatage.wild_economy.store.model.StorePurchaseStatus;
+import com.splatage.wild_economy.store.model.StoreRequirement;
+import com.splatage.wild_economy.store.model.StoreRequirementType;
+import com.splatage.wild_economy.store.model.StoreVisibilityWhenUnmet;
+import com.splatage.wild_economy.store.state.StoreEntitlementRecord;
 import com.splatage.wild_economy.store.state.StoreOwnershipState;
 import com.splatage.wild_economy.store.state.StorePurchaseAuditRecord;
 import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
 import com.splatage.wild_economy.xp.service.XpBottleService;
 import com.splatage.wild_economy.xp.service.XpBottleWithdrawResult;
 import java.lang.reflect.Proxy;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.bukkit.Material;
+import org.bukkit.Statistic;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
@@ -43,13 +51,7 @@ final class StoreServiceImplTest {
         runtimeStateService.ownershipState = StoreOwnershipState.OWNED;
         final FakeProductActionExecutor actionExecutor = new FakeProductActionExecutor(StoreActionExecutionResult.succeed());
         final FakeXpBottleService xpBottleService = new FakeXpBottleService(XpBottleWithdrawResult.success(100, 0));
-        final StoreServiceImpl service = new StoreServiceImpl(
-            this.config(this.permanentUnlock("vip_rank", MoneyAmount.ofMinor(1_500L))),
-            economyService,
-            runtimeStateService,
-            actionExecutor,
-            xpBottleService
-        );
+        final StoreServiceImpl service = this.service(this.config(this.permanentUnlock("vip_rank", MoneyAmount.ofMinor(1_500L))), economyService, runtimeStateService, actionExecutor, xpBottleService, 300L);
 
         final StorePurchaseResult result = service.purchase(this.player(UUID.randomUUID()), "vip_rank");
 
@@ -64,13 +66,7 @@ final class StoreServiceImplTest {
         final FakeEconomyService economyService = new FakeEconomyService(MoneyAmount.ofMinor(5_000L));
         final FakeStoreRuntimeStateService runtimeStateService = new FakeStoreRuntimeStateService();
         runtimeStateService.ownershipState = StoreOwnershipState.LOADING;
-        final StoreServiceImpl service = new StoreServiceImpl(
-            this.config(this.permanentUnlock("vip_rank", MoneyAmount.ofMinor(1_500L))),
-            economyService,
-            runtimeStateService,
-            new FakeProductActionExecutor(StoreActionExecutionResult.succeed()),
-            new FakeXpBottleService(XpBottleWithdrawResult.success(100, 0))
-        );
+        final StoreServiceImpl service = this.service(this.config(this.permanentUnlock("vip_rank", MoneyAmount.ofMinor(1_500L))), economyService, runtimeStateService, new FakeProductActionExecutor(StoreActionExecutionResult.succeed()), new FakeXpBottleService(XpBottleWithdrawResult.success(100, 0)), 300L);
 
         final StorePurchaseResult result = service.purchase(this.player(UUID.randomUUID()), "vip_rank");
 
@@ -86,13 +82,7 @@ final class StoreServiceImplTest {
         final FakeStoreRuntimeStateService runtimeStateService = new FakeStoreRuntimeStateService();
         runtimeStateService.ownershipState = StoreOwnershipState.NOT_OWNED;
         final FakeProductActionExecutor actionExecutor = new FakeProductActionExecutor(StoreActionExecutionResult.succeed());
-        final StoreServiceImpl service = new StoreServiceImpl(
-            this.config(this.permanentUnlock("vip_rank", MoneyAmount.ofMinor(1_500L))),
-            economyService,
-            runtimeStateService,
-            actionExecutor,
-            new FakeXpBottleService(XpBottleWithdrawResult.success(100, 0))
-        );
+        final StoreServiceImpl service = this.service(this.config(this.permanentUnlock("vip_rank", MoneyAmount.ofMinor(1_500L))), economyService, runtimeStateService, actionExecutor, new FakeXpBottleService(XpBottleWithdrawResult.success(100, 0)), 300L);
         final UUID playerId = UUID.randomUUID();
 
         final StorePurchaseResult result = service.purchase(this.player(playerId), "vip_rank");
@@ -113,16 +103,8 @@ final class StoreServiceImplTest {
         final FakeEconomyService economyService = new FakeEconomyService(MoneyAmount.ofMinor(5_000L));
         final FakeStoreRuntimeStateService runtimeStateService = new FakeStoreRuntimeStateService();
         runtimeStateService.ownershipState = StoreOwnershipState.NOT_OWNED;
-        final FakeProductActionExecutor actionExecutor = new FakeProductActionExecutor(
-            StoreActionExecutionResult.failure("executor failed")
-        );
-        final StoreServiceImpl service = new StoreServiceImpl(
-            this.config(this.repeatableGrant("crate_key", MoneyAmount.ofMinor(750L))),
-            economyService,
-            runtimeStateService,
-            actionExecutor,
-            new FakeXpBottleService(XpBottleWithdrawResult.success(100, 0))
-        );
+        final FakeProductActionExecutor actionExecutor = new FakeProductActionExecutor(StoreActionExecutionResult.failure("executor failed"));
+        final StoreServiceImpl service = this.service(this.config(this.repeatableGrant("crate_key", MoneyAmount.ofMinor(750L))), economyService, runtimeStateService, actionExecutor, new FakeXpBottleService(XpBottleWithdrawResult.success(100, 0)), 300L);
 
         final StorePurchaseResult result = service.purchase(this.player(UUID.randomUUID()), "crate_key");
 
@@ -142,13 +124,7 @@ final class StoreServiceImplTest {
         final FakeStoreRuntimeStateService runtimeStateService = new FakeStoreRuntimeStateService();
         final FakeProductActionExecutor actionExecutor = new FakeProductActionExecutor(StoreActionExecutionResult.succeed());
         final FakeXpBottleService xpBottleService = new FakeXpBottleService(XpBottleWithdrawResult.success(100, 250));
-        final StoreServiceImpl service = new StoreServiceImpl(
-            this.config(this.xpWithdrawal("xp_small", 100)),
-            economyService,
-            runtimeStateService,
-            actionExecutor,
-            xpBottleService
-        );
+        final StoreServiceImpl service = this.service(this.config(this.xpWithdrawal("xp_small", 100)), economyService, runtimeStateService, actionExecutor, xpBottleService, 300L);
 
         final StorePurchaseResult result = service.purchase(this.player(UUID.randomUUID()), "xp_small");
 
@@ -161,9 +137,84 @@ final class StoreServiceImplTest {
         assertEquals(StorePurchaseStatus.SUCCESS, runtimeStateService.purchaseRecords.getFirst().status());
     }
 
+    @Test
+    void purchase_rejectsTieredUnlockWhenPreviousTierMissing() {
+        final FakeEconomyService economyService = new FakeEconomyService(MoneyAmount.ofMinor(5_000L));
+        final FakeStoreRuntimeStateService runtimeStateService = new FakeStoreRuntimeStateService();
+        final StoreServiceImpl service = this.service(this.config(this.tieredUnlock("kit_2", "kit.2", MoneyAmount.ofMinor(500L))), economyService, runtimeStateService, new FakeProductActionExecutor(StoreActionExecutionResult.succeed()), new FakeXpBottleService(XpBottleWithdrawResult.success(100, 0)), 300L);
+
+        final StorePurchaseResult result = service.purchase(this.player(UUID.randomUUID()), "kit_2");
+
+        assertFalse(result.success());
+        assertTrue(result.message().contains("previous tier"));
+        assertEquals(0, economyService.withdrawCalls);
+    }
+
+    @Test
+    void purchase_rejectsTieredUnlockDuringCooldown() {
+        final FakeEconomyService economyService = new FakeEconomyService(MoneyAmount.ofMinor(5_000L));
+        final FakeStoreRuntimeStateService runtimeStateService = new FakeStoreRuntimeStateService();
+        final long grantedAt = Instant.now().getEpochSecond() - 60L;
+        runtimeStateService.entitlements.put("kit.1", new StoreEntitlementRecord("kit.1", "kit_1", grantedAt));
+        final StoreServiceImpl service = this.service(this.config(this.tieredUnlock("kit_2", "kit.2", MoneyAmount.ofMinor(500L))), economyService, runtimeStateService, new FakeProductActionExecutor(StoreActionExecutionResult.succeed()), new FakeXpBottleService(XpBottleWithdrawResult.success(100, 0)), 300L);
+
+        final StorePurchaseResult result = service.purchase(this.player(UUID.randomUUID()), "kit_2");
+
+        assertFalse(result.success());
+        assertTrue(result.message().contains("cooling down"));
+        assertEquals(0, economyService.withdrawCalls);
+    }
+
+    @Test
+    void purchase_rejectsPermissionLockedProduct() {
+        final FakeEconomyService economyService = new FakeEconomyService(MoneyAmount.ofMinor(5_000L));
+        final FakeStoreRuntimeStateService runtimeStateService = new FakeStoreRuntimeStateService();
+        final StoreProduct product = new StoreProduct(
+            "vip_product",
+            "store",
+            StoreProductType.REPEATABLE_GRANT,
+            "VIP Product",
+            "EMERALD",
+            MoneyAmount.ofMinor(500L),
+            null,
+            false,
+            List.of(),
+            List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "say hi")),
+            0,
+            List.of(new StoreRequirement(StoreRequirementType.PERMISSION, null, "wild.store.vip", null, null, 0L)),
+            StoreVisibilityWhenUnmet.SHOW_LOCKED,
+            "Become VIP to unlock this section."
+        );
+        final StoreServiceImpl service = this.service(this.config(product), economyService, runtimeStateService, new FakeProductActionExecutor(StoreActionExecutionResult.succeed()), new FakeXpBottleService(XpBottleWithdrawResult.success(100, 0)), 300L);
+
+        final StorePurchaseResult result = service.purchase(this.player(UUID.randomUUID()), "vip_product");
+
+        assertFalse(result.success());
+        assertTrue(result.message().contains("permission"));
+        assertEquals(0, economyService.withdrawCalls);
+    }
+
+    private StoreServiceImpl service(
+        final StoreProductsConfig config,
+        final FakeEconomyService economyService,
+        final FakeStoreRuntimeStateService runtimeStateService,
+        final FakeProductActionExecutor actionExecutor,
+        final FakeXpBottleService xpBottleService,
+        final long cooldownSeconds
+    ) {
+        return new StoreServiceImpl(
+            config,
+            economyService,
+            runtimeStateService,
+            actionExecutor,
+            xpBottleService,
+            new StoreEligibilityServiceImpl(runtimeStateService, cooldownSeconds)
+        );
+    }
+
     private StoreProductsConfig config(final StoreProduct product) {
         return new StoreProductsConfig(
-            Map.of("store", new StoreCategory("store", "Store", "EMERALD", 0)),
+            Map.of("store", new StoreCategory("store", "Store", "EMERALD", 0, List.of(), StoreVisibilityWhenUnmet.SHOW_LOCKED, null)),
             Map.of(product.productId(), product)
         );
     }
@@ -180,7 +231,29 @@ final class StoreServiceImplTest {
             false,
             List.of(),
             List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "lp user %player% parent add vip")),
-            0
+            0,
+            List.of(),
+            StoreVisibilityWhenUnmet.SHOW_LOCKED,
+            null
+        );
+    }
+
+    private StoreProduct tieredUnlock(final String productId, final String entitlementKey, final MoneyAmount price) {
+        return new StoreProduct(
+            productId,
+            "store",
+            StoreProductType.PERMANENT_UNLOCK,
+            "Kit Tier",
+            "EMERALD",
+            price,
+            entitlementKey,
+            false,
+            List.of(),
+            List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "lp user %player% parent add vip")),
+            0,
+            List.of(),
+            StoreVisibilityWhenUnmet.SHOW_LOCKED,
+            "Progress through the track to reach this tier."
         );
     }
 
@@ -196,7 +269,10 @@ final class StoreServiceImplTest {
             false,
             List.of(),
             List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "crate give %player% daily 1")),
-            0
+            0,
+            List.of(),
+            StoreVisibilityWhenUnmet.SHOW_LOCKED,
+            null
         );
     }
 
@@ -212,7 +288,10 @@ final class StoreServiceImplTest {
             false,
             List.of(),
             List.of(),
-            xpCostPoints
+            xpCostPoints,
+            List.of(),
+            StoreVisibilityWhenUnmet.SHOW_LOCKED,
+            null
         );
     }
 
@@ -224,6 +303,8 @@ final class StoreServiceImplTest {
                 return switch (method.getName()) {
                     case "getUniqueId" -> playerId;
                     case "getName" -> "TestPlayer";
+                    case "hasPermission" -> false;
+                    case "getStatistic" -> 0;
                     case "toString" -> "TestPlayer{" + playerId + "}";
                     case "hashCode" -> playerId.hashCode();
                     case "equals" -> proxy == args[0];
@@ -239,6 +320,7 @@ final class StoreServiceImplTest {
         private UUID lastGrantedPlayerId;
         private String lastGrantedEntitlementKey;
         private final List<StorePurchaseAuditRecord> purchaseRecords = new ArrayList<>();
+        private final java.util.Map<String, StoreEntitlementRecord> entitlements = new java.util.HashMap<>();
 
         @Override
         public void ensurePlayerLoadedAsync(final UUID playerId) {
@@ -247,7 +329,15 @@ final class StoreServiceImplTest {
 
         @Override
         public StoreOwnershipState getOwnershipState(final UUID playerId, final String entitlementKey) {
-            return this.ownershipState;
+            if (this.ownershipState != StoreOwnershipState.NOT_OWNED) {
+                return this.ownershipState;
+            }
+            return this.entitlements.containsKey(entitlementKey) ? StoreOwnershipState.OWNED : StoreOwnershipState.NOT_OWNED;
+        }
+
+        @Override
+        public StoreEntitlementRecord getEntitlementRecord(final UUID playerId, final String entitlementKey) {
+            return this.entitlements.get(entitlementKey);
         }
 
         @Override
@@ -259,6 +349,7 @@ final class StoreServiceImplTest {
         ) {
             this.lastGrantedPlayerId = playerId;
             this.lastGrantedEntitlementKey = entitlementKey;
+            this.entitlements.put(entitlementKey, new StoreEntitlementRecord(entitlementKey, productId, grantedAtEpochSecond));
             this.ownershipState = StoreOwnershipState.OWNED;
         }
 

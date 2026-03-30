@@ -10,5 +10,6 @@ public record GlobalConfig(
     boolean buyToHeldShulkerEnabled,
     boolean buyToLookedAtContainerEnabled,
     boolean buyToInventoryEnabled,
-    boolean buyDropAtFeetEnabled
+    boolean buyDropAtFeetEnabled,
+    long tieredTrackPurchaseCooldownSeconds
 ) {}

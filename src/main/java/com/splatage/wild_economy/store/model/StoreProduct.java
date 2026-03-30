@@ -15,7 +15,10 @@ public record StoreProduct(
     boolean requireConfirmation,
     List<String> lore,
     List<StoreAction> actions,
-    int xpCostPoints
+    int xpCostPoints,
+    List<StoreRequirement> requirements,
+    StoreVisibilityWhenUnmet visibilityWhenUnmet,
+    String lockedMessage
 ) {
     public StoreProduct {
         if (productId == null || productId.isBlank()) {
@@ -34,6 +37,8 @@ public record StoreProduct(
         Objects.requireNonNull(price, "price");
         lore = List.copyOf(Objects.requireNonNull(lore, "lore"));
         actions = List.copyOf(Objects.requireNonNull(actions, "actions"));
+        requirements = List.copyOf(Objects.requireNonNull(requirements, "requirements"));
+        visibilityWhenUnmet = Objects.requireNonNull(visibilityWhenUnmet, "visibilityWhenUnmet");
 
         if (type == StoreProductType.PERMANENT_UNLOCK
                 && (entitlementKey == null || entitlementKey.isBlank())) {
