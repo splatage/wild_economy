@@ -5,6 +5,7 @@ public enum StoreRequirementType {
     PERMISSION,
     STATISTIC,
     STATISTIC_MATERIAL,
+    STATISTIC_ENTITY,
     ADVANCEMENT,
     CUSTOM_COUNTER
 }

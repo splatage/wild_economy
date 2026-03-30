@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 
@@ -34,13 +35,13 @@ final class StoreEligibilityServiceImplTest {
     @Test
     void category_canBeHiddenByPermissionRequirement() {
         final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), new FakeStoreProgressService(), 300L);
-        final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of());
+        final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of(), Map.of());
         final StoreCategory category = new StoreCategory(
             "vip",
             "VIP",
             "NETHER_STAR",
             11,
-            List.of(new StoreRequirement(StoreRequirementType.PERMISSION, null, "wild.store.vip", null, null, 0L)),
+            List.of(new StoreRequirement(StoreRequirementType.PERMISSION, null, "wild.store.vip", null, null, null, 0L)),
             StoreVisibilityWhenUnmet.HIDE,
             "Support the server to unlock this section."
         );
@@ -59,6 +60,7 @@ final class StoreEligibilityServiceImplTest {
             UUID.randomUUID(),
             Set.of(),
             Map.of(Statistic.PLAY_ONE_MINUTE, 20 * 60 * 60),
+            Map.of(),
             Map.of()
         );
         final StoreProduct product = new StoreProduct(
@@ -73,7 +75,7 @@ final class StoreEligibilityServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
             0,
-            List.of(new StoreRequirement(StoreRequirementType.STATISTIC, null, null, Statistic.PLAY_ONE_MINUTE.name(), null, 20L * 60L * 60L * 10L)),
+            List.of(new StoreRequirement(StoreRequirementType.STATISTIC, null, null, Statistic.PLAY_ONE_MINUTE.name(), null, null, 20L * 60L * 60L * 10L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Keep progressing."
         );
@@ -86,10 +88,44 @@ final class StoreEligibilityServiceImplTest {
     }
 
     @Test
+    void product_showsLockedWhenEntityStatisticRequirementIsUnmet() {
+        final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), new FakeStoreProgressService(), 0L);
+        final Player player = this.player(
+            UUID.randomUUID(),
+            Set.of(),
+            Map.of(),
+            Map.of(),
+            Map.of(Statistic.KILL_ENTITY.name() + ":ENDERMAN", 3)
+        );
+        final StoreProduct product = new StoreProduct(
+            "hunter_unlock",
+            "tracks",
+            StoreProductType.REPEATABLE_GRANT,
+            "Hunter Unlock",
+            "ENDER_PEARL",
+            MoneyAmount.ofMinor(1_000L),
+            null,
+            false,
+            List.of(),
+            List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
+            0,
+            List.of(new StoreRequirement(StoreRequirementType.STATISTIC_ENTITY, null, null, Statistic.KILL_ENTITY.name(), null, EntityType.ENDERMAN.name(), 10L)),
+            StoreVisibilityWhenUnmet.SHOW_LOCKED,
+            "Hunt more Endermen to unlock this reward."
+        );
+
+        final StoreEligibilityResult result = service.evaluateProduct(player, product);
+
+        assertTrue(result.visible());
+        assertFalse(result.acquirable());
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("kill entity enderman: 3 / 10")));
+    }
+
+    @Test
     void product_showsLockedWhenAdvancementRequirementIsUnmet() {
         final FakeStoreProgressService progressService = new FakeStoreProgressService();
         final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), progressService, 0L);
-        final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of());
+        final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of(), Map.of());
         final StoreProduct product = new StoreProduct(
             "nether_unlock",
             "tracks",
@@ -102,7 +138,7 @@ final class StoreEligibilityServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
             0,
-            List.of(new StoreRequirement(StoreRequirementType.ADVANCEMENT, "minecraft:story/enter_the_nether", null, null, null, 0L)),
+            List.of(new StoreRequirement(StoreRequirementType.ADVANCEMENT, "minecraft:story/enter_the_nether", null, null, null, null, 0L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Reach the Nether to unlock this reward."
         );
@@ -119,7 +155,7 @@ final class StoreEligibilityServiceImplTest {
         final FakeStoreProgressService progressService = new FakeStoreProgressService();
         progressService.customCounters.put("blocks_placed", 42L);
         final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), progressService, 0L);
-        final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of());
+        final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of(), Map.of());
         final StoreProduct product = new StoreProduct(
             "builder_unlock",
             "tracks",
@@ -132,7 +168,7 @@ final class StoreEligibilityServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
             0,
-            List.of(new StoreRequirement(StoreRequirementType.CUSTOM_COUNTER, "blocks_placed", null, null, null, 100L)),
+            List.of(new StoreRequirement(StoreRequirementType.CUSTOM_COUNTER, "blocks_placed", null, null, null, null, 100L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Keep building to unlock this reward."
         );
@@ -149,7 +185,7 @@ final class StoreEligibilityServiceImplTest {
         final FakeStoreRuntimeStateService runtime = new FakeStoreRuntimeStateService();
         final StoreEligibilityService service = this.service(runtime, new FakeStoreProgressService(), 300L);
         final UUID playerId = UUID.randomUUID();
-        final Player player = this.player(playerId, Set.of(), Map.of(), Map.of());
+        final Player player = this.player(playerId, Set.of(), Map.of(), Map.of(), Map.of());
 
         final StoreEligibilityResult result = service.evaluateProduct(player, this.tieredProduct("kit.2"));
 
@@ -164,7 +200,7 @@ final class StoreEligibilityServiceImplTest {
         final long now = System.currentTimeMillis() / 1000L;
         runtime.entitlements.put("kit.1", new StoreEntitlementRecord("kit.1", "kit_1", now - 120L));
         final StoreEligibilityService service = this.service(runtime, new FakeStoreProgressService(), 300L);
-        final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of());
+        final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of(), Map.of());
 
         final StoreEligibilityResult result = service.evaluateProduct(player, this.tieredProduct("kit.2"));
 
@@ -175,7 +211,7 @@ final class StoreEligibilityServiceImplTest {
     @Test
     void product_permissionRequirementPassesForAuthorizedPlayer() {
         final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), new FakeStoreProgressService(), 0L);
-        final Player player = this.player(UUID.randomUUID(), Set.of("wild.store.vip"), Map.of(), Map.of());
+        final Player player = this.player(UUID.randomUUID(), Set.of("wild.store.vip"), Map.of(), Map.of(), Map.of());
         final StoreProduct product = new StoreProduct(
             "vip_rank",
             "tracks",
@@ -188,7 +224,7 @@ final class StoreEligibilityServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
             0,
-            List.of(new StoreRequirement(StoreRequirementType.PERMISSION, null, "wild.store.vip", null, null, 0L)),
+            List.of(new StoreRequirement(StoreRequirementType.PERMISSION, null, "wild.store.vip", null, null, null, 0L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             null
         );
@@ -226,7 +262,8 @@ final class StoreEligibilityServiceImplTest {
         final UUID playerId,
         final Set<String> permissions,
         final Map<Statistic, Integer> simpleStats,
-        final Map<String, Integer> materialStats
+        final Map<String, Integer> materialStats,
+        final Map<String, Integer> entityStats
     ) {
         return (Player) Proxy.newProxyInstance(
             Player.class.getClassLoader(),
@@ -241,6 +278,10 @@ final class StoreEligibilityServiceImplTest {
                     if (args.length == 2 && args[1] instanceof Material material) {
                         final Statistic statistic = (Statistic) args[0];
                         yield materialStats.getOrDefault(statistic.name() + ":" + material.name(), 0);
+                    }
+                    if (args.length == 2 && args[1] instanceof EntityType entityType) {
+                        final Statistic statistic = (Statistic) args[0];
+                        yield entityStats.getOrDefault(statistic.name() + ":" + entityType.name(), 0);
                     }
                     throw new UnsupportedOperationException();
                 }

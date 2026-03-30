@@ -10,6 +10,7 @@ import com.splatage.wild_economy.store.model.StoreActionType;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreRequirement;
+import com.splatage.wild_economy.store.eligibility.StoreRawStatisticWhitelist;
 import com.splatage.wild_economy.store.model.StoreRequirementType;
 import com.splatage.wild_economy.store.model.StoreVisibilityWhenUnmet;
 import com.splatage.wild_economy.store.model.StoreProductType;
@@ -700,16 +701,44 @@ public final class ConfigLoader {
 
             final long minimum = this.optionalLong(rawRequirement, "min", 0L, context + " requirement");
             final String key = this.resolveStoreRequirementKey(rawRequirement);
+            final String statistic = this.optionalMapValue(rawRequirement, "statistic");
+            final String material = this.optionalMapValue(rawRequirement, "material");
+            final String entity = this.optionalMapValue(rawRequirement, "entity");
+            this.validateStoreRequirement(requirementType, key, statistic, material, entity, context + " requirement");
             requirements.add(new StoreRequirement(
                     requirementType,
                     key,
                     this.optionalMapValue(rawRequirement, "node"),
-                    this.optionalMapValue(rawRequirement, "statistic"),
-                    this.optionalMapValue(rawRequirement, "material"),
+                    statistic,
+                    material,
+                    entity,
                     minimum
             ));
         }
         return List.copyOf(requirements);
+    }
+
+
+    private void validateStoreRequirement(
+        final StoreRequirementType requirementType,
+        final String key,
+        final String statistic,
+        final String material,
+        final String entity,
+        final String context
+    ) {
+        switch (requirementType) {
+            case STATISTIC, STATISTIC_MATERIAL, STATISTIC_ENTITY -> StoreRawStatisticWhitelist.validateRequirement(
+                requirementType,
+                statistic,
+                material,
+                entity,
+                context
+            );
+            case ADVANCEMENT, CUSTOM_COUNTER, ENTITLEMENT, PERMISSION -> {
+                // validated elsewhere by StoreRequirement and existing loader rules
+            }
+        }
     }
 
     private String resolveStoreRequirementKey(final Map<?, ?> rawRequirement) {

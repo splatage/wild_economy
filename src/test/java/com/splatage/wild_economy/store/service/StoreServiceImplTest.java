@@ -182,7 +182,7 @@ final class StoreServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "say hi")),
             0,
-            List.of(new StoreRequirement(StoreRequirementType.PERMISSION, null, "wild.store.vip", null, null, 0L)),
+            List.of(new StoreRequirement(StoreRequirementType.PERMISSION, null, "wild.store.vip", null, null, null, 0L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Become VIP to unlock this section."
         );

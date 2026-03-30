@@ -8,6 +8,7 @@ public record StoreRequirement(
     String permissionNode,
     String statistic,
     String material,
+    String entityType,
     long minimum
 ) {
     public StoreRequirement {
@@ -37,6 +38,14 @@ public record StoreRequirement(
                 }
                 if (material == null || material.isBlank()) {
                     throw new IllegalArgumentException("STATISTIC_MATERIAL requirements require a material");
+                }
+            }
+            case STATISTIC_ENTITY -> {
+                if (statistic == null || statistic.isBlank()) {
+                    throw new IllegalArgumentException("STATISTIC_ENTITY requirements require a statistic");
+                }
+                if (entityType == null || entityType.isBlank()) {
+                    throw new IllegalArgumentException("STATISTIC_ENTITY requirements require an entity type");
                 }
             }
         }

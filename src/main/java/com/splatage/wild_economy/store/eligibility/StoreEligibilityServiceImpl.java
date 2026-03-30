@@ -12,13 +12,13 @@ import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 public final class StoreEligibilityServiceImpl implements StoreEligibilityService {
@@ -161,6 +161,7 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
             case PERMISSION -> this.evaluatePermissionRequirement(player, requirement);
             case STATISTIC -> this.evaluateStatisticRequirement(player, requirement);
             case STATISTIC_MATERIAL -> this.evaluateStatisticMaterialRequirement(player, requirement);
+            case STATISTIC_ENTITY -> this.evaluateStatisticEntityRequirement(player, requirement);
             case ADVANCEMENT -> this.evaluateAdvancementRequirement(player, requirement);
             case CUSTOM_COUNTER -> this.evaluateCustomCounterRequirement(player, requirement);
         };
@@ -186,25 +187,45 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
     }
 
     private RequirementEvaluation evaluateStatisticRequirement(final Player player, final StoreRequirement requirement) {
-        final Statistic statistic = Statistic.valueOf(requirement.statistic().toUpperCase(Locale.ROOT));
+        final Statistic statistic = StoreRawStatisticWhitelist.validateSimple(requirement.statistic(), "Store requirement");
         final int current = player.getStatistic(statistic);
         return new RequirementEvaluation(
                 current >= requirement.minimum(),
-                this.prettyEnumName(statistic.name()) + ": " + current + " / " + requirement.minimum(),
+                this.prettyName(statistic.name()) + ": " + current + " / " + requirement.minimum(),
                 current >= requirement.minimum() ? null : "You have not yet reached the required progress."
         );
     }
 
     private RequirementEvaluation evaluateStatisticMaterialRequirement(final Player player, final StoreRequirement requirement) {
-        final Statistic statistic = Statistic.valueOf(requirement.statistic().toUpperCase(Locale.ROOT));
-        final Material material = Material.matchMaterial(requirement.material());
-        if (material == null) {
-            throw new IllegalStateException("Unknown material in Store requirement: " + requirement.material());
-        }
+        final Statistic statistic = StoreRawStatisticWhitelist.validateRequirement(
+                requirement.type(),
+                requirement.statistic(),
+                requirement.material(),
+                requirement.entityType(),
+                "Store requirement"
+        );
+        final Material material = StoreRawStatisticWhitelist.validateMaterial(statistic, requirement.material(), "Store requirement");
         final int current = player.getStatistic(statistic, material);
         return new RequirementEvaluation(
                 current >= requirement.minimum(),
-                this.prettyEnumName(statistic.name()) + " " + this.prettyEnumName(material.name()) + ": " + current + " / " + requirement.minimum(),
+                this.prettyName(statistic.name()) + " " + this.prettyName(material.name()) + ": " + current + " / " + requirement.minimum(),
+                current >= requirement.minimum() ? null : "You have not yet reached the required progress."
+        );
+    }
+
+    private RequirementEvaluation evaluateStatisticEntityRequirement(final Player player, final StoreRequirement requirement) {
+        final Statistic statistic = StoreRawStatisticWhitelist.validateRequirement(
+                requirement.type(),
+                requirement.statistic(),
+                requirement.material(),
+                requirement.entityType(),
+                "Store requirement"
+        );
+        final EntityType entityType = StoreRawStatisticWhitelist.validateEntity(statistic, requirement.entityType(), "Store requirement");
+        final int current = player.getStatistic(statistic, entityType);
+        return new RequirementEvaluation(
+                current >= requirement.minimum(),
+                this.prettyName(statistic.name()) + " " + this.prettyName(entityType.name()) + ": " + current + " / " + requirement.minimum(),
                 current >= requirement.minimum() ? null : "You have not yet reached the required progress."
         );
     }
@@ -222,17 +243,13 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         final long current = this.storeProgressService.getCustomCounter(player, requirement.key());
         return new RequirementEvaluation(
             current >= requirement.minimum(),
-            "Counter " + this.prettyCounterName(requirement.key()) + ": " + current + " / " + requirement.minimum(),
+            "Counter " + this.prettyName(requirement.key()) + ": " + current + " / " + requirement.minimum(),
             current >= requirement.minimum() ? null : "You have not yet reached the required progress."
         );
     }
 
-    private String prettyEnumName(final String raw) {
-        return raw.toLowerCase(Locale.ROOT).replace('_', ' ');
-    }
-
-    private String prettyCounterName(final String raw) {
-        return raw.toLowerCase(Locale.ROOT).replace('_', ' ').replace('.', ' ').replace('/', ' ').replace('-', ' ');
+    private String prettyName(final String raw) {
+        return raw.toLowerCase(java.util.Locale.ROOT).replace('_', ' ').replace('.', ' ').replace('/', ' ').replace('-', ' ');
     }
 
     private String formatDurationSeconds(final long seconds) {
