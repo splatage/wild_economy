@@ -1,5 +1,7 @@
 package com.splatage.wild_economy.gui;
 
+import com.splatage.wild_economy.config.EconomyConfig;
+import com.splatage.wild_economy.economy.EconomyFormatter;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
@@ -20,14 +22,17 @@ public final class StoreCategoryMenu {
     private static final int PAGE_SIZE = 45;
 
     private final StoreService storeService;
+    private final EconomyConfig economyConfig;
     private final PlayerInfoItemFactory playerInfoItemFactory;
     private ShopMenuRouter shopMenuRouter;
 
     public StoreCategoryMenu(
         final StoreService storeService,
+        final EconomyConfig economyConfig,
         final PlayerInfoItemFactory playerInfoItemFactory
     ) {
         this.storeService = Objects.requireNonNull(storeService, "storeService");
+        this.economyConfig = Objects.requireNonNull(economyConfig, "economyConfig");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
     }
 
@@ -119,7 +124,7 @@ public final class StoreCategoryMenu {
                         product.entitlementKey()
                 );
 
-                lore.add("Price: " + product.price().minorUnits());
+                lore.add("Price: " + EconomyFormatter.format(product.price(), this.economyConfig));
                 lore.add("Type: " + product.type().name());
                 lore.add(this.ownershipLine(ownershipState));
             }
