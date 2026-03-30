@@ -180,6 +180,7 @@ public final class ConfigLoader {
                     price,
                     this.getOptionalString(section, "entitlement-key"),
                     section.getBoolean("confirm", true),
+                    List.copyOf(section.getStringList("lore")),
                     actions,
                     xpCostPoints
             ));

@@ -20,6 +20,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 public final class StoreCategoryMenu {
 
     private static final int PAGE_SIZE = 45;
+    private static final int TILE_LORE_LINE_LIMIT = 2;
 
     private final StoreService storeService;
     private final EconomyConfig economyConfig;
@@ -114,6 +115,10 @@ public final class StoreCategoryMenu {
             meta.setDisplayName(product.displayName());
 
             final List<String> lore = new ArrayList<>();
+            lore.addAll(this.shortLore(product));
+            if (!product.lore().isEmpty()) {
+                lore.add("");
+            }
             if (product.type() == StoreProductType.XP_WITHDRAWAL) {
                 lore.add("XP Cost: " + product.xpCostPoints());
                 lore.add("Type: XP_WITHDRAWAL");
@@ -135,6 +140,12 @@ public final class StoreCategoryMenu {
         }
 
         return stack;
+    }
+
+    private List<String> shortLore(final StoreProduct product) {
+        return product.lore().stream()
+                .limit(TILE_LORE_LINE_LIMIT)
+                .toList();
     }
 
     private String ownershipLine(final StoreOwnershipState ownershipState) {

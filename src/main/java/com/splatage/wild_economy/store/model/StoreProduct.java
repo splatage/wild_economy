@@ -13,6 +13,7 @@ public record StoreProduct(
     MoneyAmount price,
     String entitlementKey,
     boolean requireConfirmation,
+    List<String> lore,
     List<StoreAction> actions,
     int xpCostPoints
 ) {
@@ -31,6 +32,7 @@ public record StoreProduct(
             throw new IllegalArgumentException("iconKey cannot be blank");
         }
         Objects.requireNonNull(price, "price");
+        lore = List.copyOf(Objects.requireNonNull(lore, "lore"));
         actions = List.copyOf(Objects.requireNonNull(actions, "actions"));
 
         if (type == StoreProductType.PERMANENT_UNLOCK
