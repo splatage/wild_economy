@@ -24,6 +24,7 @@ import com.splatage.wild_economy.store.model.StorePurchaseStatus;
 import com.splatage.wild_economy.store.model.StoreRequirement;
 import com.splatage.wild_economy.store.model.StoreRequirementType;
 import com.splatage.wild_economy.store.model.StoreVisibilityWhenUnmet;
+import com.splatage.wild_economy.store.progress.StoreProgressService;
 import com.splatage.wild_economy.store.state.StoreEntitlementRecord;
 import com.splatage.wild_economy.store.state.StoreOwnershipState;
 import com.splatage.wild_economy.store.state.StorePurchaseAuditRecord;
@@ -181,7 +182,7 @@ final class StoreServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "say hi")),
             0,
-            List.of(new StoreRequirement(StoreRequirementType.PERMISSION, null, "wild.store.vip", null, null, 0L)),
+            List.of(new StoreRequirement(StoreRequirementType.PERMISSION, null, "wild.store.vip", null, null, null, 0L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Become VIP to unlock this section."
         );
@@ -208,7 +209,7 @@ final class StoreServiceImplTest {
             runtimeStateService,
             actionExecutor,
             xpBottleService,
-            new StoreEligibilityServiceImpl(runtimeStateService, cooldownSeconds)
+            new StoreEligibilityServiceImpl(runtimeStateService, new NoOpStoreProgressService(), cooldownSeconds)
         );
     }
 
@@ -312,6 +313,27 @@ final class StoreServiceImplTest {
                 };
             }
         );
+    }
+
+    private static final class NoOpStoreProgressService implements StoreProgressService {
+        @Override
+        public boolean hasAdvancement(final Player player, final String advancementKey) {
+            return false;
+        }
+
+        @Override
+        public long getCustomCounter(final Player player, final String counterKey) {
+            return 0L;
+        }
+
+        @Override
+        public long incrementCustomCounter(final Player player, final String counterKey, final long delta) {
+            return 0L;
+        }
+
+        @Override
+        public void setCustomCounter(final Player player, final String counterKey, final long value) {
+        }
     }
 
     private static final class FakeStoreRuntimeStateService implements StoreRuntimeStateService {

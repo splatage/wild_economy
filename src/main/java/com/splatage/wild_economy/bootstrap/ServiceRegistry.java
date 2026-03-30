@@ -58,6 +58,8 @@ import com.splatage.wild_economy.platform.PaperFoliaPlatformExecutor;
 import com.splatage.wild_economy.platform.PlatformExecutor;
 import com.splatage.wild_economy.scheduler.StockTurnoverTask;
 import com.splatage.wild_economy.store.listener.StorePlayerSessionListener;
+import com.splatage.wild_economy.store.listener.StoreProgressListener;
+import com.splatage.wild_economy.store.progress.StoreProgressService;
 import com.splatage.wild_economy.store.service.StoreService;
 import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
 import com.splatage.wild_economy.xp.listener.XpBottleRedeemListener;
@@ -106,8 +108,10 @@ public final class ServiceRegistry {
     private BaltopService baltopService;
     private EconomyPlayerSessionListener economyPlayerSessionListener;
     private StorePlayerSessionListener storePlayerSessionListener;
+    private StoreProgressListener storeProgressListener;
     private StoreProductsConfig storeProductsConfig;
     private StoreRuntimeStateService storeRuntimeStateService;
+    private StoreProgressService storeProgressService;
     private StoreService storeService;
     private WildEconomyVaultProvider vaultEconomyProvider;
     private WildEconomyExpansion placeholderExpansion;
@@ -160,6 +164,7 @@ public final class ServiceRegistry {
                 this.plugin.getLogger()
         );
         this.storeRuntimeStateService = storeComponents.storeRuntimeStateService();
+        this.storeProgressService = storeComponents.storeProgressService();
         this.storeService = storeComponents.storeService();
 
         final SchemaVersionRepository schemaVersionRepository = MigrationBootstrap.createSchemaVersionRepository(this.databaseProvider);
@@ -225,6 +230,7 @@ public final class ServiceRegistry {
 
         this.economyPlayerSessionListener = new EconomyPlayerSessionListener(this.plugin, this.economyService);
         this.storePlayerSessionListener = new StorePlayerSessionListener(this.storeRuntimeStateService);
+        this.storeProgressListener = new StoreProgressListener(this.storeProgressService);
 
         this.registerEventListeners();
         this.warmOnlineEconomySessions();
@@ -237,6 +243,7 @@ public final class ServiceRegistry {
         this.plugin.getServer().getPluginManager().registerEvents(this.adminMenuListener, this.plugin);
         this.plugin.getServer().getPluginManager().registerEvents(this.economyPlayerSessionListener, this.plugin);
         this.plugin.getServer().getPluginManager().registerEvents(this.storePlayerSessionListener, this.plugin);
+        this.plugin.getServer().getPluginManager().registerEvents(this.storeProgressListener, this.plugin);
         this.plugin.getServer().getPluginManager().registerEvents(this.xpBottleRedeemListener, this.plugin);
     }
 
