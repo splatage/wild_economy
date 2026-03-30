@@ -81,7 +81,11 @@ final class GuiBootstrap {
                 playerInfoItemFactory
         );
         final StoreRootMenu storeRootMenu = new StoreRootMenu(storeService, playerInfoItemFactory);
-        final StoreCategoryMenu storeCategoryMenu = new StoreCategoryMenu(storeService, playerInfoItemFactory);
+        final StoreCategoryMenu storeCategoryMenu = new StoreCategoryMenu(
+                storeService,
+                economyConfig,
+                playerInfoItemFactory
+        );
         final StoreProductDetailMenu storeProductDetailMenu = new StoreProductDetailMenu(
                 storeService,
                 economyConfig,

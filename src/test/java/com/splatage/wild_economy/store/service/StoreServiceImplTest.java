@@ -178,6 +178,7 @@ final class StoreServiceImplTest {
             price,
             "rank.vip",
             false,
+            List.of(),
             List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "lp user %player% parent add vip")),
             0
         );
@@ -193,6 +194,7 @@ final class StoreServiceImplTest {
             price,
             null,
             false,
+            List.of(),
             List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "crate give %player% daily 1")),
             0
         );
@@ -208,6 +210,7 @@ final class StoreServiceImplTest {
             MoneyAmount.zero(),
             null,
             false,
+            List.of(),
             List.of(),
             xpCostPoints
         );

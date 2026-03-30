@@ -90,6 +90,11 @@ public final class StoreProductDetailMenu {
             final List<String> lore = new ArrayList<>();
             meta.setDisplayName(product.displayName());
 
+            lore.addAll(product.lore());
+            if (!product.lore().isEmpty()) {
+                lore.add("");
+            }
+
             if (product.type() == StoreProductType.XP_WITHDRAWAL) {
                 lore.add("XP Cost: " + product.xpCostPoints());
                 lore.add("Type: XP_WITHDRAWAL");

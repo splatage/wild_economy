@@ -1,5 +1,7 @@
 package com.splatage.wild_economy.gui;
 
+import com.splatage.wild_economy.config.EconomyConfig;
+import com.splatage.wild_economy.economy.EconomyFormatter;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
@@ -18,16 +20,20 @@ import org.bukkit.inventory.meta.ItemMeta;
 public final class StoreCategoryMenu {
 
     private static final int PAGE_SIZE = 45;
+    private static final int TILE_LORE_LINE_LIMIT = 2;
 
     private final StoreService storeService;
+    private final EconomyConfig economyConfig;
     private final PlayerInfoItemFactory playerInfoItemFactory;
     private ShopMenuRouter shopMenuRouter;
 
     public StoreCategoryMenu(
         final StoreService storeService,
+        final EconomyConfig economyConfig,
         final PlayerInfoItemFactory playerInfoItemFactory
     ) {
         this.storeService = Objects.requireNonNull(storeService, "storeService");
+        this.economyConfig = Objects.requireNonNull(economyConfig, "economyConfig");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
     }
 
@@ -109,6 +115,10 @@ public final class StoreCategoryMenu {
             meta.setDisplayName(product.displayName());
 
             final List<String> lore = new ArrayList<>();
+            lore.addAll(this.shortLore(product));
+            if (!product.lore().isEmpty()) {
+                lore.add("");
+            }
             if (product.type() == StoreProductType.XP_WITHDRAWAL) {
                 lore.add("XP Cost: " + product.xpCostPoints());
                 lore.add("Type: XP_WITHDRAWAL");
@@ -119,7 +129,7 @@ public final class StoreCategoryMenu {
                         product.entitlementKey()
                 );
 
-                lore.add("Price: " + product.price().minorUnits());
+                lore.add("Price: " + EconomyFormatter.format(product.price(), this.economyConfig));
                 lore.add("Type: " + product.type().name());
                 lore.add(this.ownershipLine(ownershipState));
             }
@@ -130,6 +140,12 @@ public final class StoreCategoryMenu {
         }
 
         return stack;
+    }
+
+    private List<String> shortLore(final StoreProduct product) {
+        return product.lore().stream()
+                .limit(TILE_LORE_LINE_LIMIT)
+                .toList();
     }
 
     private String ownershipLine(final StoreOwnershipState ownershipState) {
