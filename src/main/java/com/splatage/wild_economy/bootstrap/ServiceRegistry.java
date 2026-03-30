@@ -154,7 +154,6 @@ public final class ServiceRegistry {
         );
 
         final StoreBootstrap.Components storeComponents = StoreBootstrap.create(
-                this.plugin,
                 this.databaseProvider,
                 this.databaseConfig,
                 transactionRunner,
