@@ -699,9 +699,10 @@ public final class ConfigLoader {
             }
 
             final long minimum = this.optionalLong(rawRequirement, "min", 0L, context + " requirement");
+            final String key = this.resolveStoreRequirementKey(rawRequirement);
             requirements.add(new StoreRequirement(
                     requirementType,
-                    this.optionalMapValue(rawRequirement, "key"),
+                    key,
                     this.optionalMapValue(rawRequirement, "node"),
                     this.optionalMapValue(rawRequirement, "statistic"),
                     this.optionalMapValue(rawRequirement, "material"),
@@ -709,6 +710,26 @@ public final class ConfigLoader {
             ));
         }
         return List.copyOf(requirements);
+    }
+
+    private String resolveStoreRequirementKey(final Map<?, ?> rawRequirement) {
+        final String directKey = this.optionalMapValue(rawRequirement, "key");
+        if (directKey != null) {
+            return directKey;
+        }
+        final String entitlementKey = this.optionalMapValue(rawRequirement, "entitlement");
+        if (entitlementKey != null) {
+            return entitlementKey;
+        }
+        final String advancementKey = this.optionalMapValue(rawRequirement, "advancement");
+        if (advancementKey != null) {
+            return advancementKey;
+        }
+        final String counterKey = this.optionalMapValue(rawRequirement, "counter");
+        if (counterKey != null) {
+            return counterKey;
+        }
+        return this.optionalMapValue(rawRequirement, "counter-key");
     }
 
     private StoreVisibilityWhenUnmet parseStoreVisibilityWhenUnmet(final String rawValue, final String context) {

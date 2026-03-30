@@ -16,9 +16,9 @@ public record StoreRequirement(
             throw new IllegalArgumentException("minimum cannot be negative");
         }
         switch (type) {
-            case ENTITLEMENT -> {
+            case ENTITLEMENT, ADVANCEMENT, CUSTOM_COUNTER -> {
                 if (key == null || key.isBlank()) {
-                    throw new IllegalArgumentException("ENTITLEMENT requirements require a key");
+                    throw new IllegalArgumentException(type + " requirements require a key");
                 }
             }
             case PERMISSION -> {

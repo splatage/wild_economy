@@ -5,6 +5,7 @@ import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
 import com.splatage.wild_economy.store.model.StoreRequirement;
 import com.splatage.wild_economy.store.model.StoreVisibilityWhenUnmet;
+import com.splatage.wild_economy.store.progress.StoreProgressService;
 import com.splatage.wild_economy.store.state.StoreEntitlementRecord;
 import com.splatage.wild_economy.store.state.StoreOwnershipState;
 import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
@@ -22,16 +23,19 @@ import org.bukkit.entity.Player;
 
 public final class StoreEligibilityServiceImpl implements StoreEligibilityService {
 
-    private static final Pattern TIERED_KEY_PATTERN = Pattern.compile("^(.*?)(\\.)(0*)(\\d+)$");
+    private static final Pattern TIERED_KEY_PATTERN = Pattern.compile("^(.*?)(\.)(0*)(\d+)$");
 
     private final StoreRuntimeStateService storeRuntimeStateService;
+    private final StoreProgressService storeProgressService;
     private final long tieredTrackPurchaseCooldownSeconds;
 
     public StoreEligibilityServiceImpl(
         final StoreRuntimeStateService storeRuntimeStateService,
+        final StoreProgressService storeProgressService,
         final long tieredTrackPurchaseCooldownSeconds
     ) {
         this.storeRuntimeStateService = Objects.requireNonNull(storeRuntimeStateService, "storeRuntimeStateService");
+        this.storeProgressService = Objects.requireNonNull(storeProgressService, "storeProgressService");
         this.tieredTrackPurchaseCooldownSeconds = Math.max(0L, tieredTrackPurchaseCooldownSeconds);
     }
 
@@ -158,6 +162,8 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
             case PERMISSION -> this.evaluatePermissionRequirement(player, requirement);
             case STATISTIC -> this.evaluateStatisticRequirement(player, requirement);
             case STATISTIC_MATERIAL -> this.evaluateStatisticMaterialRequirement(player, requirement);
+            case ADVANCEMENT -> this.evaluateAdvancementRequirement(player, requirement);
+            case CUSTOM_COUNTER -> this.evaluateCustomCounterRequirement(player, requirement);
         };
     }
 
@@ -204,8 +210,30 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         );
     }
 
+    private RequirementEvaluation evaluateAdvancementRequirement(final Player player, final StoreRequirement requirement) {
+        final boolean completed = this.storeProgressService.hasAdvancement(player, requirement.key());
+        return new RequirementEvaluation(
+            completed,
+            "Advancement: " + requirement.key() + (completed ? " (met)" : " (missing)"),
+            completed ? null : "You have not yet completed the required advancement."
+        );
+    }
+
+    private RequirementEvaluation evaluateCustomCounterRequirement(final Player player, final StoreRequirement requirement) {
+        final long current = this.storeProgressService.getCustomCounter(player, requirement.key());
+        return new RequirementEvaluation(
+            current >= requirement.minimum(),
+            "Counter " + this.prettyCounterName(requirement.key()) + ": " + current + " / " + requirement.minimum(),
+            current >= requirement.minimum() ? null : "You have not yet reached the required progress."
+        );
+    }
+
     private String prettyEnumName(final String raw) {
         return raw.toLowerCase(Locale.ROOT).replace('_', ' ');
+    }
+
+    private String prettyCounterName(final String raw) {
+        return raw.toLowerCase(Locale.ROOT).replace('_', ' ').replace('.', ' ').replace('/', ' ').replace('-', ' ');
     }
 
     private String formatDurationSeconds(final long seconds) {

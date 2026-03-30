@@ -88,3 +88,41 @@ products:
     icon: EXPERIENCE_BOTTLE
     xp-points: 1500
     confirm: true
+
+
+  nether_traveler:
+    category: perks
+    type: PERMANENT_UNLOCK
+    display-name: "&5Nether Traveler"
+    icon: CRYING_OBSIDIAN
+    price: 12000.00
+    entitlement-key: "perk.nether_traveler"
+    confirm: true
+    visibility-when-unmet: SHOW_LOCKED
+    locked-message: "Reach the Nether to unlock this path."
+    requirements:
+      all-of:
+        - type: ADVANCEMENT
+          advancement: "minecraft:story/enter_the_nether"
+    actions:
+      - type: MESSAGE
+        message: "&5You unlocked Nether Traveler!"
+
+  builder_path_1:
+    category: perks
+    type: PERMANENT_UNLOCK
+    display-name: "&bBuilder Path I"
+    icon: BRICKS
+    price: 8000.00
+    entitlement-key: "builder.1"
+    confirm: true
+    visibility-when-unmet: SHOW_LOCKED
+    locked-message: "Keep building to unlock this path."
+    requirements:
+      all-of:
+        - type: CUSTOM_COUNTER
+          counter: "blocks_placed"
+          min: 500
+    actions:
+      - type: MESSAGE
+        message: "&bYou unlocked Builder Path I!"

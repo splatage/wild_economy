@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.bootstrap;
 
+import com.splatage.wild_economy.WildEconomyPlugin;
 import com.splatage.wild_economy.config.DatabaseConfig;
 import com.splatage.wild_economy.config.GlobalConfig;
 import com.splatage.wild_economy.config.StoreProductsConfig;
@@ -8,14 +9,16 @@ import com.splatage.wild_economy.persistence.DatabaseProvider;
 import com.splatage.wild_economy.persistence.TransactionRunner;
 import com.splatage.wild_economy.store.action.ProductActionExecutor;
 import com.splatage.wild_economy.store.action.SimpleProductActionExecutor;
+import com.splatage.wild_economy.store.eligibility.StoreEligibilityService;
+import com.splatage.wild_economy.store.eligibility.StoreEligibilityServiceImpl;
+import com.splatage.wild_economy.store.progress.StoreProgressService;
+import com.splatage.wild_economy.store.progress.StoreProgressServiceImpl;
 import com.splatage.wild_economy.store.repository.StoreEntitlementRepository;
 import com.splatage.wild_economy.store.repository.StorePurchaseRepository;
 import com.splatage.wild_economy.store.repository.mysql.MysqlStoreEntitlementRepository;
 import com.splatage.wild_economy.store.repository.mysql.MysqlStorePurchaseRepository;
 import com.splatage.wild_economy.store.repository.sqlite.SqliteStoreEntitlementRepository;
 import com.splatage.wild_economy.store.repository.sqlite.SqliteStorePurchaseRepository;
-import com.splatage.wild_economy.store.eligibility.StoreEligibilityService;
-import com.splatage.wild_economy.store.eligibility.StoreEligibilityServiceImpl;
 import com.splatage.wild_economy.store.service.StoreService;
 import com.splatage.wild_economy.store.service.StoreServiceImpl;
 import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
@@ -29,6 +32,7 @@ final class StoreBootstrap {
     }
 
     static Components create(
+            final WildEconomyPlugin plugin,
             final DatabaseProvider databaseProvider,
             final DatabaseConfig databaseConfig,
             final TransactionRunner transactionRunner,
@@ -59,8 +63,11 @@ final class StoreBootstrap {
                 databaseConfig.mysqlMaximumPoolSize()
         );
 
+        final StoreProgressService storeProgressService = new StoreProgressServiceImpl(plugin);
+
         final StoreEligibilityService storeEligibilityService = new StoreEligibilityServiceImpl(
                 storeRuntimeStateService,
+                storeProgressService,
                 globalConfig.tieredTrackPurchaseCooldownSeconds()
         );
 
@@ -73,11 +80,12 @@ final class StoreBootstrap {
                 storeEligibilityService
         );
 
-        return new Components(storeRuntimeStateService, storeService, storeEntitlementRepository, storePurchaseRepository);
+        return new Components(storeRuntimeStateService, storeProgressService, storeService, storeEntitlementRepository, storePurchaseRepository);
     }
 
     record Components(
             StoreRuntimeStateService storeRuntimeStateService,
+            StoreProgressService storeProgressService,
             StoreService storeService,
             StoreEntitlementRepository storeEntitlementRepository,
             StorePurchaseRepository storePurchaseRepository

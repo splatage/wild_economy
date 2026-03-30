@@ -13,6 +13,7 @@ import com.splatage.wild_economy.store.model.StoreProductType;
 import com.splatage.wild_economy.store.model.StoreRequirement;
 import com.splatage.wild_economy.store.model.StoreRequirementType;
 import com.splatage.wild_economy.store.model.StoreVisibilityWhenUnmet;
+import com.splatage.wild_economy.store.progress.StoreProgressService;
 import com.splatage.wild_economy.store.state.StoreEntitlementRecord;
 import com.splatage.wild_economy.store.state.StoreOwnershipState;
 import com.splatage.wild_economy.store.state.StorePurchaseAuditRecord;
@@ -32,7 +33,7 @@ final class StoreEligibilityServiceImplTest {
 
     @Test
     void category_canBeHiddenByPermissionRequirement() {
-        final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), 300L);
+        final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), new FakeStoreProgressService(), 300L);
         final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of());
         final StoreCategory category = new StoreCategory(
             "vip",
@@ -53,7 +54,7 @@ final class StoreEligibilityServiceImplTest {
 
     @Test
     void product_showsLockedWhenStatisticRequirementIsUnmet() {
-        final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), 300L);
+        final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), new FakeStoreProgressService(), 300L);
         final Player player = this.player(
             UUID.randomUUID(),
             Set.of(),
@@ -85,9 +86,68 @@ final class StoreEligibilityServiceImplTest {
     }
 
     @Test
+    void product_showsLockedWhenAdvancementRequirementIsUnmet() {
+        final FakeStoreProgressService progressService = new FakeStoreProgressService();
+        final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), progressService, 0L);
+        final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of());
+        final StoreProduct product = new StoreProduct(
+            "nether_unlock",
+            "tracks",
+            StoreProductType.REPEATABLE_GRANT,
+            "Nether Unlock",
+            "NETHER_STAR",
+            MoneyAmount.ofMinor(1_000L),
+            null,
+            false,
+            List.of(),
+            List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
+            0,
+            List.of(new StoreRequirement(StoreRequirementType.ADVANCEMENT, "minecraft:story/enter_the_nether", null, null, null, 0L)),
+            StoreVisibilityWhenUnmet.SHOW_LOCKED,
+            "Reach the Nether to unlock this reward."
+        );
+
+        final StoreEligibilityResult result = service.evaluateProduct(player, product);
+
+        assertTrue(result.visible());
+        assertFalse(result.acquirable());
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("minecraft:story/enter_the_nether")));
+    }
+
+    @Test
+    void product_showsLockedWhenCustomCounterRequirementIsUnmet() {
+        final FakeStoreProgressService progressService = new FakeStoreProgressService();
+        progressService.customCounters.put("blocks_placed", 42L);
+        final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), progressService, 0L);
+        final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of());
+        final StoreProduct product = new StoreProduct(
+            "builder_unlock",
+            "tracks",
+            StoreProductType.REPEATABLE_GRANT,
+            "Builder Unlock",
+            "BRICKS",
+            MoneyAmount.ofMinor(1_000L),
+            null,
+            false,
+            List.of(),
+            List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
+            0,
+            List.of(new StoreRequirement(StoreRequirementType.CUSTOM_COUNTER, "blocks_placed", null, null, null, 100L)),
+            StoreVisibilityWhenUnmet.SHOW_LOCKED,
+            "Keep building to unlock this reward."
+        );
+
+        final StoreEligibilityResult result = service.evaluateProduct(player, product);
+
+        assertTrue(result.visible());
+        assertFalse(result.acquirable());
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("42 / 100")));
+    }
+
+    @Test
     void product_requiresPreviousTierInSequence() {
         final FakeStoreRuntimeStateService runtime = new FakeStoreRuntimeStateService();
-        final StoreEligibilityService service = this.service(runtime, 300L);
+        final StoreEligibilityService service = this.service(runtime, new FakeStoreProgressService(), 300L);
         final UUID playerId = UUID.randomUUID();
         final Player player = this.player(playerId, Set.of(), Map.of(), Map.of());
 
@@ -103,7 +163,7 @@ final class StoreEligibilityServiceImplTest {
         final FakeStoreRuntimeStateService runtime = new FakeStoreRuntimeStateService();
         final long now = System.currentTimeMillis() / 1000L;
         runtime.entitlements.put("kit.1", new StoreEntitlementRecord("kit.1", "kit_1", now - 120L));
-        final StoreEligibilityService service = this.service(runtime, 300L);
+        final StoreEligibilityService service = this.service(runtime, new FakeStoreProgressService(), 300L);
         final Player player = this.player(UUID.randomUUID(), Set.of(), Map.of(), Map.of());
 
         final StoreEligibilityResult result = service.evaluateProduct(player, this.tieredProduct("kit.2"));
@@ -114,7 +174,7 @@ final class StoreEligibilityServiceImplTest {
 
     @Test
     void product_permissionRequirementPassesForAuthorizedPlayer() {
-        final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), 0L);
+        final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), new FakeStoreProgressService(), 0L);
         final Player player = this.player(UUID.randomUUID(), Set.of("wild.store.vip"), Map.of(), Map.of());
         final StoreProduct product = new StoreProduct(
             "vip_rank",
@@ -139,8 +199,8 @@ final class StoreEligibilityServiceImplTest {
         assertTrue(result.acquirable());
     }
 
-    private StoreEligibilityService service(final FakeStoreRuntimeStateService runtime, final long cooldownSeconds) {
-        return new StoreEligibilityServiceImpl(runtime, cooldownSeconds);
+    private StoreEligibilityService service(final FakeStoreRuntimeStateService runtime, final FakeStoreProgressService progressService, final long cooldownSeconds) {
+        return new StoreEligibilityServiceImpl(runtime, progressService, cooldownSeconds);
     }
 
     private StoreProduct tieredProduct(final String entitlementKey) {
@@ -191,6 +251,33 @@ final class StoreEligibilityServiceImplTest {
                 default -> throw new UnsupportedOperationException("Unexpected Player method: " + method.getName());
             }
         );
+    }
+
+    private static final class FakeStoreProgressService implements StoreProgressService {
+        private final Map<String, Boolean> advancements = new HashMap<>();
+        private final Map<String, Long> customCounters = new HashMap<>();
+
+        @Override
+        public boolean hasAdvancement(final Player player, final String advancementKey) {
+            return this.advancements.getOrDefault(advancementKey, false);
+        }
+
+        @Override
+        public long getCustomCounter(final Player player, final String counterKey) {
+            return this.customCounters.getOrDefault(counterKey, 0L);
+        }
+
+        @Override
+        public long incrementCustomCounter(final Player player, final String counterKey, final long delta) {
+            final long updated = this.getCustomCounter(player, counterKey) + delta;
+            this.customCounters.put(counterKey, updated);
+            return updated;
+        }
+
+        @Override
+        public void setCustomCounter(final Player player, final String counterKey, final long value) {
+            this.customCounters.put(counterKey, value);
+        }
     }
 
     private static final class FakeStoreRuntimeStateService implements StoreRuntimeStateService {
