@@ -1,6 +1,5 @@
 package com.splatage.wild_economy.bootstrap;
 
-import com.splatage.wild_economy.WildEconomyPlugin;
 import com.splatage.wild_economy.config.DatabaseConfig;
 import com.splatage.wild_economy.config.GlobalConfig;
 import com.splatage.wild_economy.config.StoreProductsConfig;
@@ -32,7 +31,6 @@ final class StoreBootstrap {
     }
 
     static Components create(
-            final WildEconomyPlugin plugin,
             final DatabaseProvider databaseProvider,
             final DatabaseConfig databaseConfig,
             final TransactionRunner transactionRunner,
@@ -63,7 +61,7 @@ final class StoreBootstrap {
                 databaseConfig.mysqlMaximumPoolSize()
         );
 
-        final StoreProgressService storeProgressService = new StoreProgressServiceImpl(plugin);
+        final StoreProgressService storeProgressService = new StoreProgressServiceImpl("wild_economy");
 
         final StoreEligibilityService storeEligibilityService = new StoreEligibilityServiceImpl(
                 storeRuntimeStateService,
@@ -80,7 +78,13 @@ final class StoreBootstrap {
                 storeEligibilityService
         );
 
-        return new Components(storeRuntimeStateService, storeProgressService, storeService, storeEntitlementRepository, storePurchaseRepository);
+        return new Components(
+                storeRuntimeStateService,
+                storeProgressService,
+                storeService,
+                storeEntitlementRepository,
+                storePurchaseRepository
+        );
     }
 
     record Components(

@@ -23,8 +23,7 @@ import org.bukkit.entity.Player;
 
 public final class StoreEligibilityServiceImpl implements StoreEligibilityService {
 
-    private static final Pattern TIERED_KEY_PATTERN = Pattern.compile("^(.*?)(\.)(0*)(\d+)$");
-
+    private static final Pattern TIERED_KEY_PATTERN = Pattern.compile("^(.*?)(\\.)(0*)(\\d+)$");
     private final StoreRuntimeStateService storeRuntimeStateService;
     private final StoreProgressService storeProgressService;
     private final long tieredTrackPurchaseCooldownSeconds;

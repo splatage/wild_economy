@@ -1,6 +1,5 @@
 package com.splatage.wild_economy.store.progress;
 
-import com.splatage.wild_economy.WildEconomyPlugin;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -17,11 +16,17 @@ public final class StoreProgressServiceImpl implements StoreProgressService {
 
     private static final Pattern COUNTER_KEY_PATTERN = Pattern.compile("^[a-z0-9._/-]+$");
 
-    private final WildEconomyPlugin plugin;
+    private final String namespace;
     private final Map<String, NamespacedKey> counterKeyCache = new ConcurrentHashMap<>();
 
-    public StoreProgressServiceImpl(final WildEconomyPlugin plugin) {
-        this.plugin = Objects.requireNonNull(plugin, "plugin");
+    public StoreProgressServiceImpl(final String namespace) {
+        final String normalizedNamespace = Objects.requireNonNull(namespace, "namespace")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        if (normalizedNamespace.isBlank()) {
+            throw new IllegalArgumentException("namespace cannot be blank");
+        }
+        this.namespace = normalizedNamespace;
     }
 
     @Override
@@ -78,22 +83,27 @@ public final class StoreProgressServiceImpl implements StoreProgressService {
 
     private NamespacedKey namespacedCounterKey(final String rawCounterKey) {
         final String normalizedCounterKey = this.normalizeCounterKey(rawCounterKey);
-        return this.counterKeyCache.computeIfAbsent(
-            normalizedCounterKey,
-            key -> new NamespacedKey(this.plugin, "store_counter." + key)
-        );
+        return this.counterKeyCache.computeIfAbsent(normalizedCounterKey, key -> {
+            final NamespacedKey namespacedKey = NamespacedKey.fromString(this.namespace + ":store_counter." + key);
+            if (namespacedKey == null) {
+                throw new IllegalStateException(
+                        "Invalid store counter namespaced key: " + this.namespace + ":store_counter." + key
+                );
+            }
+            return namespacedKey;
+        });
     }
 
     private String normalizeCounterKey(final String rawCounterKey) {
         final String normalized = Objects.requireNonNull(rawCounterKey, "counterKey")
-            .trim()
-            .toLowerCase(Locale.ROOT);
+                .trim()
+                .toLowerCase(Locale.ROOT);
         if (normalized.isEmpty()) {
             throw new IllegalArgumentException("counterKey cannot be blank");
         }
         if (!COUNTER_KEY_PATTERN.matcher(normalized).matches()) {
             throw new IllegalArgumentException(
-                "counterKey must contain only lowercase letters, numbers, '.', '_', '-', or '/' characters: " + rawCounterKey
+                    "counterKey must contain only lowercase letters, numbers, '.', '_', '-', or '/' characters: " + rawCounterKey
             );
         }
         return normalized;
