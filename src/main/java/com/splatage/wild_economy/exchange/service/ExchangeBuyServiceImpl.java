@@ -11,6 +11,7 @@ import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
 import com.splatage.wild_economy.exchange.domain.RejectionReason;
 import com.splatage.wild_economy.exchange.domain.StockSnapshot;
+import com.splatage.wild_economy.exchange.item.ExchangeItemCodec;
 import com.splatage.wild_economy.exchange.item.ItemValidationService;
 import com.splatage.wild_economy.exchange.item.ValidationResult;
 import com.splatage.wild_economy.exchange.pricing.PricingService;
@@ -53,6 +54,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
     private final TransactionLogService transactionLogService;
     private final GlobalConfig globalConfig;
     private final ContainerAccessService containerAccessService;
+    private final ExchangeItemCodec exchangeItemCodec;
 
     public ExchangeBuyServiceImpl(
         final ExchangeCatalog exchangeCatalog,
@@ -93,6 +95,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         this.transactionLogService = Objects.requireNonNull(transactionLogService, "transactionLogService");
         this.globalConfig = Objects.requireNonNull(globalConfig, "globalConfig");
         this.containerAccessService = Objects.requireNonNull(containerAccessService, "containerAccessService");
+        this.exchangeItemCodec = new ExchangeItemCodec();
     }
 
     @Override
@@ -185,8 +188,8 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             );
         }
 
-        final Material material = Material.matchMaterial(itemKey.value().replace("minecraft:", "").toUpperCase());
-        if (material == null || material == Material.AIR) {
+        final ItemStack deliveryTemplate = this.exchangeItemCodec.createItemStack(itemKey, 1).orElse(null);
+        if (deliveryTemplate == null) {
             return new BuyResult(
                 false,
                 itemKey,
@@ -194,7 +197,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
                 quote.unitPrice(),
                 quote.totalPrice(),
                 RejectionReason.INTERNAL_ERROR,
-                "Invalid material mapping"
+                "Invalid item template mapping"
             );
         }
 
@@ -226,7 +229,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             );
         }
 
-        final DeliveryOutcome delivery = this.deliverPurchase(player, material, amount);
+        final DeliveryOutcome delivery = this.deliverPurchase(player, deliveryTemplate, amount);
         final int amountBought = delivery.amountDelivered();
         final int undeliveredAmount = delivery.amountUndelivered();
 
@@ -397,30 +400,30 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             || this.globalConfig.buyDropAtFeetEnabled();
     }
 
-    private DeliveryOutcome deliverPurchase(final Player player, final Material material, final int amount) {
+    private DeliveryOutcome deliverPurchase(final Player player, final ItemStack deliveryTemplate, final int amount) {
         int remaining = amount;
         final List<String> deliverySegments = new ArrayList<>(4);
 
         if (this.globalConfig.buyToHeldShulkerEnabled() && remaining > 0) {
-            final DeliveryStepResult step = this.deliverToHeldShulker(player, material, remaining);
+            final DeliveryStepResult step = this.deliverToHeldShulker(player, deliveryTemplate, remaining);
             remaining -= step.amountDelivered();
             this.appendDeliverySegment(deliverySegments, step.amountDelivered(), "held shulker");
         }
 
         if (this.globalConfig.buyToLookedAtContainerEnabled() && remaining > 0) {
-            final DeliveryStepResult step = this.deliverToLookedAtContainer(player, material, remaining);
+            final DeliveryStepResult step = this.deliverToLookedAtContainer(player, deliveryTemplate, remaining);
             remaining -= step.amountDelivered();
             this.appendDeliverySegment(deliverySegments, step.amountDelivered(), step.targetLabel());
         }
 
         if (this.globalConfig.buyToInventoryEnabled() && remaining > 0) {
-            final int delivered = this.addAsMuchAsPossible(player.getInventory(), material, remaining);
+            final int delivered = this.addAsMuchAsPossible(player.getInventory(), deliveryTemplate, remaining);
             remaining -= delivered;
             this.appendDeliverySegment(deliverySegments, delivered, "inventory");
         }
 
         if (this.globalConfig.buyDropAtFeetEnabled() && remaining > 0) {
-            final ItemStack toDrop = new ItemStack(material, remaining);
+            final ItemStack toDrop = this.copyTemplate(deliveryTemplate, remaining);
             player.getWorld().dropItem(player.getLocation(), toDrop);
             this.appendDeliverySegment(deliverySegments, remaining, "dropped at feet");
             remaining = 0;
@@ -429,7 +432,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         return new DeliveryOutcome(amount - remaining, remaining, List.copyOf(deliverySegments));
     }
 
-    private DeliveryStepResult deliverToHeldShulker(final Player player, final Material material, final int amount) {
+    private DeliveryStepResult deliverToHeldShulker(final Player player, final ItemStack deliveryTemplate, final int amount) {
         final ItemStack held = player.getInventory().getItemInMainHand();
         if (!this.isHeldShulkerItem(held)) {
             return DeliveryStepResult.none();
@@ -441,7 +444,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             return DeliveryStepResult.none();
         }
 
-        final int delivered = this.addAsMuchAsPossible(shulkerBox.getInventory(), material, amount);
+        final int delivered = this.addAsMuchAsPossible(shulkerBox.getInventory(), deliveryTemplate, amount);
         if (delivered <= 0) {
             return DeliveryStepResult.none();
         }
@@ -452,7 +455,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         return new DeliveryStepResult(delivered, "held shulker");
     }
 
-    private DeliveryStepResult deliverToLookedAtContainer(final Player player, final Material material, final int amount) {
+    private DeliveryStepResult deliverToLookedAtContainer(final Player player, final ItemStack deliveryTemplate, final int amount) {
         final Block targetBlock = player.getTargetBlockExact(CONTAINER_TARGET_RANGE);
         final SupportedContainerTarget target = this.resolveSupportedBlockTarget(targetBlock);
         if (target == null) {
@@ -468,7 +471,7 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
             return DeliveryStepResult.none();
         }
 
-        final int delivered = this.addAsMuchAsPossible(target.inventory(), material, amount);
+        final int delivered = this.addAsMuchAsPossible(target.inventory(), deliveryTemplate, amount);
         if (delivered <= 0) {
             return DeliveryStepResult.none();
         }
@@ -476,15 +479,21 @@ public final class ExchangeBuyServiceImpl implements ExchangeBuyService {
         return new DeliveryStepResult(delivered, target.description());
     }
 
-    private int addAsMuchAsPossible(final Inventory inventory, final Material material, final int amount) {
+    private int addAsMuchAsPossible(final Inventory inventory, final ItemStack deliveryTemplate, final int amount) {
         if (amount <= 0) {
             return 0;
         }
 
-        final ItemStack toAdd = new ItemStack(material, amount);
+        final ItemStack toAdd = this.copyTemplate(deliveryTemplate, amount);
         final Map<Integer, ItemStack> leftovers = inventory.addItem(toAdd);
         final int leftoverAmount = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
         return Math.max(0, amount - leftoverAmount);
+    }
+
+    private ItemStack copyTemplate(final ItemStack deliveryTemplate, final int amount) {
+        final ItemStack copy = deliveryTemplate.clone();
+        copy.setAmount(Math.max(1, amount));
+        return copy;
     }
 
     private SupportedContainerTarget resolveSupportedBlockTarget(final Block targetBlock) {

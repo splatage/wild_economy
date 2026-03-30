@@ -4,6 +4,7 @@ import com.splatage.wild_economy.config.DatabaseConfig;
 import com.splatage.wild_economy.config.EconomyConfig;
 import com.splatage.wild_economy.config.ExchangeItemsConfig;
 import com.splatage.wild_economy.config.GlobalConfig;
+import com.splatage.wild_economy.catalog.rootvalue.RootValueLoader;
 import com.splatage.wild_economy.economy.EconomyGateway;
 import com.splatage.wild_economy.economy.InternalEconomyGateway;
 import com.splatage.wild_economy.economy.repository.EconomyNameCacheRepository;
@@ -65,6 +66,16 @@ final class ExchangeBootstrap {
     private ExchangeBootstrap() {
     }
 
+
+    private static RootValueLoader loadRootValueLookup(final File dataFolder, final Logger logger) {
+        try {
+            return RootValueLoader.fromFile(dataFolder.toPath().resolve("root-values.yml").toFile());
+        } catch (final IOException exception) {
+            logger.warning("Failed to load root-values.yml for derived variant pricing; falling back to base family worths: " + exception.getMessage());
+            return RootValueLoader.empty();
+        }
+    }
+
     static Components create(
             final File dataFolder,
             final Logger logger,
@@ -101,9 +112,11 @@ final class ExchangeBootstrap {
             throw new IllegalStateException("Failed to load layout.yml", exception);
         }
 
+        final RootValueLoader rootValueLookup = loadRootValueLookup(dataFolder, logger);
+
         final CatalogLoader catalogLoader = new CatalogLoader();
         final ExchangeCatalog exchangeCatalog = Objects.requireNonNull(
-                catalogLoader.load(exchangeItemsConfig),
+                catalogLoader.load(exchangeItemsConfig, rootValueLookup),
                 "exchangeCatalog"
         );
 

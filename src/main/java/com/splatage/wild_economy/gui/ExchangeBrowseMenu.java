@@ -1,10 +1,13 @@
 package com.splatage.wild_economy.gui;
 
 import com.splatage.wild_economy.exchange.domain.ItemKey;
+import com.splatage.wild_economy.exchange.item.ExchangeItemCodec;
 import com.splatage.wild_economy.exchange.service.ExchangeCatalogView;
 import com.splatage.wild_economy.gui.browse.ExchangeLayoutBrowseService;
 import com.splatage.wild_economy.gui.layout.LayoutBlueprint;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -18,6 +21,7 @@ public final class ExchangeBrowseMenu {
     private final ExchangeLayoutBrowseService exchangeLayoutBrowseService;
     private final PlayerInfoItemFactory playerInfoItemFactory;
     private final LayoutBlueprint layoutBlueprint;
+    private final ExchangeItemCodec exchangeItemCodec;
     private ShopMenuRouter shopMenuRouter;
 
     public ExchangeBrowseMenu(
@@ -28,6 +32,7 @@ public final class ExchangeBrowseMenu {
         this.exchangeLayoutBrowseService = Objects.requireNonNull(exchangeLayoutBrowseService, "exchangeLayoutBrowseService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
         this.layoutBlueprint = Objects.requireNonNull(layoutBlueprint, "layoutBlueprint");
+        this.exchangeItemCodec = new ExchangeItemCodec();
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -41,9 +46,13 @@ public final class ExchangeBrowseMenu {
         final int page,
         final boolean viaSubcategory
     ) {
-        final ShopMenuHolder holder = ShopMenuHolder.browse(layoutGroupKey, layoutChildKey, page, viaSubcategory);
-        final Inventory inventory = holder.createInventory(54, this.title(layoutGroupKey, layoutChildKey));
         final List<ExchangeCatalogView> entries = this.exchangeLayoutBrowseService.browseLayout(layoutGroupKey, layoutChildKey, page, 45);
+        final Map<Integer, ItemKey> slotItemKeys = new HashMap<>();
+        for (int slot = 0; slot < entries.size() && slot < 45; slot++) {
+            slotItemKeys.put(slot, entries.get(slot).itemKey());
+        }
+        final ShopMenuHolder holder = ShopMenuHolder.browse(layoutGroupKey, layoutChildKey, page, viaSubcategory, slotItemKeys);
+        final Inventory inventory = holder.createInventory(54, this.title(layoutGroupKey, layoutChildKey));
         final int totalVisible = this.exchangeLayoutBrowseService.countVisibleItems(layoutGroupKey, layoutChildKey);
 
         int slot = 0;
@@ -79,14 +88,19 @@ public final class ExchangeBrowseMenu {
             return;
         }
 
+        final ShopMenuHolder holder = event.getView().getTopInventory().getHolder() instanceof ShopMenuHolder shopMenuHolder
+            ? shopMenuHolder
+            : null;
+
         final int slot = event.getRawSlot();
         if (slot >= 0 && slot < 45) {
-            final ItemStack clicked = event.getCurrentItem();
-            if (clicked == null || clicked.getType() == Material.AIR) {
+            if (holder == null) {
                 return;
             }
-
-            final ItemKey itemKey = this.toItemKey(clicked.getType());
+            final ItemKey itemKey = holder.itemKeyForBrowseSlot(slot);
+            if (itemKey == null) {
+                return;
+            }
             this.shopMenuRouter.openDetail(player, itemKey);
             return;
         }
@@ -124,8 +138,8 @@ public final class ExchangeBrowseMenu {
     }
 
     private ItemStack catalogItem(final ExchangeCatalogView view) {
-        final Material material = this.resolveMaterial(view.itemKey());
-        final ItemStack stack = new ItemStack(material == null ? Material.BARRIER : material);
+        final ItemStack stack = this.exchangeItemCodec.createItemStack(view.itemKey(), 1)
+            .orElseGet(() -> new ItemStack(Material.BARRIER));
         final ItemMeta meta = stack.getItemMeta();
 
         if (meta != null) {
@@ -151,13 +165,5 @@ public final class ExchangeBrowseMenu {
         }
 
         return stack;
-    }
-
-    private Material resolveMaterial(final ItemKey itemKey) {
-        return Material.matchMaterial(itemKey.value().replace("minecraft:", "").toUpperCase());
-    }
-
-    private ItemKey toItemKey(final Material material) {
-        return new ItemKey("minecraft:" + material.name().toLowerCase());
     }
 }

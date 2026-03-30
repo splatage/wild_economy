@@ -2,6 +2,7 @@ package com.splatage.wild_economy.exchange.stock;
 
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.StockSnapshot;
+import java.util.Set;
 
 public interface StockService {
 
@@ -18,6 +19,8 @@ public interface StockService {
     void removeStock(ItemKey itemKey, int amount);
 
     long cacheRevision();
+
+    Set<ItemKey> stockedItemKeys();
 
     void flushDirtyNow();
 

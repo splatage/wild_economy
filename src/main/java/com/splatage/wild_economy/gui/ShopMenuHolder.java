@@ -2,6 +2,7 @@ package com.splatage.wild_economy.gui;
 
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Objects;
 import org.bukkit.Bukkit;
 import org.bukkit.inventory.Inventory;
@@ -30,6 +31,7 @@ public final class ShopMenuHolder implements InventoryHolder {
     private final long quotedAtMillis;
     private final String currentStoreCategoryId;
     private final String currentStoreProductId;
+    private final Map<Integer, ItemKey> browseSlotItemKeys;
 
     private Inventory inventory;
 
@@ -43,7 +45,8 @@ public final class ShopMenuHolder implements InventoryHolder {
         final BigDecimal quotedUnitPrice,
         final long quotedAtMillis,
         final String currentStoreCategoryId,
-        final String currentStoreProductId
+        final String currentStoreProductId,
+        final Map<Integer, ItemKey> browseSlotItemKeys
     ) {
         this.viewType = Objects.requireNonNull(viewType, "viewType");
         this.currentLayoutGroupKey = currentLayoutGroupKey;
@@ -55,10 +58,11 @@ public final class ShopMenuHolder implements InventoryHolder {
         this.quotedAtMillis = quotedAtMillis;
         this.currentStoreCategoryId = currentStoreCategoryId;
         this.currentStoreProductId = currentStoreProductId;
+        this.browseSlotItemKeys = browseSlotItemKeys == null ? Map.of() : Map.copyOf(browseSlotItemKeys);
     }
 
     public static ShopMenuHolder root() {
-        return new ShopMenuHolder(ViewType.ROOT, null, null, 0, null, false, null, 0L, null, null);
+        return new ShopMenuHolder(ViewType.ROOT, null, null, 0, null, false, null, 0L, null, null, Map.of());
     }
 
     public static ShopMenuHolder subcategory(final String layoutGroupKey) {
@@ -72,7 +76,8 @@ public final class ShopMenuHolder implements InventoryHolder {
             null,
             0L,
             null,
-            null
+            null,
+            Map.of()
         );
     }
 
@@ -81,6 +86,16 @@ public final class ShopMenuHolder implements InventoryHolder {
         final String layoutChildKey,
         final int page,
         final boolean viaSubcategory
+    ) {
+        return browse(layoutGroupKey, layoutChildKey, page, viaSubcategory, Map.of());
+    }
+
+    public static ShopMenuHolder browse(
+        final String layoutGroupKey,
+        final String layoutChildKey,
+        final int page,
+        final boolean viaSubcategory,
+        final Map<Integer, ItemKey> browseSlotItemKeys
     ) {
         return new ShopMenuHolder(
             ViewType.BROWSE,
@@ -92,7 +107,8 @@ public final class ShopMenuHolder implements InventoryHolder {
             null,
             0L,
             null,
-            null
+            null,
+            browseSlotItemKeys
         );
     }
 
@@ -136,12 +152,13 @@ public final class ShopMenuHolder implements InventoryHolder {
             quotedUnitPrice,
             quotedAtMillis,
             null,
-            null
+            null,
+            Map.of()
         );
     }
 
     public static ShopMenuHolder storeRoot() {
-        return new ShopMenuHolder(ViewType.STORE_ROOT, null, null, 0, null, false, null, 0L, null, null);
+        return new ShopMenuHolder(ViewType.STORE_ROOT, null, null, 0, null, false, null, 0L, null, null, Map.of());
     }
 
     public static ShopMenuHolder storeCategory(final String categoryId, final int page) {
@@ -155,7 +172,8 @@ public final class ShopMenuHolder implements InventoryHolder {
             null,
             0L,
             Objects.requireNonNull(categoryId, "categoryId"),
-            null
+            null,
+            Map.of()
         );
     }
 
@@ -174,7 +192,8 @@ public final class ShopMenuHolder implements InventoryHolder {
             null,
             0L,
             Objects.requireNonNull(categoryId, "categoryId"),
-            Objects.requireNonNull(productId, "productId")
+            Objects.requireNonNull(productId, "productId"),
+            Map.of()
         );
     }
 
@@ -189,7 +208,8 @@ public final class ShopMenuHolder implements InventoryHolder {
             null,
             0L,
             "xp_bottles",
-            null
+            null,
+            Map.of()
         );
     }
 
@@ -245,5 +265,9 @@ public final class ShopMenuHolder implements InventoryHolder {
 
     public String currentStoreProductId() {
         return this.currentStoreProductId;
+    }
+
+    public ItemKey itemKeyForBrowseSlot(final int slot) {
+        return this.browseSlotItemKeys.get(slot);
     }
 }

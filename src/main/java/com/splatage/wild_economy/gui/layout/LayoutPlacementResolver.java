@@ -2,14 +2,17 @@ package com.splatage.wild_economy.gui.layout;
 
 import com.splatage.wild_economy.catalog.rootvalue.RootValueLoader;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
+import com.splatage.wild_economy.exchange.item.ExchangeItemCodec;
 import java.util.Objects;
 
 public final class LayoutPlacementResolver {
 
     private final LayoutBlueprint blueprint;
+    private final ExchangeItemCodec exchangeItemCodec;
 
     public LayoutPlacementResolver(final LayoutBlueprint blueprint) {
         this.blueprint = Objects.requireNonNull(blueprint, "blueprint");
+        this.exchangeItemCodec = new ExchangeItemCodec();
     }
 
     public LayoutPlacement resolve(final ItemKey itemKey) {
@@ -22,6 +25,18 @@ public final class LayoutPlacementResolver {
             return fallbackPlacement();
         }
 
+        final LayoutPlacement exact = this.resolveExact(itemKey);
+        if (exact != null) {
+            return exact;
+        }
+
+        return this.exchangeItemCodec.baseCatalogKey(new ItemKey(itemKey))
+            .map(ItemKey::value)
+            .map(this::resolveExact)
+            .orElseGet(this::fallbackPlacement);
+    }
+
+    private LayoutPlacement resolveExact(final String itemKey) {
         final LayoutOverride override = this.blueprint.override(itemKey).orElse(null);
         if (override != null && override.group() != null && !override.group().isBlank()) {
             return new LayoutPlacement(override.group(), override.child());
@@ -39,7 +54,7 @@ public final class LayoutPlacementResolver {
             }
         }
 
-        return fallbackPlacement();
+        return null;
     }
 
     private static boolean matches(final java.util.List<String> itemKeys, final java.util.List<String> itemKeyPatterns, final String itemKey) {

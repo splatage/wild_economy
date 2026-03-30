@@ -93,10 +93,10 @@ public final class MysqlExchangeTransactionRepository implements ExchangeTransac
         final long sinceEpochSecond,
         final int limit
     ) {
-        final String sql = "SELECT item_key, created_at AS event_epoch, total_value, amount "
+        final String sql = "SELECT item_key, MAX(created_at) AS event_epoch, COALESCE(SUM(total_value), 0) AS total_value, COALESCE(SUM(amount), 0) AS amount "
             + "FROM " + this.exchangeTransactionsTableName + " "
             + "WHERE transaction_type = 'BUY' AND player_uuid = ? AND created_at >= ? "
-            + "ORDER BY created_at DESC, transaction_id DESC LIMIT ?";
+            + "GROUP BY item_key ORDER BY event_epoch DESC, total_value DESC LIMIT ?";
         return this.loadMarketActivity(sql, statement -> {
             statement.setString(1, playerId.toString());
             statement.setLong(2, sinceEpochSecond);

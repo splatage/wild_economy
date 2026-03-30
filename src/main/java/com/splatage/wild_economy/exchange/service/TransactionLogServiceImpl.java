@@ -2,6 +2,7 @@ package com.splatage.wild_economy.exchange.service;
 
 import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.TransactionType;
+import com.splatage.wild_economy.exchange.item.ExchangeItemCodec;
 import com.splatage.wild_economy.exchange.repository.ExchangeTransactionRepository;
 import com.splatage.wild_economy.persistence.DatabaseDialect;
 import java.math.BigDecimal;
@@ -26,6 +27,7 @@ public final class TransactionLogServiceImpl implements TransactionLogService {
     private final ExchangeTransactionRepository transactionRepository;
     private final Logger logger;
     private final ExecutorService executor;
+    private final ExchangeItemCodec exchangeItemCodec;
 
     public TransactionLogServiceImpl(
         final ExchangeTransactionRepository transactionRepository,
@@ -36,6 +38,7 @@ public final class TransactionLogServiceImpl implements TransactionLogService {
         this.transactionRepository = Objects.requireNonNull(transactionRepository, "transactionRepository");
         this.logger = Objects.requireNonNull(logger, "logger");
         this.executor = this.createExecutor(dialect, mysqlMaximumPoolSize);
+        this.exchangeItemCodec = new ExchangeItemCodec();
     }
 
     @Override
@@ -118,7 +121,7 @@ public final class TransactionLogServiceImpl implements TransactionLogService {
                         unitPrice,
                         totalValue,
                         Instant.now(),
-                        null
+                        this.exchangeItemCodec.metadataJson(itemKey)
                     );
                 } catch (final RuntimeException exception) {
                     this.logger.log(

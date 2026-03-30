@@ -3,6 +3,7 @@ package com.splatage.wild_economy.gui;
 import com.splatage.wild_economy.command.ExchangeMessageFormatter;
 import com.splatage.wild_economy.exchange.domain.BuyResult;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
+import com.splatage.wild_economy.exchange.item.ExchangeItemCodec;
 import com.splatage.wild_economy.exchange.service.ExchangeItemView;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
 import com.splatage.wild_economy.platform.PlatformExecutor;
@@ -25,6 +26,7 @@ public final class ExchangeItemDetailMenu {
     private final ExchangeService exchangeService;
     private final PlatformExecutor platformExecutor;
     private final PlayerInfoItemFactory playerInfoItemFactory;
+    private final ExchangeItemCodec exchangeItemCodec;
 
     private ShopMenuRouter shopMenuRouter;
 
@@ -36,6 +38,7 @@ public final class ExchangeItemDetailMenu {
         this.exchangeService = Objects.requireNonNull(exchangeService, "exchangeService");
         this.platformExecutor = Objects.requireNonNull(platformExecutor, "platformExecutor");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
+        this.exchangeItemCodec = new ExchangeItemCodec();
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -145,11 +148,8 @@ public final class ExchangeItemDetailMenu {
     }
 
     private ItemStack detailItem(final ExchangeItemView view, final int amount) {
-        final Material material = this.resolveMaterial(view.itemKey());
-        final ItemStack stack = new ItemStack(
-            material == null ? Material.BARRIER : material,
-            Math.max(1, Math.min(amount, 64))
-        );
+        final ItemStack stack = this.exchangeItemCodec.createItemStack(view.itemKey(), Math.max(1, Math.min(amount, 64)))
+            .orElseGet(() -> new ItemStack(Material.BARRIER, Math.max(1, Math.min(amount, 64))));
 
         final ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
@@ -203,9 +203,5 @@ public final class ExchangeItemDetailMenu {
             return true;
         }
         return System.currentTimeMillis() - quotedAtMillis > QUOTE_MAX_AGE_MILLIS;
-    }
-
-    private Material resolveMaterial(final ItemKey itemKey) {
-        return Material.matchMaterial(itemKey.value().replace("minecraft:", "").toUpperCase());
     }
 }
