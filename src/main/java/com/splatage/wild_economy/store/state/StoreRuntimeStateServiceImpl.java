@@ -10,7 +10,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -100,6 +99,26 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
     }
 
     @Override
+    public StoreEntitlementRecord getEntitlementRecord(final UUID playerId, final String entitlementKey) {
+        Objects.requireNonNull(playerId, "playerId");
+        if (entitlementKey == null || entitlementKey.isBlank()) {
+            return null;
+        }
+
+        final PlayerStoreState state = this.playerStates.computeIfAbsent(playerId, ignored -> new PlayerStoreState());
+        state.markActive();
+        final PlayerLoadState loadState = state.loadState();
+        if (loadState == PlayerLoadState.UNLOADED) {
+            this.ensurePlayerLoadedAsync(playerId);
+            return null;
+        }
+        if (loadState == PlayerLoadState.LOADING || loadState == PlayerLoadState.LOAD_FAILED) {
+            return null;
+        }
+        return state.entitlementRecord(entitlementKey);
+    }
+
+    @Override
     public void grantEntitlement(
         final UUID playerId,
         final String entitlementKey,
@@ -185,7 +204,7 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
     private void loadPlayerState(final UUID playerId, final PlayerStoreState state) {
         try {
             final Map<String, StoreEntitlementRecord> records = this.storeEntitlementRepository.loadPlayerEntitlements(playerId);
-            state.completeLoad(records.keySet());
+            state.completeLoad(records);
         } catch (final RuntimeException exception) {
             state.failLoad();
             this.logger.log(Level.WARNING, "Failed to lazy-load store entitlements for " + playerId, exception);
@@ -421,13 +440,13 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
 
     private static final class PlayerStoreState {
 
-        private final Set<String> entitlementKeys;
+        private final ConcurrentHashMap<String, StoreEntitlementRecord> entitlementRecords;
         private final ConcurrentHashMap<String, DirtyEntitlementGrant> dirtyEntitlements;
         private volatile PlayerLoadState loadState;
         private volatile boolean quitRequested;
 
         private PlayerStoreState() {
-            this.entitlementKeys = ConcurrentHashMap.newKeySet();
+            this.entitlementRecords = new ConcurrentHashMap<>();
             this.dirtyEntitlements = new ConcurrentHashMap<>();
             this.loadState = PlayerLoadState.UNLOADED;
             this.quitRequested = false;
@@ -441,10 +460,12 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
             return true;
         }
 
-        private synchronized void completeLoad(final Collection<String> loadedEntitlements) {
-            this.entitlementKeys.clear();
-            this.entitlementKeys.addAll(loadedEntitlements);
-            this.entitlementKeys.addAll(this.dirtyEntitlements.keySet());
+        private synchronized void completeLoad(final Map<String, StoreEntitlementRecord> loadedEntitlements) {
+            this.entitlementRecords.clear();
+            this.entitlementRecords.putAll(loadedEntitlements);
+            for (final DirtyEntitlementGrant dirtyGrant : this.dirtyEntitlements.values()) {
+                this.entitlementRecords.put(dirtyGrant.entitlementKey(), new StoreEntitlementRecord(dirtyGrant.entitlementKey(), dirtyGrant.productId(), dirtyGrant.grantedAtEpochSecond()));
+            }
             this.loadState = PlayerLoadState.LOADED;
         }
 
@@ -465,11 +486,16 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
         }
 
         private boolean hasEntitlement(final String entitlementKey) {
-            return this.entitlementKeys.contains(entitlementKey);
+            return this.entitlementRecords.containsKey(entitlementKey);
+        }
+
+        private StoreEntitlementRecord entitlementRecord(final String entitlementKey) {
+            return this.entitlementRecords.get(entitlementKey);
         }
 
         private void applyGrant(final String entitlementKey, final String productId, final long grantedAtEpochSecond) {
-            this.entitlementKeys.add(entitlementKey);
+            final StoreEntitlementRecord record = new StoreEntitlementRecord(entitlementKey, productId, grantedAtEpochSecond);
+            this.entitlementRecords.put(entitlementKey, record);
             this.dirtyEntitlements.put(entitlementKey, new DirtyEntitlementGrant(entitlementKey, productId, grantedAtEpochSecond));
             this.loadState = PlayerLoadState.LOADED;
         }

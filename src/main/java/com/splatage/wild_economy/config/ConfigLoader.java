@@ -9,6 +9,9 @@ import com.splatage.wild_economy.store.model.StoreAction;
 import com.splatage.wild_economy.store.model.StoreActionType;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
+import com.splatage.wild_economy.store.model.StoreRequirement;
+import com.splatage.wild_economy.store.model.StoreRequirementType;
+import com.splatage.wild_economy.store.model.StoreVisibilityWhenUnmet;
 import com.splatage.wild_economy.store.model.StoreProductType;
 import java.io.File;
 import java.math.BigDecimal;
@@ -65,7 +68,8 @@ public final class ConfigLoader {
                 config.getBoolean("buy-delivery.use-held-shulker", false),
                 config.getBoolean("buy-delivery.use-looked-at-container", false),
                 config.getBoolean("buy-delivery.use-player-inventory", true),
-                config.getBoolean("buy-delivery.drop-at-feet", false)
+                config.getBoolean("buy-delivery.drop-at-feet", false),
+                config.getLong("store.tiered-track-purchase-cooldown-seconds", 300L)
         );
     }
 
@@ -131,7 +135,10 @@ public final class ConfigLoader {
                     categoryId,
                     this.requireNonBlank(section, "display-name", "store category '" + categoryId + "'"),
                     this.requireNonBlank(section, "icon", "store category '" + categoryId + "'"),
-                    this.requireNonNegativeInt(section, "slot", "store category '" + categoryId + "'")
+                    this.requireNonNegativeInt(section, "slot", "store category '" + categoryId + "'"),
+                    this.parseStoreRequirements(section, "store category '" + categoryId + "'"),
+                    this.parseStoreVisibilityWhenUnmet(this.getOptionalString(section, "visibility-when-unmet"), "store category '" + categoryId + "'"),
+                    this.getOptionalString(section, "locked-message")
             ));
         }
 
@@ -182,7 +189,10 @@ public final class ConfigLoader {
                     section.getBoolean("confirm", true),
                     List.copyOf(section.getStringList("lore")),
                     actions,
-                    xpCostPoints
+                    xpCostPoints,
+                    this.parseStoreRequirements(section, "store product '" + productId + "'"),
+                    this.parseStoreVisibilityWhenUnmet(this.getOptionalString(section, "visibility-when-unmet"), "store product '" + productId + "'"),
+                    this.getOptionalString(section, "locked-message")
             ));
         }
 
@@ -666,6 +676,74 @@ public final class ConfigLoader {
             throw new IllegalStateException(context + " has negative decimal field '" + path + "'");
         }
         return value;
+    }
+
+    private List<StoreRequirement> parseStoreRequirements(final ConfigurationSection section, final String context) {
+        final ConfigurationSection requirementsSection = section.getConfigurationSection("requirements");
+        if (requirementsSection == null) {
+            return List.of();
+        }
+        final List<Map<?, ?>> rawRequirements = requirementsSection.getMapList("all-of");
+        if (rawRequirements.isEmpty()) {
+            return List.of();
+        }
+
+        final List<StoreRequirement> requirements = new ArrayList<>(rawRequirements.size());
+        for (final Map<?, ?> rawRequirement : rawRequirements) {
+            final String rawType = this.requireMapValue(rawRequirement, "type", context + " requirement");
+            final StoreRequirementType requirementType;
+            try {
+                requirementType = StoreRequirementType.valueOf(rawType.trim().toUpperCase(Locale.ROOT).replace('-', '_'));
+            } catch (final IllegalArgumentException exception) {
+                throw new IllegalStateException(context + " has invalid requirement type '" + rawType + "'", exception);
+            }
+
+            final long minimum = this.optionalLong(rawRequirement, "min", 0L, context + " requirement");
+            requirements.add(new StoreRequirement(
+                    requirementType,
+                    this.optionalMapValue(rawRequirement, "key"),
+                    this.optionalMapValue(rawRequirement, "node"),
+                    this.optionalMapValue(rawRequirement, "statistic"),
+                    this.optionalMapValue(rawRequirement, "material"),
+                    minimum
+            ));
+        }
+        return List.copyOf(requirements);
+    }
+
+    private StoreVisibilityWhenUnmet parseStoreVisibilityWhenUnmet(final String rawValue, final String context) {
+        if (rawValue == null) {
+            return StoreVisibilityWhenUnmet.SHOW_LOCKED;
+        }
+        try {
+            return StoreVisibilityWhenUnmet.valueOf(rawValue.trim().toUpperCase(Locale.ROOT).replace('-', '_'));
+        } catch (final IllegalArgumentException exception) {
+            throw new IllegalStateException(context + " has invalid visibility-when-unmet value '" + rawValue + "'", exception);
+        }
+    }
+
+    private String optionalMapValue(final Map<?, ?> map, final String key) {
+        final Object rawValue = map.get(key);
+        if (rawValue == null) {
+            return null;
+        }
+        final String value = String.valueOf(rawValue).trim();
+        return value.isEmpty() ? null : value;
+    }
+
+    private long optionalLong(final Map<?, ?> map, final String key, final long defaultValue, final String context) {
+        final Object rawValue = map.get(key);
+        if (rawValue == null) {
+            return defaultValue;
+        }
+        if (rawValue instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(rawValue).trim());
+        } catch (final NumberFormatException exception) {
+            throw new IllegalStateException(context + " has invalid long field '" + key + "'", exception);
+        }
     }
 
     private String requireMapValue(final Map<?, ?> map, final String key, final String context) {

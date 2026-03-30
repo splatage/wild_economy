@@ -2,6 +2,7 @@ package com.splatage.wild_economy.gui;
 
 import com.splatage.wild_economy.config.EconomyConfig;
 import com.splatage.wild_economy.economy.EconomyFormatter;
+import com.splatage.wild_economy.store.eligibility.StoreEligibilityResult;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
 import com.splatage.wild_economy.store.model.StorePurchaseResult;
@@ -42,12 +43,18 @@ public final class StoreProductDetailMenu {
         this.storeService.ensurePlayerLoadedAsync(player.getUniqueId());
 
         final StoreProduct product = this.resolveProduct(productId);
+        final StoreEligibilityResult eligibility = this.storeService.getProductEligibility(player, productId);
+        if (!eligibility.visible()) {
+            this.shopMenuRouter.goBack(player);
+            return;
+        }
+
         final ShopMenuHolder holder = ShopMenuHolder.storeDetail(categoryId, page, productId);
         final Inventory inventory = holder.createInventory(27, "Store - " + product.displayName());
 
         inventory.setItem(21, this.playerInfoItemFactory.create(player));
-        inventory.setItem(11, this.detailItem(player, product));
-        inventory.setItem(13, this.purchaseButton(product));
+        inventory.setItem(11, this.detailItem(player, product, eligibility));
+        inventory.setItem(13, this.purchaseButton(product, eligibility));
         inventory.setItem(22, this.button(Material.BARRIER, "Back", List.of("Return to the product list")));
 
         player.openInventory(inventory);
@@ -68,6 +75,12 @@ public final class StoreProductDetailMenu {
 
         switch (event.getRawSlot()) {
             case 13 -> {
+                final StoreEligibilityResult eligibility = this.storeService.getProductEligibility(player, productId);
+                if (!eligibility.acquirable()) {
+                    player.sendMessage(eligibility.blockedMessage() == null ? "This product is locked." : eligibility.blockedMessage());
+                    this.open(player, categoryId, holder.currentPage(), productId);
+                    return;
+                }
                 final StorePurchaseResult result = this.storeService.purchase(player, productId);
                 player.sendMessage(result.success() ? "Purchase successful." : result.message());
 
@@ -81,7 +94,7 @@ public final class StoreProductDetailMenu {
         }
     }
 
-    private ItemStack detailItem(final Player player, final StoreProduct product) {
+    private ItemStack detailItem(final Player player, final StoreProduct product, final StoreEligibilityResult eligibility) {
         final Material material = this.resolveMaterial(product.iconKey());
         final ItemStack stack = new ItemStack(material);
         final ItemMeta meta = stack.getItemMeta();
@@ -110,6 +123,15 @@ public final class StoreProductDetailMenu {
                 lore.add(this.ownershipLine(ownershipState));
             }
 
+            if (!eligibility.acquirable()) {
+                lore.add("");
+                lore.add("Status: Locked");
+                lore.addAll(eligibility.progressLines());
+                if (eligibility.inspirationalMessage() != null && !eligibility.inspirationalMessage().isBlank()) {
+                    lore.add(eligibility.inspirationalMessage());
+                }
+            }
+
             lore.add(product.requireConfirmation() ? "Confirmation: Required" : "Confirmation: Not required");
             meta.setLore(lore);
             stack.setItemMeta(meta);
@@ -127,16 +149,26 @@ public final class StoreProductDetailMenu {
         };
     }
 
-    private ItemStack purchaseButton(final StoreProduct product) {
+    private ItemStack purchaseButton(final StoreProduct product, final StoreEligibilityResult eligibility) {
         final List<String> lore = new ArrayList<>();
+        final Material material;
+        final String name;
         if (product.type() == StoreProductType.XP_WITHDRAWAL) {
             lore.add("XP Cost: " + product.xpCostPoints());
         } else {
             lore.add("Price: " + EconomyFormatter.format(product.price(), this.economyConfig));
         }
-        lore.add("Click to confirm purchase");
+        if (eligibility.acquirable()) {
+            material = Material.GREEN_STAINED_GLASS_PANE;
+            name = "Purchase";
+            lore.add("Click to confirm purchase");
+        } else {
+            material = Material.RED_STAINED_GLASS_PANE;
+            name = "Locked";
+            lore.add(eligibility.blockedMessage() == null ? "This product is locked." : eligibility.blockedMessage());
+        }
 
-        return this.button(Material.GREEN_STAINED_GLASS_PANE, "Purchase", lore);
+        return this.button(material, name, lore);
     }
 
     private ItemStack button(final Material material, final String name, final List<String> lore) {

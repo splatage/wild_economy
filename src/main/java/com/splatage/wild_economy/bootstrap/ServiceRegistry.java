@@ -154,6 +154,7 @@ public final class ServiceRegistry {
                 this.databaseConfig,
                 transactionRunner,
                 this.storeProductsConfig,
+                this.globalConfig,
                 this.economyService,
                 this.xpBottleService,
                 this.plugin.getLogger()

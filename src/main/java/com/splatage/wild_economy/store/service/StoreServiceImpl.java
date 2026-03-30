@@ -7,6 +7,8 @@ import com.splatage.wild_economy.economy.model.MoneyAmount;
 import com.splatage.wild_economy.economy.service.EconomyService;
 import com.splatage.wild_economy.store.action.ProductActionExecutor;
 import com.splatage.wild_economy.store.action.StoreActionExecutionResult;
+import com.splatage.wild_economy.store.eligibility.StoreEligibilityResult;
+import com.splatage.wild_economy.store.eligibility.StoreEligibilityService;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
@@ -31,19 +33,22 @@ public final class StoreServiceImpl implements StoreService {
     private final StoreRuntimeStateService storeRuntimeStateService;
     private final ProductActionExecutor productActionExecutor;
     private final XpBottleService xpBottleService;
+    private final StoreEligibilityService storeEligibilityService;
 
     public StoreServiceImpl(
         final StoreProductsConfig storeProductsConfig,
         final EconomyService economyService,
         final StoreRuntimeStateService storeRuntimeStateService,
         final ProductActionExecutor productActionExecutor,
-        final XpBottleService xpBottleService
+        final XpBottleService xpBottleService,
+        final StoreEligibilityService storeEligibilityService
     ) {
         this.storeProductsConfig = Objects.requireNonNull(storeProductsConfig, "storeProductsConfig");
         this.economyService = Objects.requireNonNull(economyService, "economyService");
         this.storeRuntimeStateService = Objects.requireNonNull(storeRuntimeStateService, "storeRuntimeStateService");
         this.productActionExecutor = Objects.requireNonNull(productActionExecutor, "productActionExecutor");
         this.xpBottleService = Objects.requireNonNull(xpBottleService, "xpBottleService");
+        this.storeEligibilityService = Objects.requireNonNull(storeEligibilityService, "storeEligibilityService");
     }
 
     @Override
@@ -54,11 +59,43 @@ public final class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    public List<StoreCategory> getVisibleCategories(final Player player) {
+        return this.getCategories().stream()
+                .filter(category -> this.storeEligibilityService.evaluateCategory(player, category).visible())
+                .toList();
+    }
+
+    @Override
     public List<StoreProduct> getProducts(final String categoryId) {
         return this.storeProductsConfig.products().values().stream()
                 .filter(product -> product.categoryId().equals(categoryId))
                 .sorted(Comparator.comparing(StoreProduct::displayName, String.CASE_INSENSITIVE_ORDER))
                 .toList();
+    }
+
+    @Override
+    public List<StoreProduct> getVisibleProducts(final Player player, final String categoryId) {
+        return this.getProducts(categoryId).stream()
+                .filter(product -> this.storeEligibilityService.evaluateProduct(player, product).visible())
+                .toList();
+    }
+
+    @Override
+    public StoreEligibilityResult getCategoryEligibility(final Player player, final String categoryId) {
+        final StoreCategory category = this.storeProductsConfig.category(categoryId);
+        if (category == null) {
+            return StoreEligibilityResult.hidden();
+        }
+        return this.storeEligibilityService.evaluateCategory(player, category);
+    }
+
+    @Override
+    public StoreEligibilityResult getProductEligibility(final Player player, final String productId) {
+        final StoreProduct product = this.storeProductsConfig.product(productId);
+        if (product == null) {
+            return StoreEligibilityResult.hidden();
+        }
+        return this.storeEligibilityService.evaluateProduct(player, product);
     }
 
     @Override
@@ -83,30 +120,13 @@ public final class StoreServiceImpl implements StoreService {
             );
         }
 
-        if (product.type() == StoreProductType.PERMANENT_UNLOCK) {
-            final StoreOwnershipState ownershipState = this.getOwnershipState(playerId, product.entitlementKey());
-            if (ownershipState == StoreOwnershipState.OWNED) {
-                return StorePurchaseResult.failure(
-                        "You already own this unlock.",
-                        product,
-                        this.economyService.getBalance(playerId)
-                );
-            }
-            if (ownershipState == StoreOwnershipState.LOADING) {
-                return StorePurchaseResult.failure(
-                        "Store data is still loading. Please try again in a moment.",
-                        product,
-                        this.economyService.getBalance(playerId)
-                );
-            }
-            if (ownershipState == StoreOwnershipState.LOAD_FAILED) {
-                this.ensurePlayerLoadedAsync(playerId);
-                return StorePurchaseResult.failure(
-                        "Store data could not be loaded right now. Please try again in a moment.",
-                        product,
-                        this.economyService.getBalance(playerId)
-                );
-            }
+        final StoreEligibilityResult eligibility = this.storeEligibilityService.evaluateProduct(player, product);
+        if (!eligibility.visible() || !eligibility.acquirable()) {
+            return StorePurchaseResult.failure(
+                    eligibility.blockedMessage() == null ? "This product is currently unavailable." : eligibility.blockedMessage(),
+                    product,
+                    this.economyService.getBalance(playerId)
+            );
         }
 
         if (product.type() == StoreProductType.XP_WITHDRAWAL) {

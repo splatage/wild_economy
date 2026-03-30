@@ -53,3 +53,8 @@ buy-delivery:
 
   # Last-resort fallback: drop undelivered purchased items at the player's feet.
   drop-at-feet: false
+
+store:
+  # Cooldown applied between adjacent permanent unlock tiers when the entitlement key
+  # follows a dotted numeric track such as kit.1, kit.2, kit.3.
+  tiered-track-purchase-cooldown-seconds: 300
