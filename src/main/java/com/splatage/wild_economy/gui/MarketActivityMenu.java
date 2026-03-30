@@ -4,11 +4,11 @@ import com.splatage.wild_economy.exchange.activity.MarketActivityCategory;
 import com.splatage.wild_economy.exchange.activity.MarketActivityItemView;
 import com.splatage.wild_economy.exchange.activity.MarketActivityService;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
+import com.splatage.wild_economy.exchange.item.ExchangeItemCodec;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -34,6 +34,7 @@ public final class MarketActivityMenu {
 
     private final MarketActivityService marketActivityService;
     private final PlayerInfoItemFactory playerInfoItemFactory;
+    private final ExchangeItemCodec exchangeItemCodec;
     private ShopMenuRouter shopMenuRouter;
 
     public MarketActivityMenu(
@@ -42,6 +43,7 @@ public final class MarketActivityMenu {
     ) {
         this.marketActivityService = Objects.requireNonNull(marketActivityService, "marketActivityService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
+        this.exchangeItemCodec = new ExchangeItemCodec();
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -157,7 +159,6 @@ public final class MarketActivityMenu {
     }
 
     private ItemStack activityItem(final MarketActivityCategory category, final MarketActivityItemView view) {
-        final Material material = this.resolveMaterial(view.itemKey());
         final List<String> lore = switch (category) {
             case RECENTLY_STOCKED -> List.of(
                 "§7Last stocked:",
@@ -187,14 +188,9 @@ public final class MarketActivityMenu {
                 "§eClick to view item"
             );
         };
-        return this.infoItem(material, view.displayName(), lore.stream().filter(s -> !s.isEmpty()).toList());
-    }
-
-    private Material resolveMaterial(final ItemKey itemKey) {
-        final String raw = itemKey.value();
-        final String bukkitName = raw.startsWith("minecraft:") ? raw.substring("minecraft:".length()) : raw;
-        final Material material = Material.matchMaterial(bukkitName.toUpperCase(Locale.ROOT));
-        return material != null ? material : Material.BUNDLE;
+        final ItemStack baseStack = this.exchangeItemCodec.createItemStack(view.itemKey(), 1)
+            .orElseGet(() -> new ItemStack(Material.BUNDLE));
+        return this.infoItem(baseStack, view.displayName(), lore.stream().filter(s -> !s.isEmpty()).toList());
     }
 
     private String relativeTime(final long eventEpochSecond) {
@@ -219,7 +215,10 @@ public final class MarketActivityMenu {
     }
 
     private ItemStack infoItem(final Material material, final String name, final List<String> lore) {
-        final ItemStack stack = new ItemStack(material);
+        return this.infoItem(new ItemStack(material), name, lore);
+    }
+
+    private ItemStack infoItem(final ItemStack stack, final String name, final List<String> lore) {
         final ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             meta.setDisplayName("§6" + name);

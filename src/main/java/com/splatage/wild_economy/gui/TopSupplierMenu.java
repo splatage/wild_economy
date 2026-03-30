@@ -1,6 +1,7 @@
 package com.splatage.wild_economy.gui;
 
 import com.splatage.wild_economy.exchange.domain.ItemKey;
+import com.splatage.wild_economy.exchange.item.ExchangeItemCodec;
 import com.splatage.wild_economy.exchange.supplier.SupplierContributionEntry;
 import com.splatage.wild_economy.exchange.supplier.SupplierPlayerDetail;
 import com.splatage.wild_economy.exchange.supplier.SupplierScope;
@@ -45,6 +46,7 @@ public final class TopSupplierMenu {
 
     private final SupplierStatsService supplierStatsService;
     private final PlayerInfoItemFactory playerInfoItemFactory;
+    private final ExchangeItemCodec exchangeItemCodec;
     private ShopMenuRouter shopMenuRouter;
 
     public TopSupplierMenu(
@@ -53,6 +55,7 @@ public final class TopSupplierMenu {
     ) {
         this.supplierStatsService = Objects.requireNonNull(supplierStatsService, "supplierStatsService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
+        this.exchangeItemCodec = new ExchangeItemCodec();
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -271,10 +274,11 @@ public final class TopSupplierMenu {
     }
 
     private ItemStack contributionEntry(final int position, final SupplierContributionEntry contribution) {
-        final Material material = resolveMaterial(contribution.itemKey());
+        final ItemStack baseStack = this.exchangeItemCodec.createItemStack(contribution.itemKey(), 1)
+            .orElseGet(() -> new ItemStack(Material.CHEST));
 
         return this.infoItem(
-            material,
+            baseStack,
             "#" + position + " " + contribution.displayName(),
             List.of(
                 "§7Quantity supplied:",
@@ -285,15 +289,11 @@ public final class TopSupplierMenu {
         );
     }
 
-    private Material resolveMaterial(final ItemKey itemKey) {
-        final String raw = itemKey.value();
-        final String bukkitName = raw.startsWith("minecraft:") ? raw.substring("minecraft:".length()) : raw;
-        final Material material = Material.matchMaterial(bukkitName);
-        return material != null ? material : Material.CHEST;
+    private ItemStack infoItem(final Material material, final String name, final List<String> lore) {
+        return this.infoItem(new ItemStack(material), name, lore);
     }
 
-    private ItemStack infoItem(final Material material, final String name, final List<String> lore) {
-        final ItemStack stack = new ItemStack(material);
+    private ItemStack infoItem(final ItemStack stack, final String name, final List<String> lore) {
         final ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             meta.setDisplayName("§6" + name);

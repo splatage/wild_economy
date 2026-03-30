@@ -193,6 +193,11 @@ public final class StockServiceImpl implements StockService {
     }
 
     @Override
+    public Set<ItemKey> stockedItemKeys() {
+        return Set.copyOf(this.stockCache.keySet());
+    }
+
+    @Override
     public StockMetricsSnapshot metricsSnapshot() {
         return new StockMetricsSnapshot(
                 this.dirtyKeys.size(),

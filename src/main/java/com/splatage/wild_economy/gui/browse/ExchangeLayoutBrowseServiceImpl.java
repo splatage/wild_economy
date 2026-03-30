@@ -13,6 +13,7 @@ import com.splatage.wild_economy.gui.layout.LayoutChildDefinition;
 import com.splatage.wild_economy.gui.layout.LayoutGroupDefinition;
 import com.splatage.wild_economy.gui.layout.LayoutPlacement;
 import com.splatage.wild_economy.gui.layout.LayoutPlacementResolver;
+import java.util.Comparator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -146,19 +147,42 @@ public final class ExchangeLayoutBrowseServiceImpl implements ExchangeLayoutBrow
 
     private List<ExchangeCatalogEntry> computeIndexedEntries(final LayoutScopeKey scopeKey) {
         final List<ExchangeCatalogEntry> matches = new ArrayList<>();
+        final Set<com.splatage.wild_economy.exchange.domain.ItemKey> seenItemKeys = ConcurrentHashMap.newKeySet();
+
         for (final ExchangeCatalogEntry entry : this.exchangeCatalog.allEntries()) {
-            final LayoutPlacement placement = this.layoutPlacementResolver.resolve(entry.itemKey());
-            if (!scopeKey.layoutGroupKey().equalsIgnoreCase(placement.groupKey())) {
+            this.addMatchingEntry(scopeKey, matches, seenItemKeys, entry);
+        }
+        for (final com.splatage.wild_economy.exchange.domain.ItemKey stockedItemKey : this.stockService.stockedItemKeys().stream()
+            .sorted(Comparator.comparing(com.splatage.wild_economy.exchange.domain.ItemKey::value, String.CASE_INSENSITIVE_ORDER))
+            .toList()) {
+            final ExchangeCatalogEntry entry = this.exchangeCatalog.get(stockedItemKey).orElse(null);
+            if (entry == null) {
                 continue;
             }
-            if (scopeKey.layoutChildKey() != null && !scopeKey.layoutChildKey().isBlank()) {
-                if (!scopeKey.layoutChildKey().equalsIgnoreCase(placement.childKey())) {
-                    continue;
-                }
-            }
-            matches.add(entry);
+            this.addMatchingEntry(scopeKey, matches, seenItemKeys, entry);
         }
         return List.copyOf(matches);
+    }
+
+    private void addMatchingEntry(
+        final LayoutScopeKey scopeKey,
+        final List<ExchangeCatalogEntry> matches,
+        final Set<com.splatage.wild_economy.exchange.domain.ItemKey> seenItemKeys,
+        final ExchangeCatalogEntry entry
+    ) {
+        if (!seenItemKeys.add(entry.itemKey())) {
+            return;
+        }
+        final LayoutPlacement placement = this.layoutPlacementResolver.resolve(entry.itemKey());
+        if (!scopeKey.layoutGroupKey().equalsIgnoreCase(placement.groupKey())) {
+            return;
+        }
+        if (scopeKey.layoutChildKey() != null && !scopeKey.layoutChildKey().isBlank()) {
+            if (!scopeKey.layoutChildKey().equalsIgnoreCase(placement.childKey())) {
+                return;
+            }
+        }
+        matches.add(entry);
     }
 
     private List<ExchangeCatalogView> visibleEntries(

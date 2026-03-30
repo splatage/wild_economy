@@ -16,6 +16,7 @@ import com.splatage.wild_economy.exchange.stock.StockMetricsSnapshot;
 import com.splatage.wild_economy.exchange.stock.StockService;
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class ExchangeBrowseServiceImplTest {
@@ -107,6 +108,7 @@ class ExchangeBrowseServiceImplTest {
         @Override public int consumeUpTo(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
         @Override public void removeStock(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
         @Override public long cacheRevision() { return 1L; }
+        @Override public Set<ItemKey> stockedItemKeys() { return Set.of(this.snapshot.itemKey()); }
         @Override public void flushDirtyNow() { throw new UnsupportedOperationException(); }
         @Override public StockMetricsSnapshot metricsSnapshot() { throw new UnsupportedOperationException(); }
         @Override public void shutdown() { throw new UnsupportedOperationException(); }
@@ -132,6 +134,7 @@ class ExchangeBrowseServiceImplTest {
         @Override public int consumeUpTo(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
         @Override public void removeStock(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
         @Override public long cacheRevision() { return 1L; }
+        @Override public Set<ItemKey> stockedItemKeys() { return Set.of(this.snapshot.itemKey()); }
         @Override public void flushDirtyNow() { throw new UnsupportedOperationException(); }
         @Override public StockMetricsSnapshot metricsSnapshot() { throw new UnsupportedOperationException(); }
         @Override public void shutdown() { throw new UnsupportedOperationException(); }

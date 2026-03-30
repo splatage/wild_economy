@@ -26,6 +26,7 @@ import com.splatage.wild_economy.gui.layout.LayoutPlacementResolver;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
@@ -221,6 +222,7 @@ final class ExchangeLayoutBrowseServiceImplTest {
         @Override public int consumeUpTo(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
         @Override public void removeStock(final ItemKey itemKey, final int amount) { throw new UnsupportedOperationException(); }
         @Override public long cacheRevision() { return this.revision.get(); }
+        @Override public Set<ItemKey> stockedItemKeys() { return Set.of(this.snapshot.itemKey()); }
         @Override public void flushDirtyNow() { throw new UnsupportedOperationException(); }
         @Override public StockMetricsSnapshot metricsSnapshot() { throw new UnsupportedOperationException(); }
         @Override public void shutdown() { throw new UnsupportedOperationException(); }

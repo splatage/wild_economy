@@ -1,18 +1,21 @@
 package com.splatage.wild_economy.exchange.catalog;
 
+import com.splatage.wild_economy.catalog.rootvalue.RootValueLoader;
+import com.splatage.wild_economy.catalog.rootvalue.RootValueLookup;
 import com.splatage.wild_economy.exchange.domain.GeneratedItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemCategory;
 import com.splatage.wild_economy.exchange.domain.ItemKey;
+import com.splatage.wild_economy.exchange.item.ExchangeItemCodec;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class ExchangeCatalog {
 
@@ -23,16 +26,27 @@ public final class ExchangeCatalog {
         Comparator.comparing(GeneratedItemCategory::displayName, String.CASE_INSENSITIVE_ORDER)
             .thenComparing(GeneratedItemCategory::name);
 
+    private final ExchangeItemCodec exchangeItemCodec;
+    private final ExchangeVariantWorthResolver variantWorthResolver;
     private final Map<ItemKey, ExchangeCatalogEntry> entries;
+    private final Map<ItemKey, ExchangeCatalogEntry> derivedEntries;
     private final List<ExchangeCatalogEntry> allEntries;
     private final Map<ItemCategory, List<ExchangeCatalogEntry>> entriesByCategory;
     private final Map<ItemCategory, Map<GeneratedItemCategory, List<ExchangeCatalogEntry>>> entriesByCategoryAndGeneratedCategory;
     private final Map<ItemCategory, List<GeneratedItemCategory>> generatedSubcategoriesByCategory;
 
     public ExchangeCatalog(final Map<ItemKey, ExchangeCatalogEntry> entries) {
-        Objects.requireNonNull(entries, "entries");
+        this(entries, RootValueLoader.empty());
+    }
 
+    public ExchangeCatalog(final Map<ItemKey, ExchangeCatalogEntry> entries, final RootValueLookup rootValueLookup) {
+        Objects.requireNonNull(entries, "entries");
+        Objects.requireNonNull(rootValueLookup, "rootValueLookup");
+
+        this.exchangeItemCodec = new ExchangeItemCodec();
         this.entries = Map.copyOf(entries);
+        this.derivedEntries = new ConcurrentHashMap<>();
+        this.variantWorthResolver = new ExchangeVariantWorthResolver(this.entries, rootValueLookup, this.exchangeItemCodec);
 
         final List<ExchangeCatalogEntry> sortedEntries = new ArrayList<>(this.entries.values());
         sortedEntries.sort(DISPLAY_NAME_ORDER);
@@ -59,7 +73,23 @@ public final class ExchangeCatalog {
     }
 
     public Optional<ExchangeCatalogEntry> get(final ItemKey itemKey) {
-        return Optional.ofNullable(this.entries.get(itemKey));
+        final ExchangeCatalogEntry exact = this.entries.get(itemKey);
+        if (exact != null) {
+            return Optional.of(exact);
+        }
+
+        final ExchangeCatalogEntry cachedDerived = this.derivedEntries.get(itemKey);
+        if (cachedDerived != null) {
+            return Optional.of(cachedDerived);
+        }
+
+        final ExchangeCatalogEntry derived = this.buildDerivedEntry(itemKey);
+        if (derived == null) {
+            return Optional.empty();
+        }
+
+        this.derivedEntries.putIfAbsent(itemKey, derived);
+        return Optional.of(this.derivedEntries.get(itemKey));
     }
 
     public Collection<ExchangeCatalogEntry> allEntries() {
@@ -89,6 +119,72 @@ public final class ExchangeCatalog {
 
     public List<GeneratedItemCategory> generatedSubcategories(final ItemCategory category) {
         return this.generatedSubcategoriesByCategory.getOrDefault(category, List.of());
+    }
+
+    private ExchangeCatalogEntry buildDerivedEntry(final ItemKey itemKey) {
+        final Optional<ItemKey> baseCatalogKey = this.exchangeItemCodec.baseCatalogKey(itemKey);
+        if (baseCatalogKey.isEmpty()) {
+            return null;
+        }
+
+        final ExchangeCatalogEntry baseEntry = this.entries.get(baseCatalogKey.get());
+        if (baseEntry == null) {
+            return null;
+        }
+
+        final String displayName = this.exchangeItemCodec.displayName(itemKey)
+            .orElseGet(() -> baseEntry.displayName() == null || baseEntry.displayName().isBlank() ? itemKey.value() : baseEntry.displayName());
+        final java.math.BigDecimal resolvedBaseWorth = this.variantWorthResolver.resolveVariantBaseWorth(itemKey).orElse(baseEntry.baseWorth());
+        final ExchangeCatalogEntry.ResolvedEcoEntry resolvedEco = this.scaleResolvedEco(baseEntry, resolvedBaseWorth);
+        return new ExchangeCatalogEntry(
+            itemKey,
+            displayName,
+            baseEntry.category(),
+            baseEntry.generatedCategory(),
+            baseEntry.policyMode(),
+            resolvedBaseWorth,
+            baseEntry.stockCap(),
+            baseEntry.turnoverAmountPerInterval(),
+            baseEntry.buyEnabled(),
+            baseEntry.sellEnabled(),
+            resolvedEco
+        );
+    }
+
+    private ExchangeCatalogEntry.ResolvedEcoEntry scaleResolvedEco(
+        final ExchangeCatalogEntry baseEntry,
+        final java.math.BigDecimal derivedBaseWorth
+    ) {
+        if (derivedBaseWorth == null || baseEntry.baseWorth() == null || baseEntry.baseWorth().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            return baseEntry.eco();
+        }
+
+        final java.math.BigDecimal baseWorth = baseEntry.baseWorth();
+        return new ExchangeCatalogEntry.ResolvedEcoEntry(
+            baseEntry.eco().minStockInclusive(),
+            baseEntry.eco().maxStockInclusive(),
+            scaleResolvedPrice(baseEntry.eco().buyPriceLowStock(), baseWorth, derivedBaseWorth),
+            scaleResolvedPrice(baseEntry.eco().buyPriceHighStock(), baseWorth, derivedBaseWorth),
+            scaleResolvedPrice(baseEntry.eco().sellPriceLowStock(), baseWorth, derivedBaseWorth),
+            scaleResolvedPrice(baseEntry.eco().sellPriceHighStock(), baseWorth, derivedBaseWorth)
+        );
+    }
+
+    private static java.math.BigDecimal scaleResolvedPrice(
+        final java.math.BigDecimal baseResolvedPrice,
+        final java.math.BigDecimal baseWorth,
+        final java.math.BigDecimal derivedBaseWorth
+    ) {
+        if (baseResolvedPrice == null) {
+            return null;
+        }
+        if (baseWorth.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            return baseResolvedPrice;
+        }
+        return baseResolvedPrice
+            .multiply(derivedBaseWorth)
+            .divide(baseWorth, 2, java.math.RoundingMode.HALF_UP)
+            .setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
     private static int compareEntriesByReverseItemKeySegments(
