@@ -75,6 +75,7 @@ final class StoreEligibilityServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
             0,
+            null,
             List.of(new StoreRequirement(StoreRequirementType.STATISTIC, null, null, Statistic.PLAY_ONE_MINUTE.name(), null, null, 20L * 60L * 60L * 10L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Keep progressing."
@@ -109,6 +110,7 @@ final class StoreEligibilityServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
             0,
+            null,
             List.of(new StoreRequirement(StoreRequirementType.STATISTIC_ENTITY, null, null, Statistic.KILL_ENTITY.name(), null, EntityType.ENDERMAN.name(), 10L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Hunt more Endermen to unlock this reward."
@@ -138,6 +140,7 @@ final class StoreEligibilityServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
             0,
+            null,
             List.of(new StoreRequirement(StoreRequirementType.ADVANCEMENT, "minecraft:story/enter_the_nether", null, null, null, null, 0L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Reach the Nether to unlock this reward."
@@ -168,6 +171,7 @@ final class StoreEligibilityServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
             0,
+            null,
             List.of(new StoreRequirement(StoreRequirementType.CUSTOM_COUNTER, "blocks_placed", null, null, null, null, 100L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Keep building to unlock this reward."
@@ -224,6 +228,7 @@ final class StoreEligibilityServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
             0,
+            null,
             List.of(new StoreRequirement(StoreRequirementType.PERMISSION, null, "wild.store.vip", null, null, null, 0L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             null
@@ -252,6 +257,7 @@ final class StoreEligibilityServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
             0,
+            null,
             List.of(),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Keep progressing."

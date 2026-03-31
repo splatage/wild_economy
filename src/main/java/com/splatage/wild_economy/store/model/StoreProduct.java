@@ -16,6 +16,7 @@ public record StoreProduct(
     List<String> lore,
     List<StoreAction> actions,
     int xpCostPoints,
+    Integer slot,
     List<StoreRequirement> requirements,
     StoreVisibilityWhenUnmet visibilityWhenUnmet,
     String lockedMessage
@@ -37,6 +38,9 @@ public record StoreProduct(
         Objects.requireNonNull(price, "price");
         lore = List.copyOf(Objects.requireNonNull(lore, "lore"));
         actions = List.copyOf(Objects.requireNonNull(actions, "actions"));
+        if (slot != null && slot < 0) {
+            throw new IllegalArgumentException("slot cannot be negative");
+        }
         requirements = List.copyOf(Objects.requireNonNull(requirements, "requirements"));
         visibilityWhenUnmet = Objects.requireNonNull(visibilityWhenUnmet, "visibilityWhenUnmet");
 
