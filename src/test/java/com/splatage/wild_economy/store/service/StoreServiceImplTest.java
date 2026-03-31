@@ -182,6 +182,7 @@ final class StoreServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "say hi")),
             0,
+            null,
             List.of(new StoreRequirement(StoreRequirementType.PERMISSION, null, "wild.store.vip", null, null, null, 0L)),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Become VIP to unlock this section."
@@ -233,6 +234,7 @@ final class StoreServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "lp user %player% parent add vip")),
             0,
+            null,
             List.of(),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             null
@@ -252,6 +254,7 @@ final class StoreServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "lp user %player% parent add vip")),
             0,
+            null,
             List.of(),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             "Progress through the track to reach this tier."
@@ -271,6 +274,7 @@ final class StoreServiceImplTest {
             List.of(),
             List.of(new StoreAction(StoreActionType.CONSOLE_COMMAND, "crate give %player% daily 1")),
             0,
+            null,
             List.of(),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             null
@@ -290,6 +294,7 @@ final class StoreServiceImplTest {
             List.of(),
             List.of(),
             xpCostPoints,
+            null,
             List.of(),
             StoreVisibilityWhenUnmet.SHOW_LOCKED,
             null

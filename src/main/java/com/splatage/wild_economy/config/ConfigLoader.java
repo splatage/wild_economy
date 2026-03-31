@@ -191,6 +191,7 @@ public final class ConfigLoader {
                     List.copyOf(section.getStringList("lore")),
                     actions,
                     xpCostPoints,
+                    section.contains("slot") ? this.requireNonNegativeInt(section, "slot", "store product '" + productId + "'") : null,
                     this.parseStoreRequirements(section, "store product '" + productId + "'"),
                     this.parseStoreVisibilityWhenUnmet(this.getOptionalString(section, "visibility-when-unmet"), "store product '" + productId + "'"),
                     this.getOptionalString(section, "locked-message")

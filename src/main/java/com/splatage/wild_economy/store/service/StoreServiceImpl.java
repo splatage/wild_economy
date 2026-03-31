@@ -69,7 +69,7 @@ public final class StoreServiceImpl implements StoreService {
     public List<StoreProduct> getProducts(final String categoryId) {
         return this.storeProductsConfig.products().values().stream()
                 .filter(product -> product.categoryId().equals(categoryId))
-                .sorted(Comparator.comparing(StoreProduct::displayName, String.CASE_INSENSITIVE_ORDER))
+                .sorted(Comparator.comparing(StoreProduct::slot, Comparator.nullsLast(Integer::compareTo)))
                 .toList();
     }
 
