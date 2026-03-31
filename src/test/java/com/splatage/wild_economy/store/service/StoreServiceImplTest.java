@@ -147,7 +147,7 @@ final class StoreServiceImplTest {
         final StorePurchaseResult result = service.purchase(this.player(UUID.randomUUID()), "kit_2");
 
         assertFalse(result.success());
-        assertTrue(result.message().contains("previous tier"));
+        assertTrue(result.message().contains("Unlock Kit 1 first."));
         assertEquals(0, economyService.withdrawCalls);
     }
 
@@ -192,7 +192,7 @@ final class StoreServiceImplTest {
         final StorePurchaseResult result = service.purchase(this.player(UUID.randomUUID()), "vip_product");
 
         assertFalse(result.success());
-        assertTrue(result.message().contains("permission"));
+        assertTrue(result.message().toLowerCase().contains("access"));
         assertEquals(0, economyService.withdrawCalls);
     }
 
@@ -210,7 +210,7 @@ final class StoreServiceImplTest {
             runtimeStateService,
             actionExecutor,
             xpBottleService,
-            new StoreEligibilityServiceImpl(runtimeStateService, new NoOpStoreProgressService(), cooldownSeconds)
+            new StoreEligibilityServiceImpl(runtimeStateService, new NoOpStoreProgressService(), config, cooldownSeconds)
         );
     }
 
@@ -242,11 +242,12 @@ final class StoreServiceImplTest {
     }
 
     private StoreProduct tieredUnlock(final String productId, final String entitlementKey, final MoneyAmount price) {
+        final String displayName = entitlementKey.endsWith(".2") ? "Kit 2" : "Kit 1";
         return new StoreProduct(
             productId,
             "store",
             StoreProductType.PERMANENT_UNLOCK,
-            "Kit Tier",
+            displayName,
             "EMERALD",
             price,
             entitlementKey,

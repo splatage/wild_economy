@@ -11,6 +11,8 @@ public record StoreProductsConfig(
     Map<String, StoreCategory> categories,
     Map<String, StoreProduct> products
 ) {
+    public static final StoreProductsConfig EMPTY = new StoreProductsConfig(Map.of(), Map.of());
+
     public StoreProductsConfig {
         categories = Collections.unmodifiableMap(new LinkedHashMap<>(Objects.requireNonNull(categories, "categories")));
         products = Collections.unmodifiableMap(new LinkedHashMap<>(Objects.requireNonNull(products, "products")));

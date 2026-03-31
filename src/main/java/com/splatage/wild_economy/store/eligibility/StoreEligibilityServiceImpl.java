@@ -1,5 +1,6 @@
 package com.splatage.wild_economy.store.eligibility;
 
+import com.splatage.wild_economy.config.StoreProductsConfig;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
@@ -11,7 +12,10 @@ import com.splatage.wild_economy.store.state.StoreOwnershipState;
 import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -24,8 +28,10 @@ import org.bukkit.entity.Player;
 public final class StoreEligibilityServiceImpl implements StoreEligibilityService {
 
     private static final Pattern TIERED_KEY_PATTERN = Pattern.compile("^(.*?)(\\.)(0*)(\\d+)$");
+
     private final StoreRuntimeStateService storeRuntimeStateService;
     private final StoreProgressService storeProgressService;
+    private final Map<String, String> entitlementDisplayNames;
     private final long tieredTrackPurchaseCooldownSeconds;
 
     public StoreEligibilityServiceImpl(
@@ -33,8 +39,19 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         final StoreProgressService storeProgressService,
         final long tieredTrackPurchaseCooldownSeconds
     ) {
+        this(storeRuntimeStateService, storeProgressService, StoreProductsConfig.EMPTY, tieredTrackPurchaseCooldownSeconds);
+    }
+
+    public StoreEligibilityServiceImpl(
+        final StoreRuntimeStateService storeRuntimeStateService,
+        final StoreProgressService storeProgressService,
+        final StoreProductsConfig storeProductsConfig,
+        final long tieredTrackPurchaseCooldownSeconds
+    ) {
         this.storeRuntimeStateService = Objects.requireNonNull(storeRuntimeStateService, "storeRuntimeStateService");
         this.storeProgressService = Objects.requireNonNull(storeProgressService, "storeProgressService");
+        Objects.requireNonNull(storeProductsConfig, "storeProductsConfig");
+        this.entitlementDisplayNames = this.buildEntitlementDisplayNames(storeProductsConfig);
         this.tieredTrackPurchaseCooldownSeconds = Math.max(0L, tieredTrackPurchaseCooldownSeconds);
     }
 
@@ -56,15 +73,25 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
             if (ownershipState == StoreOwnershipState.OWNED) {
                 return StoreEligibilityResult.locked(
                         "You already own this unlock.",
-                        List.of("Owned: Yes"),
+                        List.of("Ownership: Unlocked"),
                         product.lockedMessage()
                 );
             }
             if (ownershipState == StoreOwnershipState.LOADING) {
-                return this.lockedFor(product.visibilityWhenUnmet(), product.lockedMessage(), "Store data is still loading.", List.of("Owned: Loading..."));
+                return this.lockedFor(
+                        product.visibilityWhenUnmet(),
+                        product.lockedMessage(),
+                        "Store data is still loading.",
+                        List.of("Ownership: Checking...")
+                );
             }
             if (ownershipState == StoreOwnershipState.LOAD_FAILED) {
-                return this.lockedFor(product.visibilityWhenUnmet(), product.lockedMessage(), "Store data could not be loaded right now.", List.of("Owned: Unavailable"));
+                return this.lockedFor(
+                        product.visibilityWhenUnmet(),
+                        product.lockedMessage(),
+                        "Store data could not be loaded right now.",
+                        List.of("Ownership: Unavailable")
+                );
             }
         }
 
@@ -87,13 +114,15 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
             return base;
         }
 
+        final String previousTierLabel = this.resolveEntitlementDisplayName(tierInfo.previousTierKey());
         final StoreOwnershipState priorState = this.storeRuntimeStateService.getOwnershipState(playerId, tierInfo.previousTierKey());
         if (priorState != StoreOwnershipState.OWNED) {
+            final String previousTierMessage = "Unlock " + previousTierLabel + " first.";
             return this.lockedFor(
                     product.visibilityWhenUnmet(),
                     product.lockedMessage(),
-                    "You must unlock the previous tier first.",
-                    List.of("Previous tier required: " + tierInfo.previousTierKey())
+                    previousTierMessage,
+                    List.of(previousTierMessage)
             );
         }
 
@@ -114,7 +143,7 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
                     product.visibilityWhenUnmet(),
                     product.lockedMessage(),
                     "This track is cooling down before the next tier can be purchased.",
-                    List.of("Cooldown remaining: " + this.formatDurationSeconds(remaining))
+                    List.of("Next tier available in: " + this.formatDurationSeconds(remaining))
             );
         }
 
@@ -168,12 +197,14 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
     }
 
     private RequirementEvaluation evaluateEntitlementRequirement(final UUID playerId, final StoreRequirement requirement) {
+        final String entitlementLabel = this.resolveEntitlementDisplayName(requirement.key());
+        final String requirementLine = "Requires: " + entitlementLabel;
         final StoreOwnershipState ownershipState = this.storeRuntimeStateService.getOwnershipState(playerId, requirement.key());
         return switch (ownershipState) {
-            case OWNED -> new RequirementEvaluation(true, "Requires unlock: " + requirement.key() + " (met)", null);
-            case LOADING -> new RequirementEvaluation(false, "Requires unlock: " + requirement.key() + " (loading)", "Store data is still loading.");
-            case LOAD_FAILED -> new RequirementEvaluation(false, "Requires unlock: " + requirement.key() + " (unavailable)", "Store data could not be loaded right now.");
-            case NOT_OWNED -> new RequirementEvaluation(false, "Requires unlock: " + requirement.key() + " (missing)", "You do not yet own the required unlock.");
+            case OWNED -> new RequirementEvaluation(true, requirementLine, null);
+            case LOADING -> new RequirementEvaluation(false, requirementLine + " (checking...)", "Store data is still loading.");
+            case LOAD_FAILED -> new RequirementEvaluation(false, requirementLine + " (unavailable)", "Store data could not be loaded right now.");
+            case NOT_OWNED -> new RequirementEvaluation(false, requirementLine, "Unlock " + entitlementLabel + " first.");
         };
     }
 
@@ -181,8 +212,8 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         final boolean allowed = player.hasPermission(requirement.permissionNode());
         return new RequirementEvaluation(
                 allowed,
-                "Permission: " + requirement.permissionNode() + (allowed ? " (met)" : " (missing)"),
-                allowed ? null : "You do not have the required permission."
+                "Requires access: " + this.prettyPermission(requirement.permissionNode()),
+                allowed ? null : "You do not yet have access to this item."
         );
     }
 
@@ -191,7 +222,7 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         final int current = player.getStatistic(statistic);
         return new RequirementEvaluation(
                 current >= requirement.minimum(),
-                this.prettyName(statistic.name()) + ": " + current + " / " + requirement.minimum(),
+                this.prettyWords(statistic.name()) + ": " + current + " / " + requirement.minimum(),
                 current >= requirement.minimum() ? null : "You have not yet reached the required progress."
         );
     }
@@ -208,7 +239,7 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         final int current = player.getStatistic(statistic, material);
         return new RequirementEvaluation(
                 current >= requirement.minimum(),
-                this.prettyName(statistic.name()) + " " + this.prettyName(material.name()) + ": " + current + " / " + requirement.minimum(),
+                this.prettyWords(statistic.name()) + " " + this.prettyWords(material.name()) + ": " + current + " / " + requirement.minimum(),
                 current >= requirement.minimum() ? null : "You have not yet reached the required progress."
         );
     }
@@ -225,7 +256,7 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         final int current = player.getStatistic(statistic, entityType);
         return new RequirementEvaluation(
                 current >= requirement.minimum(),
-                this.prettyName(statistic.name()) + " " + this.prettyName(entityType.name()) + ": " + current + " / " + requirement.minimum(),
+                this.prettyWords(statistic.name()) + " " + this.prettyWords(entityType.name()) + ": " + current + " / " + requirement.minimum(),
                 current >= requirement.minimum() ? null : "You have not yet reached the required progress."
         );
     }
@@ -234,7 +265,7 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         final boolean completed = this.storeProgressService.hasAdvancement(player, requirement.key());
         return new RequirementEvaluation(
             completed,
-            "Advancement: " + requirement.key() + (completed ? " (met)" : " (missing)"),
+            "Requires advancement: " + this.prettyAdvancement(requirement.key()),
             completed ? null : "You have not yet completed the required advancement."
         );
     }
@@ -243,13 +274,79 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         final long current = this.storeProgressService.getCustomCounter(player, requirement.key());
         return new RequirementEvaluation(
             current >= requirement.minimum(),
-            "Counter " + this.prettyName(requirement.key()) + ": " + current + " / " + requirement.minimum(),
+            this.prettyWords(requirement.key()) + ": " + current + " / " + requirement.minimum(),
             current >= requirement.minimum() ? null : "You have not yet reached the required progress."
         );
     }
 
-    private String prettyName(final String raw) {
-        return raw.toLowerCase(java.util.Locale.ROOT).replace('_', ' ').replace('.', ' ').replace('/', ' ').replace('-', ' ');
+    private Map<String, String> buildEntitlementDisplayNames(final StoreProductsConfig storeProductsConfig) {
+        final Map<String, String> displayNames = new HashMap<>();
+        for (final StoreProduct product : storeProductsConfig.products().values()) {
+            if (product.type() != StoreProductType.PERMANENT_UNLOCK) {
+                continue;
+            }
+            final String entitlementKey = product.entitlementKey();
+            if (entitlementKey == null || entitlementKey.isBlank()) {
+                continue;
+            }
+            displayNames.putIfAbsent(entitlementKey, product.displayName());
+        }
+        return Map.copyOf(displayNames);
+    }
+
+    private String resolveEntitlementDisplayName(final String entitlementKey) {
+        final String displayName = this.entitlementDisplayNames.get(entitlementKey);
+        if (displayName != null && !displayName.isBlank()) {
+            return displayName;
+        }
+        return this.prettyWords(entitlementKey);
+    }
+
+    private String prettyPermission(final String permissionNode) {
+        if (permissionNode == null || permissionNode.isBlank()) {
+            return "Access";
+        }
+        final int lastDot = permissionNode.lastIndexOf('.');
+        final String segment = lastDot >= 0 ? permissionNode.substring(lastDot + 1) : permissionNode;
+        return this.prettyWords(segment);
+    }
+
+    private String prettyAdvancement(final String advancementKey) {
+        if (advancementKey == null || advancementKey.isBlank()) {
+            return "Advancement";
+        }
+        final int lastSlash = advancementKey.lastIndexOf('/');
+        final String tail = lastSlash >= 0 ? advancementKey.substring(lastSlash + 1) : advancementKey;
+        final int lastColon = tail.lastIndexOf(':');
+        final String segment = lastColon >= 0 ? tail.substring(lastColon + 1) : tail;
+        return this.prettyWords(segment);
+    }
+
+    private String prettyWords(final String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
+        }
+        final String[] parts = raw.replace(':', ' ')
+                .replace('/', ' ')
+                .replace('.', ' ')
+                .replace('-', ' ')
+                .replace('_', ' ')
+                .trim()
+                .split("\\s+");
+        final StringBuilder builder = new StringBuilder();
+        for (final String part : parts) {
+            if (part.isBlank()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(part.charAt(0)));
+            if (part.length() > 1) {
+                builder.append(part.substring(1).toLowerCase(Locale.ROOT));
+            }
+        }
+        return builder.toString();
     }
 
     private String formatDurationSeconds(final long seconds) {
