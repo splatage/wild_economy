@@ -134,6 +134,9 @@ public final class XpBottleMenu {
         final List<String> lore = new ArrayList<>();
         lore.add("XP Cost: " + product.xpCostPoints());
         if (!eligibility.acquirable()) {
+            if (eligibility.blockedMessage() != null && !eligibility.blockedMessage().isBlank()) {
+                lore.add(eligibility.blockedMessage());
+            }
             lore.addAll(eligibility.progressLines());
             if (eligibility.inspirationalMessage() != null && !eligibility.inspirationalMessage().isBlank()) {
                 lore.add(eligibility.inspirationalMessage());

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.splatage.wild_economy.config.StoreProductsConfig;
 import com.splatage.wild_economy.economy.model.MoneyAmount;
 import com.splatage.wild_economy.store.model.StoreAction;
 import com.splatage.wild_economy.store.model.StoreActionType;
@@ -85,7 +86,7 @@ final class StoreEligibilityServiceImplTest {
 
         assertTrue(result.visible());
         assertFalse(result.acquirable());
-        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("play one minute")));
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Play One Minute")));
     }
 
     @Test
@@ -120,7 +121,7 @@ final class StoreEligibilityServiceImplTest {
 
         assertTrue(result.visible());
         assertFalse(result.acquirable());
-        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("kill entity enderman: 3 / 10")));
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Kill Entity Enderman: 3 / 10")));
     }
 
     @Test
@@ -150,7 +151,7 @@ final class StoreEligibilityServiceImplTest {
 
         assertTrue(result.visible());
         assertFalse(result.acquirable());
-        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("minecraft:story/enter_the_nether")));
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Enter The Nether")));
     }
 
     @Test
@@ -181,7 +182,7 @@ final class StoreEligibilityServiceImplTest {
 
         assertTrue(result.visible());
         assertFalse(result.acquirable());
-        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("42 / 100")));
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Blocks Placed: 42 / 100")));
     }
 
     @Test
@@ -195,7 +196,7 @@ final class StoreEligibilityServiceImplTest {
 
         assertTrue(result.visible());
         assertFalse(result.acquirable());
-        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("kit.1")));
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Unlock Kit 1 first.")));
     }
 
     @Test
@@ -209,7 +210,7 @@ final class StoreEligibilityServiceImplTest {
         final StoreEligibilityResult result = service.evaluateProduct(player, this.tieredProduct("kit.2"));
 
         assertFalse(result.acquirable());
-        assertTrue(result.progressLines().stream().anyMatch(line -> line.toLowerCase().contains("cooldown")));
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Next tier available in:")));
     }
 
     @Test
@@ -241,7 +242,7 @@ final class StoreEligibilityServiceImplTest {
     }
 
     private StoreEligibilityService service(final FakeStoreRuntimeStateService runtime, final FakeStoreProgressService progressService, final long cooldownSeconds) {
-        return new StoreEligibilityServiceImpl(runtime, progressService, cooldownSeconds);
+        return new StoreEligibilityServiceImpl(runtime, progressService, StoreProductsConfig.EMPTY, cooldownSeconds);
     }
 
     private StoreProduct tieredProduct(final String entitlementKey) {

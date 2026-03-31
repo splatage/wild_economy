@@ -125,7 +125,9 @@ public final class StoreProductDetailMenu {
 
             if (!eligibility.acquirable()) {
                 lore.add("");
-                lore.add("Status: Locked");
+                if (eligibility.blockedMessage() != null && !eligibility.blockedMessage().isBlank()) {
+                    lore.add(eligibility.blockedMessage());
+                }
                 lore.addAll(eligibility.progressLines());
                 if (eligibility.inspirationalMessage() != null && !eligibility.inspirationalMessage().isBlank()) {
                     lore.add(eligibility.inspirationalMessage());
@@ -142,10 +144,10 @@ public final class StoreProductDetailMenu {
 
     private String ownershipLine(final StoreOwnershipState ownershipState) {
         return switch (ownershipState) {
-            case OWNED -> "Owned: Yes";
-            case LOADING -> "Owned: Loading...";
-            case LOAD_FAILED -> "Owned: Unavailable";
-            case NOT_OWNED -> "Owned: No";
+            case OWNED -> "Ownership: Unlocked";
+            case LOADING -> "Ownership: Checking...";
+            case LOAD_FAILED -> "Ownership: Unavailable";
+            case NOT_OWNED -> "Ownership: Not unlocked";
         };
     }
 

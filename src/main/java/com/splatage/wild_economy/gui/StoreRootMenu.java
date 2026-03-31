@@ -3,6 +3,7 @@ package com.splatage.wild_economy.gui;
 import com.splatage.wild_economy.store.eligibility.StoreEligibilityResult;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.service.StoreService;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -95,8 +96,10 @@ public final class StoreRootMenu {
         if (meta != null) {
             meta.setDisplayName(name);
             if (eligibility != null && !eligibility.acquirable()) {
-                final List<String> lore = new java.util.ArrayList<>();
-                lore.add("Locked");
+                final List<String> lore = new ArrayList<>();
+                if (eligibility.blockedMessage() != null && !eligibility.blockedMessage().isBlank()) {
+                    lore.add(eligibility.blockedMessage());
+                }
                 lore.addAll(eligibility.progressLines());
                 if (eligibility.inspirationalMessage() != null && !eligibility.inspirationalMessage().isBlank()) {
                     lore.add(eligibility.inspirationalMessage());

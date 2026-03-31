@@ -66,6 +66,7 @@ final class StoreBootstrap {
         final StoreEligibilityService storeEligibilityService = new StoreEligibilityServiceImpl(
                 storeRuntimeStateService,
                 storeProgressService,
+                storeProductsConfig,
                 globalConfig.tieredTrackPurchaseCooldownSeconds()
         );
 
