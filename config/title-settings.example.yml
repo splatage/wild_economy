@@ -1,0 +1,131 @@
+titles:
+  stormbound_galefoot:
+    display-name: "Stormbound — Galefoot"
+    title-text: "Galefoot"
+    icon: DIAMOND_BOOTS
+    slot: 0
+    source: RELIC
+    family: stormbound
+    tier: 1
+    priority: 10
+    lore:
+      - "Display your first Stormbound title."
+      - "Unlocked from the Galefoot relic tier."
+    visibility-when-unmet: SHOW_LOCKED
+    locked-message: "Advance your Stormbound relic path to unlock this title."
+    requirements:
+      all-of:
+        - type: ENTITLEMENT
+          entitlement: "prestige.stormbound.1"
+
+  stormbound_galecrest:
+    display-name: "Stormbound — Galecrest"
+    title-text: "Galecrest"
+    icon: DIAMOND_HELMET
+    slot: 1
+    source: RELIC
+    family: stormbound
+    tier: 2
+    priority: 20
+    lore:
+      - "Display your second Stormbound title."
+      - "Unlocked from the Galecrest relic tier."
+    visibility-when-unmet: SHOW_LOCKED
+    locked-message: "Advance your Stormbound relic path to unlock this title."
+    requirements:
+      all-of:
+        - type: ENTITLEMENT
+          entitlement: "prestige.stormbound.2"
+
+  stormbound_tempeststride:
+    display-name: "Stormbound — Tempeststride"
+    title-text: "Tempeststride"
+    icon: DIAMOND_LEGGINGS
+    slot: 2
+    source: RELIC
+    family: stormbound
+    tier: 3
+    priority: 30
+    lore:
+      - "Display your third Stormbound title."
+      - "Unlocked from the Tempeststride relic tier."
+    visibility-when-unmet: SHOW_LOCKED
+    locked-message: "Advance your Stormbound relic path to unlock this title."
+    requirements:
+      all-of:
+        - type: ENTITLEMENT
+          entitlement: "prestige.stormbound.3"
+
+  stormbound_heart_of_the_storm:
+    display-name: "Stormbound — Heart of the Storm"
+    title-text: "Heart of the Storm"
+    icon: DIAMOND_CHESTPLATE
+    slot: 3
+    source: RELIC
+    family: stormbound
+    tier: 4
+    priority: 40
+    lore:
+      - "Display your fourth Stormbound title."
+      - "Unlocked from the Heart of the Storm relic tier."
+    visibility-when-unmet: SHOW_LOCKED
+    locked-message: "Advance your Stormbound relic path to unlock this title."
+    requirements:
+      all-of:
+        - type: ENTITLEMENT
+          entitlement: "prestige.stormbound.4"
+
+  stormbound_crown_of_thunder:
+    display-name: "Stormbound — Crown of Thunder"
+    title-text: "Crown of Thunder"
+    icon: BOLT_ARMOR_TRIM_SMITHING_TEMPLATE
+    slot: 4
+    source: RELIC
+    family: stormbound
+    tier: 5
+    priority: 50
+    lore:
+      - "Display your capstone Stormbound title."
+      - "Unlocked from the Crown of Thunder relic tier."
+    visibility-when-unmet: SHOW_LOCKED
+    locked-message: "Complete the Stormbound relic path to unlock this title."
+    requirements:
+      all-of:
+        - type: ENTITLEMENT
+          entitlement: "prestige.stormbound.5"
+
+  bread_apprentice_baker:
+    display-name: "Bread — Apprentice Baker"
+    title-text: "Apprentice Baker"
+    icon: BREAD
+    slot: 9
+    source: COMMERCE_MILESTONE
+    family: bread
+    tier: 1
+    priority: 10
+    lore:
+      - "A permanent bread-supply title."
+      - "Intended for exchange-driven milestone entitlement wiring."
+    visibility-when-unmet: SHOW_LOCKED
+    locked-message: "Supply enough bread to earn this title."
+    requirements:
+      all-of:
+        - type: ENTITLEMENT
+          entitlement: "title.exchange.bread.milestone.1"
+
+  bread_baker_of_the_week:
+    display-name: "Bread — Baker of the Week"
+    title-text: "Baker of the Week"
+    icon: BREAD
+    slot: 10
+    source: COMMERCE_CROWN
+    family: bread
+    priority: 100
+    lore:
+      - "A temporary reigning bread-supplier title."
+    visibility-when-unmet: SHOW_LOCKED
+    locked-message: "Hold the weekly bread crown to display this title."
+    requirements:
+      all-of:
+        - type: ENTITLEMENT
+          entitlement: "title.exchange.bread.weekly"

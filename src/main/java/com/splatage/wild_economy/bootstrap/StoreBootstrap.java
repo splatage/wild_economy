@@ -10,6 +10,8 @@ import com.splatage.wild_economy.store.action.ProductActionExecutor;
 import com.splatage.wild_economy.store.action.SimpleProductActionExecutor;
 import com.splatage.wild_economy.store.eligibility.StoreEligibilityService;
 import com.splatage.wild_economy.store.eligibility.StoreEligibilityServiceImpl;
+import com.splatage.wild_economy.store.eligibility.StoreRequirementGateService;
+import com.splatage.wild_economy.store.eligibility.StoreRequirementGateServiceImpl;
 import com.splatage.wild_economy.store.progress.StoreProgressService;
 import com.splatage.wild_economy.store.progress.StoreProgressServiceImpl;
 import com.splatage.wild_economy.store.repository.StoreEntitlementRepository;
@@ -62,11 +64,15 @@ final class StoreBootstrap {
         );
 
         final StoreProgressService storeProgressService = new StoreProgressServiceImpl("wild_economy");
+        final StoreRequirementGateService storeRequirementGateService = new StoreRequirementGateServiceImpl(
+                storeRuntimeStateService,
+                storeProgressService,
+                storeProductsConfig
+        );
 
         final StoreEligibilityService storeEligibilityService = new StoreEligibilityServiceImpl(
                 storeRuntimeStateService,
-                storeProgressService,
-                storeProductsConfig,
+                storeRequirementGateService,
                 globalConfig.tieredTrackPurchaseCooldownSeconds()
         );
 
@@ -82,6 +88,7 @@ final class StoreBootstrap {
         return new Components(
                 storeRuntimeStateService,
                 storeProgressService,
+                storeRequirementGateService,
                 storeService,
                 storeEntitlementRepository,
                 storePurchaseRepository
@@ -91,6 +98,7 @@ final class StoreBootstrap {
     record Components(
             StoreRuntimeStateService storeRuntimeStateService,
             StoreProgressService storeProgressService,
+            StoreRequirementGateService storeRequirementGateService,
             StoreService storeService,
             StoreEntitlementRepository storeEntitlementRepository,
             StorePurchaseRepository storePurchaseRepository

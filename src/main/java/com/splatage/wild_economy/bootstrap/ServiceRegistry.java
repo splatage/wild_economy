@@ -58,6 +58,14 @@ import com.splatage.wild_economy.platform.PaperFoliaPlatformExecutor;
 import com.splatage.wild_economy.platform.PlatformExecutor;
 import com.splatage.wild_economy.scheduler.StockTurnoverTask;
 import com.splatage.wild_economy.store.listener.StorePlayerSessionListener;
+import com.splatage.wild_economy.config.TitleSettingsConfig;
+import com.splatage.wild_economy.title.eligibility.TitleEligibilityEvaluator;
+import com.splatage.wild_economy.title.eligibility.TitleEligibilityEvaluatorImpl;
+import com.splatage.wild_economy.title.listener.TitleSessionListener;
+import com.splatage.wild_economy.title.service.PersistentDataTitleSelectionService;
+import com.splatage.wild_economy.title.service.ResolvedTitleService;
+import com.splatage.wild_economy.title.service.ResolvedTitleServiceImpl;
+import com.splatage.wild_economy.title.service.TitleSelectionService;
 import com.splatage.wild_economy.store.listener.StoreProgressListener;
 import com.splatage.wild_economy.store.progress.StoreProgressService;
 import com.splatage.wild_economy.store.service.StoreService;
@@ -110,9 +118,14 @@ public final class ServiceRegistry {
     private StorePlayerSessionListener storePlayerSessionListener;
     private StoreProgressListener storeProgressListener;
     private StoreProductsConfig storeProductsConfig;
+    private TitleSettingsConfig titleSettingsConfig;
     private StoreRuntimeStateService storeRuntimeStateService;
     private StoreProgressService storeProgressService;
     private StoreService storeService;
+    private TitleSelectionService titleSelectionService;
+    private TitleEligibilityEvaluator titleEligibilityEvaluator;
+    private ResolvedTitleService resolvedTitleService;
+    private TitleSessionListener titleSessionListener;
     private WildEconomyVaultProvider vaultEconomyProvider;
     private WildEconomyExpansion placeholderExpansion;
     private XpBottleService xpBottleService;
@@ -131,6 +144,7 @@ public final class ServiceRegistry {
         this.exchangeItemsConfig = configLoader.loadExchangeItemsConfig();
         this.economyConfig = configLoader.loadEconomyConfig();
         this.storeProductsConfig = configLoader.loadStoreProductsConfig(this.economyConfig);
+        this.titleSettingsConfig = configLoader.loadTitleSettingsConfig();
         this.databaseProvider = new DatabaseProvider(this.databaseConfig);
         final TransactionRunner transactionRunner = new TransactionRunner(this.databaseProvider);
 
@@ -166,6 +180,13 @@ public final class ServiceRegistry {
         this.storeRuntimeStateService = storeComponents.storeRuntimeStateService();
         this.storeProgressService = storeComponents.storeProgressService();
         this.storeService = storeComponents.storeService();
+        this.titleSelectionService = new PersistentDataTitleSelectionService("wild_economy");
+        this.titleEligibilityEvaluator = new TitleEligibilityEvaluatorImpl(storeComponents.storeRequirementGateService());
+        this.resolvedTitleService = new ResolvedTitleServiceImpl(
+                this.titleSettingsConfig,
+                this.titleEligibilityEvaluator,
+                this.titleSelectionService
+        );
 
         final SchemaVersionRepository schemaVersionRepository = MigrationBootstrap.createSchemaVersionRepository(this.databaseProvider);
         MigrationBootstrap.migrateAll(this.databaseProvider, this.databaseConfig, schemaVersionRepository);
@@ -231,6 +252,7 @@ public final class ServiceRegistry {
         this.economyPlayerSessionListener = new EconomyPlayerSessionListener(this.plugin, this.economyService);
         this.storePlayerSessionListener = new StorePlayerSessionListener(this.storeRuntimeStateService);
         this.storeProgressListener = new StoreProgressListener(this.storeProgressService);
+        this.titleSessionListener = new TitleSessionListener(this.resolvedTitleService);
 
         this.registerEventListeners();
         this.warmOnlineEconomySessions();
@@ -244,12 +266,16 @@ public final class ServiceRegistry {
         this.plugin.getServer().getPluginManager().registerEvents(this.economyPlayerSessionListener, this.plugin);
         this.plugin.getServer().getPluginManager().registerEvents(this.storePlayerSessionListener, this.plugin);
         this.plugin.getServer().getPluginManager().registerEvents(this.storeProgressListener, this.plugin);
+        this.plugin.getServer().getPluginManager().registerEvents(this.titleSessionListener, this.plugin);
         this.plugin.getServer().getPluginManager().registerEvents(this.xpBottleRedeemListener, this.plugin);
     }
 
     private void warmOnlineEconomySessions() {
         for (final Player onlinePlayer : this.plugin.getServer().getOnlinePlayers()) {
             this.economyService.warmPlayerSession(onlinePlayer.getUniqueId(), onlinePlayer.getName());
+            if (this.resolvedTitleService != null) {
+                this.resolvedTitleService.warm(onlinePlayer);
+            }
         }
     }
 
@@ -276,7 +302,8 @@ public final class ServiceRegistry {
                 this.economyService,
                 this.baltopService,
                 this.supplierStatsService,
-                this.economyConfig
+                this.economyConfig,
+                this.resolvedTitleService
         );
         this.placeholderExpansion.register();
     }

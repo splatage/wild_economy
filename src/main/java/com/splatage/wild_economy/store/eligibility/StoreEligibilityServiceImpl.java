@@ -4,14 +4,11 @@ import com.splatage.wild_economy.config.StoreProductsConfig;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
-import com.splatage.wild_economy.store.model.StoreRequirement;
-import com.splatage.wild_economy.store.model.StoreVisibilityWhenUnmet;
 import com.splatage.wild_economy.store.progress.StoreProgressService;
 import com.splatage.wild_economy.store.state.StoreEntitlementRecord;
 import com.splatage.wild_economy.store.state.StoreOwnershipState;
 import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -20,9 +17,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.bukkit.Material;
-import org.bukkit.Statistic;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 public final class StoreEligibilityServiceImpl implements StoreEligibilityService {
@@ -30,7 +24,7 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
     private static final Pattern TIERED_KEY_PATTERN = Pattern.compile("^(.*?)(\\.)(0*)(\\d+)$");
 
     private final StoreRuntimeStateService storeRuntimeStateService;
-    private final StoreProgressService storeProgressService;
+    private final StoreRequirementGateService requirementGateService;
     private final Map<String, String> entitlementDisplayNames;
     private final long tieredTrackPurchaseCooldownSeconds;
 
@@ -39,7 +33,12 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         final StoreProgressService storeProgressService,
         final long tieredTrackPurchaseCooldownSeconds
     ) {
-        this(storeRuntimeStateService, storeProgressService, StoreProductsConfig.EMPTY, tieredTrackPurchaseCooldownSeconds);
+        this(
+                storeRuntimeStateService,
+                new StoreRequirementGateServiceImpl(storeRuntimeStateService, storeProgressService, StoreProductsConfig.EMPTY),
+                StoreProductsConfig.EMPTY,
+                tieredTrackPurchaseCooldownSeconds
+        );
     }
 
     public StoreEligibilityServiceImpl(
@@ -48,16 +47,37 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         final StoreProductsConfig storeProductsConfig,
         final long tieredTrackPurchaseCooldownSeconds
     ) {
+        this(
+                storeRuntimeStateService,
+                new StoreRequirementGateServiceImpl(storeRuntimeStateService, storeProgressService, storeProductsConfig),
+                storeProductsConfig,
+                tieredTrackPurchaseCooldownSeconds
+        );
+    }
+
+    public StoreEligibilityServiceImpl(
+        final StoreRuntimeStateService storeRuntimeStateService,
+        final StoreRequirementGateService requirementGateService,
+        final long tieredTrackPurchaseCooldownSeconds
+    ) {
+        this(storeRuntimeStateService, requirementGateService, StoreProductsConfig.EMPTY, tieredTrackPurchaseCooldownSeconds);
+    }
+
+    public StoreEligibilityServiceImpl(
+        final StoreRuntimeStateService storeRuntimeStateService,
+        final StoreRequirementGateService requirementGateService,
+        final StoreProductsConfig storeProductsConfig,
+        final long tieredTrackPurchaseCooldownSeconds
+    ) {
         this.storeRuntimeStateService = Objects.requireNonNull(storeRuntimeStateService, "storeRuntimeStateService");
-        this.storeProgressService = Objects.requireNonNull(storeProgressService, "storeProgressService");
-        Objects.requireNonNull(storeProductsConfig, "storeProductsConfig");
-        this.entitlementDisplayNames = this.buildEntitlementDisplayNames(storeProductsConfig);
+        this.requirementGateService = Objects.requireNonNull(requirementGateService, "requirementGateService");
+        this.entitlementDisplayNames = this.buildEntitlementDisplayNames(Objects.requireNonNull(storeProductsConfig, "storeProductsConfig"));
         this.tieredTrackPurchaseCooldownSeconds = Math.max(0L, tieredTrackPurchaseCooldownSeconds);
     }
 
     @Override
     public StoreEligibilityResult evaluateCategory(final Player player, final StoreCategory category) {
-        return this.evaluateRequirements(
+        return this.requirementGateService.evaluate(
                 player,
                 category.requirements(),
                 category.visibilityWhenUnmet(),
@@ -95,7 +115,7 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
             }
         }
 
-        final StoreEligibilityResult base = this.evaluateRequirements(
+        final StoreEligibilityResult base = this.requirementGateService.evaluate(
                 player,
                 product.requirements(),
                 product.visibilityWhenUnmet(),
@@ -150,133 +170,27 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         return base;
     }
 
-    private StoreEligibilityResult evaluateRequirements(
-        final Player player,
-        final List<StoreRequirement> requirements,
-        final StoreVisibilityWhenUnmet visibilityWhenUnmet,
-        final String lockedMessage
-    ) {
-        final List<String> progressLines = new ArrayList<>();
-        String blockedMessage = null;
-        for (final StoreRequirement requirement : requirements) {
-            final RequirementEvaluation evaluation = this.evaluateRequirement(player, requirement);
-            progressLines.add(evaluation.progressLine());
-            if (!evaluation.satisfied() && blockedMessage == null) {
-                blockedMessage = evaluation.blockedMessage();
-            }
-        }
-
-        if (blockedMessage == null) {
-            return StoreEligibilityResult.allowed();
-        }
-        return this.lockedFor(visibilityWhenUnmet, lockedMessage, blockedMessage, progressLines);
-    }
-
     private StoreEligibilityResult lockedFor(
-        final StoreVisibilityWhenUnmet visibilityWhenUnmet,
-        final String lockedMessage,
-        final String blockedMessage,
-        final List<String> progressLines
+            final com.splatage.wild_economy.store.model.StoreVisibilityWhenUnmet visibilityWhenUnmet,
+            final String lockedMessage,
+            final String blockedMessage,
+            final List<String> progressLines
     ) {
-        if (visibilityWhenUnmet == StoreVisibilityWhenUnmet.HIDE) {
+        if (visibilityWhenUnmet == com.splatage.wild_economy.store.model.StoreVisibilityWhenUnmet.HIDE) {
             return StoreEligibilityResult.hidden();
         }
         return StoreEligibilityResult.locked(blockedMessage, progressLines, lockedMessage);
     }
 
-    private RequirementEvaluation evaluateRequirement(final Player player, final StoreRequirement requirement) {
-        return switch (requirement.type()) {
-            case ENTITLEMENT -> this.evaluateEntitlementRequirement(player.getUniqueId(), requirement);
-            case PERMISSION -> this.evaluatePermissionRequirement(player, requirement);
-            case STATISTIC -> this.evaluateStatisticRequirement(player, requirement);
-            case STATISTIC_MATERIAL -> this.evaluateStatisticMaterialRequirement(player, requirement);
-            case STATISTIC_ENTITY -> this.evaluateStatisticEntityRequirement(player, requirement);
-            case ADVANCEMENT -> this.evaluateAdvancementRequirement(player, requirement);
-            case CUSTOM_COUNTER -> this.evaluateCustomCounterRequirement(player, requirement);
-        };
-    }
-
-    private RequirementEvaluation evaluateEntitlementRequirement(final UUID playerId, final StoreRequirement requirement) {
-        final String entitlementLabel = this.resolveEntitlementDisplayName(requirement.key());
-        final String requirementLine = "Requires: " + entitlementLabel;
-        final StoreOwnershipState ownershipState = this.storeRuntimeStateService.getOwnershipState(playerId, requirement.key());
-        return switch (ownershipState) {
-            case OWNED -> new RequirementEvaluation(true, requirementLine, null);
-            case LOADING -> new RequirementEvaluation(false, requirementLine + " (checking...)", "Store data is still loading.");
-            case LOAD_FAILED -> new RequirementEvaluation(false, requirementLine + " (unavailable)", "Store data could not be loaded right now.");
-            case NOT_OWNED -> new RequirementEvaluation(false, requirementLine, "Unlock " + entitlementLabel + " first.");
-        };
-    }
-
-    private RequirementEvaluation evaluatePermissionRequirement(final Player player, final StoreRequirement requirement) {
-        final boolean allowed = player.hasPermission(requirement.permissionNode());
-        return new RequirementEvaluation(
-                allowed,
-                "Requires access: " + this.prettyPermission(requirement.permissionNode()),
-                allowed ? null : "You do not yet have access to this item."
-        );
-    }
-
-    private RequirementEvaluation evaluateStatisticRequirement(final Player player, final StoreRequirement requirement) {
-        final Statistic statistic = StoreRawStatisticWhitelist.validateSimple(requirement.statistic(), "Store requirement");
-        final int current = player.getStatistic(statistic);
-        return new RequirementEvaluation(
-                current >= requirement.minimum(),
-                this.prettyWords(statistic.name()) + ": " + current + " / " + requirement.minimum(),
-                current >= requirement.minimum() ? null : "You have not yet reached the required progress."
-        );
-    }
-
-    private RequirementEvaluation evaluateStatisticMaterialRequirement(final Player player, final StoreRequirement requirement) {
-        final Statistic statistic = StoreRawStatisticWhitelist.validateRequirement(
-                requirement.type(),
-                requirement.statistic(),
-                requirement.material(),
-                requirement.entityType(),
-                "Store requirement"
-        );
-        final Material material = StoreRawStatisticWhitelist.validateMaterial(statistic, requirement.material(), "Store requirement");
-        final int current = player.getStatistic(statistic, material);
-        return new RequirementEvaluation(
-                current >= requirement.minimum(),
-                this.prettyWords(statistic.name()) + " " + this.prettyWords(material.name()) + ": " + current + " / " + requirement.minimum(),
-                current >= requirement.minimum() ? null : "You have not yet reached the required progress."
-        );
-    }
-
-    private RequirementEvaluation evaluateStatisticEntityRequirement(final Player player, final StoreRequirement requirement) {
-        final Statistic statistic = StoreRawStatisticWhitelist.validateRequirement(
-                requirement.type(),
-                requirement.statistic(),
-                requirement.material(),
-                requirement.entityType(),
-                "Store requirement"
-        );
-        final EntityType entityType = StoreRawStatisticWhitelist.validateEntity(statistic, requirement.entityType(), "Store requirement");
-        final int current = player.getStatistic(statistic, entityType);
-        return new RequirementEvaluation(
-                current >= requirement.minimum(),
-                this.prettyWords(statistic.name()) + " " + this.prettyWords(entityType.name()) + ": " + current + " / " + requirement.minimum(),
-                current >= requirement.minimum() ? null : "You have not yet reached the required progress."
-        );
-    }
-
-    private RequirementEvaluation evaluateAdvancementRequirement(final Player player, final StoreRequirement requirement) {
-        final boolean completed = this.storeProgressService.hasAdvancement(player, requirement.key());
-        return new RequirementEvaluation(
-            completed,
-            "Requires advancement: " + this.prettyAdvancement(requirement.key()),
-            completed ? null : "You have not yet completed the required advancement."
-        );
-    }
-
-    private RequirementEvaluation evaluateCustomCounterRequirement(final Player player, final StoreRequirement requirement) {
-        final long current = this.storeProgressService.getCustomCounter(player, requirement.key());
-        return new RequirementEvaluation(
-            current >= requirement.minimum(),
-            this.prettyWords(requirement.key()) + ": " + current + " / " + requirement.minimum(),
-            current >= requirement.minimum() ? null : "You have not yet reached the required progress."
-        );
+    private String resolveEntitlementDisplayName(final String entitlementKey) {
+        if (entitlementKey == null || entitlementKey.isBlank()) {
+            return "previous tier";
+        }
+        final String displayName = this.entitlementDisplayNames.get(entitlementKey);
+        if (displayName != null && !displayName.isBlank()) {
+            return displayName;
+        }
+        return this.prettyWords(entitlementKey);
     }
 
     private Map<String, String> buildEntitlementDisplayNames(final StoreProductsConfig storeProductsConfig) {
@@ -294,33 +208,19 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         return Map.copyOf(displayNames);
     }
 
-    private String resolveEntitlementDisplayName(final String entitlementKey) {
-        final String displayName = this.entitlementDisplayNames.get(entitlementKey);
-        if (displayName != null && !displayName.isBlank()) {
-            return displayName;
+    private String formatDurationSeconds(final long seconds) {
+        final long hours = seconds / 3600L;
+        final long minutes = (seconds % 3600L) / 60L;
+        final long remainingSeconds = seconds % 60L;
+        if (hours > 0L) {
+            return hours + "h " + minutes + "m";
         }
-        return this.prettyWords(entitlementKey);
+        if (minutes > 0L) {
+            return minutes + "m " + remainingSeconds + "s";
+        }
+        return remainingSeconds + "s";
     }
 
-    private String prettyPermission(final String permissionNode) {
-        if (permissionNode == null || permissionNode.isBlank()) {
-            return "Access";
-        }
-        final int lastDot = permissionNode.lastIndexOf('.');
-        final String segment = lastDot >= 0 ? permissionNode.substring(lastDot + 1) : permissionNode;
-        return this.prettyWords(segment);
-    }
-
-    private String prettyAdvancement(final String advancementKey) {
-        if (advancementKey == null || advancementKey.isBlank()) {
-            return "Advancement";
-        }
-        final int lastSlash = advancementKey.lastIndexOf('/');
-        final String tail = lastSlash >= 0 ? advancementKey.substring(lastSlash + 1) : advancementKey;
-        final int lastColon = tail.lastIndexOf(':');
-        final String segment = lastColon >= 0 ? tail.substring(lastColon + 1) : tail;
-        return this.prettyWords(segment);
-    }
 
     private String prettyWords(final String raw) {
         if (raw == null || raw.isBlank()) {
@@ -349,19 +249,6 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         return builder.toString();
     }
 
-    private String formatDurationSeconds(final long seconds) {
-        final long hours = seconds / 3600L;
-        final long minutes = (seconds % 3600L) / 60L;
-        final long remainingSeconds = seconds % 60L;
-        if (hours > 0L) {
-            return hours + "h " + minutes + "m";
-        }
-        if (minutes > 0L) {
-            return minutes + "m " + remainingSeconds + "s";
-        }
-        return remainingSeconds + "s";
-    }
-
     private TierInfo parseTierInfo(final String entitlementKey) {
         if (entitlementKey == null || entitlementKey.isBlank()) {
             return null;
@@ -380,9 +267,6 @@ public final class StoreEligibilityServiceImpl implements StoreEligibilityServic
         final long previousTierNumber = tierNumber - 1L;
         final String previousTierKey = baseKey + separator + zeroPadding + previousTierNumber;
         return new TierInfo(previousTierKey);
-    }
-
-    private record RequirementEvaluation(boolean satisfied, String progressLine, String blockedMessage) {
     }
 
     private record TierInfo(String previousTierKey) {
