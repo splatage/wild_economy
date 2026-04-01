@@ -14,6 +14,7 @@ import com.splatage.wild_economy.command.ShopSellContainerSubcommand;
 import com.splatage.wild_economy.command.ShopSellHandSubcommand;
 import com.splatage.wild_economy.command.ShopSellPreviewSubcommand;
 import com.splatage.wild_economy.command.ShopTopSubcommand;
+import com.splatage.wild_economy.command.TitleCommand;
 import com.splatage.wild_economy.config.ConfigLoader;
 import com.splatage.wild_economy.config.ConfigValidator;
 import com.splatage.wild_economy.config.DatabaseConfig;
@@ -48,6 +49,8 @@ import com.splatage.wild_economy.gui.PlayerHeadCache;
 import com.splatage.wild_economy.gui.PlayerInfoItemFactory;
 import com.splatage.wild_economy.gui.ShopMenuListener;
 import com.splatage.wild_economy.gui.ShopMenuRouter;
+import com.splatage.wild_economy.gui.TitleMenu;
+import com.splatage.wild_economy.gui.TitleMenuListener;
 import com.splatage.wild_economy.gui.admin.AdminMenuListener;
 import com.splatage.wild_economy.gui.admin.AdminMenuRouter;
 import com.splatage.wild_economy.gui.browse.ExchangeLayoutBrowseService;
@@ -126,6 +129,8 @@ public final class ServiceRegistry {
     private TitleEligibilityEvaluator titleEligibilityEvaluator;
     private ResolvedTitleService resolvedTitleService;
     private TitleSessionListener titleSessionListener;
+    private TitleMenu titleMenu;
+    private TitleMenuListener titleMenuListener;
     private WildEconomyVaultProvider vaultEconomyProvider;
     private WildEconomyExpansion placeholderExpansion;
     private XpBottleService xpBottleService;
@@ -187,6 +192,13 @@ public final class ServiceRegistry {
                 this.titleEligibilityEvaluator,
                 this.titleSelectionService
         );
+        this.titleMenu = new TitleMenu(
+                this.titleSettingsConfig,
+                this.titleEligibilityEvaluator,
+                this.titleSelectionService,
+                this.resolvedTitleService
+        );
+        this.titleMenuListener = new TitleMenuListener(this.titleMenu);
 
         final SchemaVersionRepository schemaVersionRepository = MigrationBootstrap.createSchemaVersionRepository(this.databaseProvider);
         MigrationBootstrap.migrateAll(this.databaseProvider, this.databaseConfig, schemaVersionRepository);
@@ -267,6 +279,7 @@ public final class ServiceRegistry {
         this.plugin.getServer().getPluginManager().registerEvents(this.storePlayerSessionListener, this.plugin);
         this.plugin.getServer().getPluginManager().registerEvents(this.storeProgressListener, this.plugin);
         this.plugin.getServer().getPluginManager().registerEvents(this.titleSessionListener, this.plugin);
+        this.plugin.getServer().getPluginManager().registerEvents(this.titleMenuListener, this.plugin);
         this.plugin.getServer().getPluginManager().registerEvents(this.xpBottleRedeemListener, this.plugin);
     }
 
@@ -404,6 +417,11 @@ public final class ServiceRegistry {
         final PluginCommand eco = this.plugin.getCommand("eco");
         if (eco != null) {
             eco.setExecutor(ecoCommand);
+        }
+
+        final PluginCommand titles = this.plugin.getCommand("titles");
+        if (titles != null) {
+            titles.setExecutor(new TitleCommand(this.titleMenu, this.titleSelectionService, this.resolvedTitleService));
         }
     }
 

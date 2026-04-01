@@ -1,131 +1,1209 @@
 titles:
   stormbound_galefoot:
-    display-name: "Stormbound — Galefoot"
+    display-name: "Stormbound I — Galefoot"
     title-text: "Galefoot"
-    icon: DIAMOND_BOOTS
+    icon: "DIAMOND_BOOTS"
     slot: 0
-    source: RELIC
-    family: stormbound
+    source: "RELIC"
+    family: "stormbound"
     tier: 1
     priority: 10
     lore:
-      - "Display your first Stormbound title."
+      - "Display your Galefoot title."
       - "Unlocked from the Galefoot relic tier."
-    visibility-when-unmet: SHOW_LOCKED
-    locked-message: "Advance your Stormbound relic path to unlock this title."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Leap, roam, and start proving yourself to the open sky."
     requirements:
       all-of:
-        - type: ENTITLEMENT
-          entitlement: "prestige.stormbound.1"
-
-  stormbound_galecrest:
-    display-name: "Stormbound — Galecrest"
-    title-text: "Galecrest"
-    icon: DIAMOND_HELMET
+        - type: "STATISTIC"
+          statistic: "JUMP"
+          min: "3000"
+        - type: "STATISTIC"
+          statistic: "WALK_ONE_CM"
+          min: "500000"
+  earthshaper_quarryborn:
+    display-name: "Earthshaper I — Quarryborn"
+    title-text: "Quarryborn"
+    icon: "IRON_PICKAXE"
     slot: 1
-    source: RELIC
-    family: stormbound
+    source: "RELIC"
+    family: "earthshaper"
+    tier: 1
+    priority: 10
+    lore:
+      - "Display your Quarryborn title."
+      - "Unlocked from the Quarryborn relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Mine stone and prove yourself beneath the hills."
+    requirements:
+      all-of:
+        - type: "ADVANCEMENT"
+          advancement: "minecraft:story/iron_tools"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "MINE_BLOCK"
+          material: "COBBLESTONE"
+          min: "512"
+  cinderlord_ashstep:
+    display-name: "Cinderlord I — Ashstep"
+    title-text: "Ashstep"
+    icon: "GOLDEN_BOOTS"
+    slot: 2
+    source: "RELIC"
+    family: "cinderlord"
+    tier: 1
+    priority: 10
+    lore:
+      - "Display your Ashstep title."
+      - "Unlocked from the Ashstep relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Reach the Nether before you claim its path."
+    requirements:
+      all-of:
+        - type: "ADVANCEMENT"
+          advancement: "minecraft:story/enter_the_nether"
+  tidecaller_foamstep:
+    display-name: "Tidecaller I — Foamstep"
+    title-text: "Foamstep"
+    icon: "DIAMOND_BOOTS"
+    slot: 3
+    source: "RELIC"
+    family: "tidecaller"
+    tier: 1
+    priority: 10
+    lore:
+      - "Display your Foamstep title."
+      - "Unlocked from the Foamstep relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Swim the shore and learn to live in the water."
+    requirements:
+      all-of:
+        - type: "STATISTIC"
+          statistic: "SWIM_ONE_CM"
+          min: "100000"
+        - type: "STATISTIC"
+          statistic: "FISH_CAUGHT"
+          min: "25"
+  thornwarden_rootstep:
+    display-name: "Thornwarden I — Rootstep"
+    title-text: "Rootstep"
+    icon: "DIAMOND_BOOTS"
+    slot: 4
+    source: "RELIC"
+    family: "thornwarden"
+    tier: 1
+    priority: 10
+    lore:
+      - "Display your Rootstep title."
+      - "Unlocked from the Rootstep relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Grow the land before the grove will answer."
+    requirements:
+      all-of:
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "BONE_MEAL"
+          min: "128"
+        - type: "CUSTOM_COUNTER"
+          counter: "blocks_placed.survival"
+          min: "500"
+  voidwarden_riftstep:
+    display-name: "Voidwarden I — Riftstep"
+    title-text: "Riftstep"
+    icon: "DIAMOND_BOOTS"
+    slot: 5
+    source: "RELIC"
+    family: "voidwarden"
+    tier: 1
+    priority: 10
+    lore:
+      - "Display your Riftstep title."
+      - "Unlocked from the Riftstep relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Reach the End and start learning the horizon."
+    requirements:
+      all-of:
+        - type: "ADVANCEMENT"
+          advancement: "minecraft:story/enter_the_end"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "ENDER_PEARL"
+          min: "16"
+  dawnkeeper_lightstep:
+    display-name: "Dawnkeeper I — Lightstep"
+    title-text: "Lightstep"
+    icon: "DIAMOND_BOOTS"
+    slot: 6
+    source: "RELIC"
+    family: "dawnkeeper"
+    tier: 1
+    priority: 10
+    lore:
+      - "Display your Lightstep title."
+      - "Unlocked from the Lightstep relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Build shelter and stay alive long enough to matter."
+    requirements:
+      all-of:
+        - type: "CUSTOM_COUNTER"
+          counter: "blocks_placed.survival"
+          min: "500"
+        - type: "STATISTIC"
+          statistic: "TIME_SINCE_DEATH"
+          min: "72000"
+  wildheart_longstride:
+    display-name: "Wildheart I — Longstride"
+    title-text: "Longstride"
+    icon: "DIAMOND_BOOTS"
+    slot: 7
+    source: "RELIC"
+    family: "wildheart"
+    tier: 1
+    priority: 10
+    lore:
+      - "Display your Longstride title."
+      - "Unlocked from the Longstride relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Range far from home and live well on the road."
+    requirements:
+      all-of:
+        - type: "STATISTIC"
+          statistic: "WALK_ONE_CM"
+          min: "750000"
+        - type: "STATISTIC"
+          statistic: "ANIMALS_BRED"
+          min: "10"
+  gearwright_railstep:
+    display-name: "Gearwright I — Railstep"
+    title-text: "Railstep"
+    icon: "DIAMOND_BOOTS"
+    slot: 8
+    source: "RELIC"
+    family: "gearwright"
+    tier: 1
+    priority: 10
+    lore:
+      - "Display your Railstep title."
+      - "Unlocked from the Railstep relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Build the first reliable lines before you claim the workshop path."
+    requirements:
+      all-of:
+        - type: "CUSTOM_COUNTER"
+          counter: "blocks_placed.survival"
+          min: "1000"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "CRAFT_ITEM"
+          material: "RAIL"
+          min: "64"
+  stormbound_galecrest:
+    display-name: "Stormbound II — Galecrest"
+    title-text: "Galecrest"
+    icon: "DIAMOND_HELMET"
+    slot: 9
+    source: "RELIC"
+    family: "stormbound"
     tier: 2
     priority: 20
     lore:
-      - "Display your second Stormbound title."
+      - "Display your Galecrest title."
       - "Unlocked from the Galecrest relic tier."
-    visibility-when-unmet: SHOW_LOCKED
-    locked-message: "Advance your Stormbound relic path to unlock this title."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Use the wind itself and keep moving with intent."
     requirements:
       all-of:
-        - type: ENTITLEMENT
-          entitlement: "prestige.stormbound.2"
-
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.stormbound.1"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "WIND_CHARGE"
+          min: "16"
+        - type: "STATISTIC"
+          statistic: "SPRINT_ONE_CM"
+          min: "500000"
+  earthshaper_delvers_step:
+    display-name: "Earthshaper II — Delver's Step"
+    title-text: "Delver's Step"
+    icon: "DIAMOND_HELMET"
+    slot: 10
+    source: "RELIC"
+    family: "earthshaper"
+    tier: 2
+    priority: 20
+    lore:
+      - "Display your Delver's Step title."
+      - "Unlocked from the Delver's Step relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Delve deeper and learn the discipline of the underground."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.earthshaper.1"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "MINE_BLOCK"
+          material: "DEEPSLATE"
+          min: "512"
+  cinderlord_emberveil:
+    display-name: "Cinderlord II — Emberveil"
+    title-text: "Emberveil"
+    icon: "GOLDEN_HELMET"
+    slot: 11
+    source: "RELIC"
+    family: "cinderlord"
+    tier: 2
+    priority: 20
+    lore:
+      - "Display your Emberveil title."
+      - "Unlocked from the Emberveil relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Kill blazes and start earning your fire-hardened name."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.cinderlord.1"
+        - type: "STATISTIC_ENTITY"
+          statistic: "KILL_ENTITY"
+          entity: "BLAZE"
+          min: "25"
+  tidecaller_reefcrown:
+    display-name: "Tidecaller II — Reefcrown"
+    title-text: "Reefcrown"
+    icon: "DIAMOND_HELMET"
+    slot: 12
+    source: "RELIC"
+    family: "tidecaller"
+    tier: 2
+    priority: 20
+    lore:
+      - "Display your Reefcrown title."
+      - "Unlocked from the Reefcrown relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Hunt the drowned and prove your reefcraft."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.tidecaller.1"
+        - type: "STATISTIC_ENTITY"
+          statistic: "KILL_ENTITY"
+          entity: "DROWNED"
+          min: "20"
+        - type: "STATISTIC"
+          statistic: "SWIM_ONE_CM"
+          min: "250000"
+  thornwarden_bloomcrown:
+    display-name: "Thornwarden II — Bloomcrown"
+    title-text: "Bloomcrown"
+    icon: "DIAMOND_HELMET"
+    slot: 13
+    source: "RELIC"
+    family: "thornwarden"
+    tier: 2
+    priority: 20
+    lore:
+      - "Display your Bloomcrown title."
+      - "Unlocked from the Bloomcrown relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Compost, tend, and prove you can cultivate abundance."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.thornwarden.1"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "CRAFT_ITEM"
+          material: "COMPOSTER"
+          min: "1"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "BONE_MEAL"
+          min: "256"
+  voidwarden_horizon_crown:
+    display-name: "Voidwarden II — Horizon Crown"
+    title-text: "Horizon Crown"
+    icon: "DIAMOND_HELMET"
+    slot: 14
+    source: "RELIC"
+    family: "voidwarden"
+    tier: 2
+    priority: 20
+    lore:
+      - "Display your Horizon Crown title."
+      - "Unlocked from the Horizon Crown relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Throw pearls, hunt endermen, and go farther than is comfortable."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.voidwarden.1"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "ENDER_PEARL"
+          min: "64"
+        - type: "STATISTIC_ENTITY"
+          statistic: "KILL_ENTITY"
+          entity: "ENDERMAN"
+          min: "25"
+  dawnkeeper_watchhelm:
+    display-name: "Dawnkeeper II — Watchhelm"
+    title-text: "Watchhelm"
+    icon: "DIAMOND_HELMET"
+    slot: 15
+    source: "RELIC"
+    family: "dawnkeeper"
+    tier: 2
+    priority: 20
+    lore:
+      - "Display your Watchhelm title."
+      - "Unlocked from the Watchhelm relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Win a raid before you claim the keeper’s watch."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.dawnkeeper.1"
+        - type: "STATISTIC"
+          statistic: "RAID_WIN"
+          min: "1"
+  wildheart_horncrest:
+    display-name: "Wildheart II — Horncrest"
+    title-text: "Horncrest"
+    icon: "DIAMOND_HELMET"
+    slot: 16
+    source: "RELIC"
+    family: "wildheart"
+    tier: 2
+    priority: 20
+    lore:
+      - "Display your Horncrest title."
+      - "Unlocked from the Horncrest relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Breed, fish, and keep moving with purpose."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.wildheart.1"
+        - type: "STATISTIC"
+          statistic: "FISH_CAUGHT"
+          min: "25"
+        - type: "STATISTIC"
+          statistic: "SPRINT_ONE_CM"
+          min: "500000"
+  gearwright_cogmind:
+    display-name: "Gearwright II — Cogmind"
+    title-text: "Cogmind"
+    icon: "DIAMOND_HELMET"
+    slot: 17
+    source: "RELIC"
+    family: "gearwright"
+    tier: 2
+    priority: 20
+    lore:
+      - "Display your Cogmind title."
+      - "Unlocked from the Cogmind relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Learn control logic, not just transport."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.gearwright.1"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "CRAFT_ITEM"
+          material: "REPEATER"
+          min: "16"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "CRAFT_ITEM"
+          material: "COMPARATOR"
+          min: "8"
   stormbound_tempeststride:
-    display-name: "Stormbound — Tempeststride"
+    display-name: "Stormbound III — Tempeststride"
     title-text: "Tempeststride"
-    icon: DIAMOND_LEGGINGS
-    slot: 2
-    source: RELIC
-    family: stormbound
+    icon: "DIAMOND_LEGGINGS"
+    slot: 18
+    source: "RELIC"
+    family: "stormbound"
     tier: 3
     priority: 30
     lore:
-      - "Display your third Stormbound title."
+      - "Display your Tempeststride title."
       - "Unlocked from the Tempeststride relic tier."
-    visibility-when-unmet: SHOW_LOCKED
-    locked-message: "Advance your Stormbound relic path to unlock this title."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Take to the air and learn disciplined flight."
     requirements:
       all-of:
-        - type: ENTITLEMENT
-          entitlement: "prestige.stormbound.3"
-
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.stormbound.2"
+        - type: "STATISTIC"
+          statistic: "AVIATE_ONE_CM"
+          min: "100000"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "FIREWORK_ROCKET"
+          min: "64"
+  earthshaper_deeproad:
+    display-name: "Earthshaper III — Deeproad"
+    title-text: "Deeproad"
+    icon: "DIAMOND_LEGGINGS"
+    slot: 19
+    source: "RELIC"
+    family: "earthshaper"
+    tier: 3
+    priority: 30
+    lore:
+      - "Display your Deeproad title."
+      - "Unlocked from the Deeproad relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Cut the deep roads and bring back real ore."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.earthshaper.2"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "MINE_BLOCK"
+          material: "DEEPSLATE"
+          min: "2048"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "MINE_BLOCK"
+          material: "DIAMOND_ORE"
+          min: "8"
+  cinderlord_magmabound:
+    display-name: "Cinderlord III — Magmabound"
+    title-text: "Magmabound"
+    icon: "DIAMOND_LEGGINGS"
+    slot: 20
+    source: "RELIC"
+    family: "cinderlord"
+    tier: 3
+    priority: 30
+    lore:
+      - "Display your Magmabound title."
+      - "Unlocked from the Magmabound relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Walk the fortress roads and carry real blaze spoils."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.cinderlord.2"
+        - type: "STATISTIC_ENTITY"
+          statistic: "KILL_ENTITY"
+          entity: "WITHER_SKELETON"
+          min: "25"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "PICKUP"
+          material: "BLAZE_ROD"
+          min: "32"
+  tidecaller_abysswalker:
+    display-name: "Tidecaller III — Abysswalker"
+    title-text: "Abysswalker"
+    icon: "DIAMOND_LEGGINGS"
+    slot: 21
+    source: "RELIC"
+    family: "tidecaller"
+    tier: 3
+    priority: 30
+    lore:
+      - "Display your Abysswalker title."
+      - "Unlocked from the Abysswalker relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Go below the sunlit water and fight guardians."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.tidecaller.2"
+        - type: "STATISTIC_ENTITY"
+          statistic: "KILL_ENTITY"
+          entity: "GUARDIAN"
+          min: "10"
+        - type: "STATISTIC"
+          statistic: "SWIM_ONE_CM"
+          min: "500000"
+  thornwarden_briarwoven:
+    display-name: "Thornwarden III — Briarwoven"
+    title-text: "Briarwoven"
+    icon: "DIAMOND_LEGGINGS"
+    slot: 22
+    source: "RELIC"
+    family: "thornwarden"
+    tier: 3
+    priority: 30
+    lore:
+      - "Display your Briarwoven title."
+      - "Unlocked from the Briarwoven relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Work with bees and gather the sweet proof of care."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.thornwarden.2"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "CRAFT_ITEM"
+          material: "BEEHIVE"
+          min: "2"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "PICKUP"
+          material: "HONEYCOMB"
+          min: "32"
+  voidwarden_starwoven:
+    display-name: "Voidwarden III — Starwoven"
+    title-text: "Starwoven"
+    icon: "DIAMOND_LEGGINGS"
+    slot: 23
+    source: "RELIC"
+    family: "voidwarden"
+    tier: 3
+    priority: 30
+    lore:
+      - "Display your Starwoven title."
+      - "Unlocked from the Starwoven relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Raid the outer dark and bring back shell and silence."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.voidwarden.2"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "PICKUP"
+          material: "SHULKER_SHELL"
+          min: "8"
+        - type: "STATISTIC_ENTITY"
+          statistic: "KILL_ENTITY"
+          entity: "ENDERMAN"
+          min: "75"
+  dawnkeeper_oathwoven:
+    display-name: "Dawnkeeper III — Oathwoven"
+    title-text: "Oathwoven"
+    icon: "DIAMOND_LEGGINGS"
+    slot: 24
+    source: "RELIC"
+    family: "dawnkeeper"
+    tier: 3
+    priority: 30
+    lore:
+      - "Display your Oathwoven title."
+      - "Unlocked from the Oathwoven relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Survive longer, build more, and learn to hold the line."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.dawnkeeper.2"
+        - type: "CUSTOM_COUNTER"
+          counter: "blocks_placed.survival"
+          min: "2000"
+        - type: "STATISTIC"
+          statistic: "TIME_SINCE_DEATH"
+          min: "144000"
+  wildheart_packrunner:
+    display-name: "Wildheart III — Packrunner"
+    title-text: "Packrunner"
+    icon: "DIAMOND_LEGGINGS"
+    slot: 25
+    source: "RELIC"
+    family: "wildheart"
+    tier: 3
+    priority: 30
+    lore:
+      - "Display your Packrunner title."
+      - "Unlocked from the Packrunner relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Prove the hunt is matched by endurance and care."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.wildheart.2"
+        - type: "STATISTIC"
+          statistic: "ANIMALS_BRED"
+          min: "50"
+        - type: "STATISTIC"
+          statistic: "FISH_CAUGHT"
+          min: "50"
+  gearwright_circuitweave:
+    display-name: "Gearwright III — Circuitweave"
+    title-text: "Circuitweave"
+    icon: "DIAMOND_LEGGINGS"
+    slot: 26
+    source: "RELIC"
+    family: "gearwright"
+    tier: 3
+    priority: 30
+    lore:
+      - "Display your Circuitweave title."
+      - "Unlocked from the Circuitweave relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Move into real machine work and item flow."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.gearwright.2"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "CRAFT_ITEM"
+          material: "HOPPER"
+          min: "16"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "CRAFT_ITEM"
+          material: "OBSERVER"
+          min: "16"
   stormbound_heart_of_the_storm:
-    display-name: "Stormbound — Heart of the Storm"
+    display-name: "Stormbound IV — Heart of the Storm"
     title-text: "Heart of the Storm"
-    icon: DIAMOND_CHESTPLATE
-    slot: 3
-    source: RELIC
-    family: stormbound
+    icon: "DIAMOND_CHESTPLATE"
+    slot: 27
+    source: "RELIC"
+    family: "stormbound"
     tier: 4
     priority: 40
     lore:
-      - "Display your fourth Stormbound title."
+      - "Display your Heart of the Storm title."
       - "Unlocked from the Heart of the Storm relic tier."
-    visibility-when-unmet: SHOW_LOCKED
-    locked-message: "Advance your Stormbound relic path to unlock this title."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Fly far, burn rockets, and live in the weather."
     requirements:
       all-of:
-        - type: ENTITLEMENT
-          entitlement: "prestige.stormbound.4"
-
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.stormbound.3"
+        - type: "STATISTIC"
+          statistic: "AVIATE_ONE_CM"
+          min: "500000"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "FIREWORK_ROCKET"
+          min: "256"
+  earthshaper_mountainheart:
+    display-name: "Earthshaper IV — Mountainheart"
+    title-text: "Mountainheart"
+    icon: "DIAMOND_CHESTPLATE"
+    slot: 28
+    source: "RELIC"
+    family: "earthshaper"
+    tier: 4
+    priority: 40
+    lore:
+      - "Display your Mountainheart title."
+      - "Unlocked from the Mountainheart relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Shape halls where there were none and master the heavy work."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.earthshaper.3"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "MINE_BLOCK"
+          material: "DEEPSLATE"
+          min: "4096"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "MINE_BLOCK"
+          material: "OBSIDIAN"
+          min: "64"
+  cinderlord_furnaceheart:
+    display-name: "Cinderlord IV — Furnaceheart"
+    title-text: "Furnaceheart"
+    icon: "DIAMOND_CHESTPLATE"
+    slot: 29
+    source: "RELIC"
+    family: "cinderlord"
+    tier: 4
+    priority: 40
+    lore:
+      - "Display your Furnaceheart title."
+      - "Unlocked from the Furnaceheart relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Mine deep Nether wealth and survive the furnace-road."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.cinderlord.3"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "MINE_BLOCK"
+          material: "ANCIENT_DEBRIS"
+          min: "4"
+        - type: "STATISTIC_ENTITY"
+          statistic: "KILL_ENTITY"
+          entity: "BLAZE"
+          min: "75"
+  tidecaller_heart_of_the_current:
+    display-name: "Tidecaller IV — Heart of the Current"
+    title-text: "Heart of the Current"
+    icon: "DIAMOND_CHESTPLATE"
+    slot: 30
+    source: "RELIC"
+    family: "tidecaller"
+    tier: 4
+    priority: 40
+    lore:
+      - "Display your Heart of the Current title."
+      - "Unlocked from the Heart of the Current relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Face monument danger and master deep-water endurance."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.tidecaller.3"
+        - type: "STATISTIC_ENTITY"
+          statistic: "KILL_ENTITY"
+          entity: "ELDER_GUARDIAN"
+          min: "1"
+        - type: "STATISTIC"
+          statistic: "SWIM_ONE_CM"
+          min: "1000000"
+  thornwarden_heartwood:
+    display-name: "Thornwarden IV — Heartwood"
+    title-text: "Heartwood"
+    icon: "DIAMOND_CHESTPLATE"
+    slot: 31
+    source: "RELIC"
+    family: "thornwarden"
+    tier: 4
+    priority: 40
+    lore:
+      - "Display your Heartwood title."
+      - "Unlocked from the Heartwood relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Keep growing, keep harvesting, and build living land at scale."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.thornwarden.3"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "BONE_MEAL"
+          min: "768"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "PICKUP"
+          material: "HONEYCOMB"
+          min: "64"
+  voidwarden_eclipseheart:
+    display-name: "Voidwarden IV — Eclipseheart"
+    title-text: "Eclipseheart"
+    icon: "DIAMOND_CHESTPLATE"
+    slot: 32
+    source: "RELIC"
+    family: "voidwarden"
+    tier: 4
+    priority: 40
+    lore:
+      - "Display your Eclipseheart title."
+      - "Unlocked from the Eclipseheart relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Live in the outer End long enough to deserve the chestpiece."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.voidwarden.3"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "PICKUP"
+          material: "SHULKER_SHELL"
+          min: "16"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "CHORUS_FRUIT"
+          min: "64"
+  dawnkeeper_sunward:
+    display-name: "Dawnkeeper IV — Sunward"
+    title-text: "Sunward"
+    icon: "DIAMOND_CHESTPLATE"
+    slot: 33
+    source: "RELIC"
+    family: "dawnkeeper"
+    tier: 4
+    priority: 40
+    lore:
+      - "Display your Sunward title."
+      - "Unlocked from the Sunward relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Protect the village and keep your promise through the night."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.dawnkeeper.3"
+        - type: "STATISTIC"
+          statistic: "RAID_WIN"
+          min: "3"
+        - type: "STATISTIC"
+          statistic: "TIME_SINCE_DEATH"
+          min: "288000"
+  wildheart_beasthide:
+    display-name: "Wildheart IV — Beasthide"
+    title-text: "Beasthide"
+    icon: "DIAMOND_CHESTPLATE"
+    slot: 34
+    source: "RELIC"
+    family: "wildheart"
+    tier: 4
+    priority: 40
+    lore:
+      - "Display your Beasthide title."
+      - "Unlocked from the Beasthide relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Cross the hard country often enough to belong to it."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.wildheart.3"
+        - type: "STATISTIC"
+          statistic: "WALK_ONE_CM"
+          min: "3000000"
+        - type: "STATISTIC"
+          statistic: "ANIMALS_BRED"
+          min: "100"
+  gearwright_enginecore:
+    display-name: "Gearwright IV — Enginecore"
+    title-text: "Enginecore"
+    icon: "DIAMOND_CHESTPLATE"
+    slot: 35
+    source: "RELIC"
+    family: "gearwright"
+    tier: 4
+    priority: 40
+    lore:
+      - "Display your Enginecore title."
+      - "Unlocked from the Enginecore relic tier."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Build systems that hold under pressure."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.gearwright.3"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "CRAFT_ITEM"
+          material: "STICKY_PISTON"
+          min: "16"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "CRAFT_ITEM"
+          material: "POWERED_RAIL"
+          min: "64"
   stormbound_crown_of_thunder:
-    display-name: "Stormbound — Crown of Thunder"
+    display-name: "Stormbound V — Crown of Thunder"
     title-text: "Crown of Thunder"
-    icon: BOLT_ARMOR_TRIM_SMITHING_TEMPLATE
-    slot: 4
-    source: RELIC
-    family: stormbound
+    icon: "BOLT_ARMOR_TRIM_SMITHING_TEMPLATE"
+    slot: 36
+    source: "RELIC"
+    family: "stormbound"
     tier: 5
     priority: 50
     lore:
-      - "Display your capstone Stormbound title."
-      - "Unlocked from the Crown of Thunder relic tier."
-    visibility-when-unmet: SHOW_LOCKED
-    locked-message: "Complete the Stormbound relic path to unlock this title."
+      - "Display your Crown of Thunder title."
+      - "Unlocked from the Crown of Thunder relic capstone."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Complete the storm path and earn the right to wear the sky."
     requirements:
       all-of:
-        - type: ENTITLEMENT
-          entitlement: "prestige.stormbound.5"
-
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.stormbound.1"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.stormbound.2"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.stormbound.3"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.stormbound.4"
+        - type: "ADVANCEMENT"
+          advancement: "minecraft:end/elytra"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "WIND_CHARGE"
+          min: "64"
+        - type: "STATISTIC"
+          statistic: "AVIATE_ONE_CM"
+          min: "1500000"
+  earthshaper_throne_of_stone:
+    display-name: "Earthshaper V — Throne of Stone"
+    title-text: "Throne of Stone"
+    icon: "WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE"
+    slot: 37
+    source: "RELIC"
+    family: "earthshaper"
+    tier: 5
+    priority: 50
+    lore:
+      - "Display your Throne of Stone title."
+      - "Unlocked from the Throne of Stone relic capstone."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Complete the mountain path and earn the right to finish the set."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.earthshaper.1"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.earthshaper.2"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.earthshaper.3"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.earthshaper.4"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "MINE_BLOCK"
+          material: "DEEPSLATE"
+          min: "8192"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "MINE_BLOCK"
+          material: "ANCIENT_DEBRIS"
+          min: "8"
+  cinderlord_throne_of_cinders:
+    display-name: "Cinderlord V — Throne of Cinders"
+    title-text: "Throne of Cinders"
+    icon: "SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE"
+    slot: 38
+    source: "RELIC"
+    family: "cinderlord"
+    tier: 5
+    priority: 50
+    lore:
+      - "Display your Throne of Cinders title."
+      - "Unlocked from the Throne of Cinders relic capstone."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Complete the infernal path and show true Nether mastery."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.cinderlord.1"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.cinderlord.2"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.cinderlord.3"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.cinderlord.4"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "MINE_BLOCK"
+          material: "ANCIENT_DEBRIS"
+          min: "8"
+        - type: "STATISTIC_ENTITY"
+          statistic: "KILL_ENTITY"
+          entity: "WITHER_SKELETON"
+          min: "75"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "PICKUP"
+          material: "BLAZE_ROD"
+          min: "128"
+  tidecaller_throne_of_the_tide:
+    display-name: "Tidecaller V — Throne of the Tide"
+    title-text: "Throne of the Tide"
+    icon: "TIDE_ARMOR_TRIM_SMITHING_TEMPLATE"
+    slot: 39
+    source: "RELIC"
+    family: "tidecaller"
+    tier: 5
+    priority: 50
+    lore:
+      - "Display your Throne of the Tide title."
+      - "Unlocked from the Throne of the Tide relic capstone."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Complete the sea path and prove mastery of the deep."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.tidecaller.1"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.tidecaller.2"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.tidecaller.3"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.tidecaller.4"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "TRIDENT"
+          min: "100"
+        - type: "STATISTIC_ENTITY"
+          statistic: "KILL_ENTITY"
+          entity: "ELDER_GUARDIAN"
+          min: "3"
+        - type: "STATISTIC"
+          statistic: "SWIM_ONE_CM"
+          min: "2000000"
+  thornwarden_crown_of_the_grove:
+    display-name: "Thornwarden V — Crown of the Grove"
+    title-text: "Crown of the Grove"
+    icon: "WILD_ARMOR_TRIM_SMITHING_TEMPLATE"
+    slot: 40
+    source: "RELIC"
+    family: "thornwarden"
+    tier: 5
+    priority: 50
+    lore:
+      - "Display your Crown of the Grove title."
+      - "Unlocked from the Crown of the Grove relic capstone."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Complete the grove path and prove long, patient stewardship."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.thornwarden.1"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.thornwarden.2"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.thornwarden.3"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.thornwarden.4"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "BONE_MEAL"
+          min: "1536"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "PICKUP"
+          material: "HONEYCOMB"
+          min: "128"
+        - type: "CUSTOM_COUNTER"
+          counter: "blocks_placed.survival"
+          min: "5000"
+  voidwarden_throne_of_silence:
+    display-name: "Voidwarden V — Throne of Silence"
+    title-text: "Throne of Silence"
+    icon: "SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE"
+    slot: 41
+    source: "RELIC"
+    family: "voidwarden"
+    tier: 5
+    priority: 50
+    lore:
+      - "Display your Throne of Silence title."
+      - "Unlocked from the Throne of Silence relic capstone."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Complete the void path and prove you can master the far horizon."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.voidwarden.1"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.voidwarden.2"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.voidwarden.3"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.voidwarden.4"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "PICKUP"
+          material: "SHULKER_SHELL"
+          min: "32"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "USE_ITEM"
+          material: "ENDER_PEARL"
+          min: "192"
+        - type: "STATISTIC_ENTITY"
+          statistic: "KILL_ENTITY"
+          entity: "ENDERMAN"
+          min: "200"
+  dawnkeeper_crown_of_dawn:
+    display-name: "Dawnkeeper V — Crown of Dawn"
+    title-text: "Crown of Dawn"
+    icon: "SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE"
+    slot: 42
+    source: "RELIC"
+    family: "dawnkeeper"
+    tier: 5
+    priority: 50
+    lore:
+      - "Display your Crown of Dawn title."
+      - "Unlocked from the Crown of Dawn relic capstone."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Complete the keeper path and prove you can survive and safeguard others."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.dawnkeeper.1"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.dawnkeeper.2"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.dawnkeeper.3"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.dawnkeeper.4"
+        - type: "STATISTIC"
+          statistic: "RAID_WIN"
+          min: "5"
+        - type: "STATISTIC"
+          statistic: "TIME_SINCE_DEATH"
+          min: "576000"
+  wildheart_throne_of_the_wild:
+    display-name: "Wildheart V — Throne of the Wild"
+    title-text: "Throne of the Wild"
+    icon: "VEX_ARMOR_TRIM_SMITHING_TEMPLATE"
+    slot: 43
+    source: "RELIC"
+    family: "wildheart"
+    tier: 5
+    priority: 50
+    lore:
+      - "Display your Throne of the Wild title."
+      - "Unlocked from the Throne of the Wild relic capstone."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Complete the roaming path and earn the throne of the long road."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.wildheart.1"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.wildheart.2"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.wildheart.3"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.wildheart.4"
+        - type: "STATISTIC"
+          statistic: "WALK_ONE_CM"
+          min: "6000000"
+        - type: "STATISTIC"
+          statistic: "ANIMALS_BRED"
+          min: "200"
+        - type: "STATISTIC"
+          statistic: "FISH_CAUGHT"
+          min: "100"
+  gearwright_crown_of_brass:
+    display-name: "Gearwright V — Crown of Brass"
+    title-text: "Crown of Brass"
+    icon: "SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE"
+    slot: 44
+    source: "RELIC"
+    family: "gearwright"
+    tier: 5
+    priority: 50
+    lore:
+      - "Display your Crown of Brass title."
+      - "Unlocked from the Crown of Brass relic capstone."
+    visibility-when-unmet: "SHOW_LOCKED"
+    locked-message: "Complete the workshop path and earn master-builder standing."
+    requirements:
+      all-of:
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.gearwright.1"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.gearwright.2"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.gearwright.3"
+        - type: "ENTITLEMENT"
+          entitlement: "prestige.gearwright.4"
+        - type: "CUSTOM_COUNTER"
+          counter: "blocks_placed.survival"
+          min: "5000"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "CRAFT_ITEM"
+          material: "HOPPER"
+          min: "64"
+        - type: "STATISTIC_MATERIAL"
+          statistic: "CRAFT_ITEM"
+          material: "RAIL"
+          min: "256"
   bread_apprentice_baker:
     display-name: "Bread — Apprentice Baker"
     title-text: "Apprentice Baker"
-    icon: BREAD
-    slot: 9
-    source: COMMERCE_MILESTONE
-    family: bread
+    icon: "BREAD"
+    slot: 45
+    source: "COMMERCE_MILESTONE"
+    family: "bread"
     tier: 1
     priority: 10
     lore:
       - "A permanent bread-supply title."
       - "Intended for exchange-driven milestone entitlement wiring."
-    visibility-when-unmet: SHOW_LOCKED
+    visibility-when-unmet: "SHOW_LOCKED"
     locked-message: "Supply enough bread to earn this title."
     requirements:
       all-of:
-        - type: ENTITLEMENT
+        - type: "ENTITLEMENT"
           entitlement: "title.exchange.bread.milestone.1"
-
   bread_baker_of_the_week:
     display-name: "Bread — Baker of the Week"
     title-text: "Baker of the Week"
-    icon: BREAD
-    slot: 10
-    source: COMMERCE_CROWN
-    family: bread
+    icon: "BREAD"
+    slot: 46
+    source: "COMMERCE_CROWN"
+    family: "bread"
     priority: 100
     lore:
       - "A temporary reigning bread-supplier title."
-    visibility-when-unmet: SHOW_LOCKED
+    visibility-when-unmet: "SHOW_LOCKED"
     locked-message: "Hold the weekly bread crown to display this title."
     requirements:
       all-of:
-        - type: ENTITLEMENT
+        - type: "ENTITLEMENT"
           entitlement: "title.exchange.bread.weekly"

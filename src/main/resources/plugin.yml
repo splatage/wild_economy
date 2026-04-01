@@ -79,6 +79,12 @@ commands:
     usage: /shopadmin
     permission: wild_economy.admin.view
 
+  titles:
+    description: Open title selection and manage your active title.
+    usage: /titles [clear]
+    aliases: [title]
+    permission: wild_economy.titles
+
 permissions:
   wild_economy.shop:
     description: Allows use of player shop commands.
@@ -114,6 +120,10 @@ permissions:
 
   wild_economy.baltop:
     description: Allows viewing baltop.
+    default: true
+
+  wild_economy.titles:
+    description: Allows opening the title selection menu.
     default: true
 
   wild_economy.admin:

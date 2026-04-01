@@ -17,7 +17,11 @@ public record TitleSettingsConfig(Map<String, TitleOption> titles) {
 
     public List<TitleOption> orderedTitles() {
         return this.titles.values().stream()
-                .sorted(Comparator.comparingInt(TitleOption::priority).reversed())
+                .sorted(
+                        Comparator.comparingInt(TitleOption::priority).reversed()
+                                .thenComparing(option -> option.slot() == null ? Integer.MAX_VALUE : option.slot())
+                                .thenComparing(TitleOption::key)
+                )
                 .toList();
     }
 }
