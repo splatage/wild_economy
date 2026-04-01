@@ -86,7 +86,7 @@ final class StoreEligibilityServiceImplTest {
 
         assertTrue(result.visible());
         assertFalse(result.acquirable());
-        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Play One Minute")));
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Play time: 1h 0m / 10h 0m")));
     }
 
     @Test
@@ -121,7 +121,7 @@ final class StoreEligibilityServiceImplTest {
 
         assertTrue(result.visible());
         assertFalse(result.acquirable());
-        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Kill Entity Enderman: 3 / 10")));
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Enderman killed: 3 / 10")));
     }
 
     @Test
@@ -182,7 +182,7 @@ final class StoreEligibilityServiceImplTest {
 
         assertTrue(result.visible());
         assertFalse(result.acquirable());
-        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Blocks Placed: 42 / 100")));
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Blocks placed: 42 / 100")));
     }
 
     @Test
@@ -211,6 +211,76 @@ final class StoreEligibilityServiceImplTest {
 
         assertFalse(result.acquirable());
         assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Next tier available in:")));
+    }
+
+    @Test
+    void product_showsDistanceRequirementsInBlocks() {
+        final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), new FakeStoreProgressService(), 0L);
+        final Player player = this.player(
+            UUID.randomUUID(),
+            Set.of(),
+            Map.of(Statistic.WALK_ONE_CM, 12_345),
+            Map.of(),
+            Map.of()
+        );
+        final StoreProduct product = new StoreProduct(
+            "walker_unlock",
+            "tracks",
+            StoreProductType.REPEATABLE_GRANT,
+            "Walker Unlock",
+            "LEATHER_BOOTS",
+            MoneyAmount.ofMinor(1_000L),
+            null,
+            false,
+            List.of(),
+            List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
+            0,
+            null,
+            List.of(new StoreRequirement(StoreRequirementType.STATISTIC, null, null, Statistic.WALK_ONE_CM.name(), null, null, 50_000L)),
+            StoreVisibilityWhenUnmet.SHOW_LOCKED,
+            "Walk farther to unlock this reward."
+        );
+
+        final StoreEligibilityResult result = service.evaluateProduct(player, product);
+
+        assertTrue(result.visible());
+        assertFalse(result.acquirable());
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Walk distance: 123.5 blocks / 500 blocks")));
+    }
+
+    @Test
+    void product_showsTimeRequirementsAsDurations() {
+        final StoreEligibilityService service = this.service(new FakeStoreRuntimeStateService(), new FakeStoreProgressService(), 0L);
+        final Player player = this.player(
+            UUID.randomUUID(),
+            Set.of(),
+            Map.of(Statistic.TIME_SINCE_DEATH, 72_000),
+            Map.of(),
+            Map.of()
+        );
+        final StoreProduct product = new StoreProduct(
+            "survivor_unlock",
+            "tracks",
+            StoreProductType.REPEATABLE_GRANT,
+            "Survivor Unlock",
+            "TOTEM_OF_UNDYING",
+            MoneyAmount.ofMinor(1_000L),
+            null,
+            false,
+            List.of(),
+            List.of(new StoreAction(StoreActionType.MESSAGE, "hi")),
+            0,
+            null,
+            List.of(new StoreRequirement(StoreRequirementType.STATISTIC, null, null, Statistic.TIME_SINCE_DEATH.name(), null, null, 144_000L)),
+            StoreVisibilityWhenUnmet.SHOW_LOCKED,
+            "Stay alive longer to unlock this reward."
+        );
+
+        final StoreEligibilityResult result = service.evaluateProduct(player, product);
+
+        assertTrue(result.visible());
+        assertFalse(result.acquirable());
+        assertTrue(result.progressLines().stream().anyMatch(line -> line.contains("Time since death: 1h 0m / 2h 0m")));
     }
 
     @Test

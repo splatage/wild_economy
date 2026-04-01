@@ -8,6 +8,9 @@ import com.splatage.wild_economy.store.model.StoreVisibilityWhenUnmet;
 import com.splatage.wild_economy.store.progress.StoreProgressService;
 import com.splatage.wild_economy.store.state.StoreOwnershipState;
 import com.splatage.wild_economy.store.state.StoreRuntimeStateService;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -109,7 +112,10 @@ public final class StoreRequirementGateServiceImpl implements StoreRequirementGa
         final int current = player.getStatistic(statistic);
         return new RequirementEvaluation(
                 current >= requirement.minimum(),
-                this.prettyWords(statistic.name()) + ": " + current + " / " + requirement.minimum(),
+                this.statisticRequirementLabel(statistic) + ": "
+                        + this.formatRequirementValue(statistic, current)
+                        + " / "
+                        + this.formatRequirementValue(statistic, requirement.minimum()),
                 current >= requirement.minimum() ? null : "You have not yet reached the required progress."
         );
     }
@@ -126,7 +132,10 @@ public final class StoreRequirementGateServiceImpl implements StoreRequirementGa
         final int current = player.getStatistic(statistic, material);
         return new RequirementEvaluation(
                 current >= requirement.minimum(),
-                this.prettyWords(statistic.name()) + " " + this.prettyWords(material.name()) + ": " + current + " / " + requirement.minimum(),
+                this.materialRequirementLabel(statistic, material) + ": "
+                        + this.formatCount(current)
+                        + " / "
+                        + this.formatCount(requirement.minimum()),
                 current >= requirement.minimum() ? null : "You have not yet reached the required progress."
         );
     }
@@ -143,7 +152,10 @@ public final class StoreRequirementGateServiceImpl implements StoreRequirementGa
         final int current = player.getStatistic(statistic, entityType);
         return new RequirementEvaluation(
                 current >= requirement.minimum(),
-                this.prettyWords(statistic.name()) + " " + this.prettyWords(entityType.name()) + ": " + current + " / " + requirement.minimum(),
+                this.entityRequirementLabel(statistic, entityType) + ": "
+                        + this.formatCount(current)
+                        + " / "
+                        + this.formatCount(requirement.minimum()),
                 current >= requirement.minimum() ? null : "You have not yet reached the required progress."
         );
     }
@@ -161,9 +173,109 @@ public final class StoreRequirementGateServiceImpl implements StoreRequirementGa
         final long current = this.storeProgressService.getCustomCounter(player, requirement.key());
         return new RequirementEvaluation(
                 current >= requirement.minimum(),
-                this.prettyWords(requirement.key()) + ": " + current + " / " + requirement.minimum(),
+                this.customCounterLabel(requirement.key()) + ": "
+                        + this.formatCount(current)
+                        + " / "
+                        + this.formatCount(requirement.minimum()),
                 current >= requirement.minimum() ? null : "You have not yet reached the required progress."
         );
+    }
+
+
+    private String statisticRequirementLabel(final Statistic statistic) {
+        return switch (statistic) {
+            case PLAY_ONE_MINUTE -> "Play time";
+            case WALK_ONE_CM -> "Walk distance";
+            case SPRINT_ONE_CM -> "Sprint distance";
+            case SWIM_ONE_CM -> "Swim distance";
+            case AVIATE_ONE_CM -> "Flight distance";
+            case JUMP -> "Jumps";
+            case MOB_KILLS -> "Mob kills";
+            case PLAYER_KILLS -> "Player kills";
+            case ANIMALS_BRED -> "Animals bred";
+            case FISH_CAUGHT -> "Fish caught";
+            case TALKED_TO_VILLAGER -> "Villagers greeted";
+            case TRADED_WITH_VILLAGER -> "Villager trades";
+            case RAID_TRIGGER -> "Raids triggered";
+            case RAID_WIN -> "Raids won";
+            case DEATHS -> "Deaths";
+            case TIME_SINCE_DEATH -> "Time since death";
+            case TIME_SINCE_REST -> "Time since rest";
+            case TARGET_HIT -> "Targets hit";
+            default -> this.prettyWords(statistic.name());
+        };
+    }
+
+    private String materialRequirementLabel(final Statistic statistic, final Material material) {
+        final String materialLabel = this.prettyWords(material.name());
+        return switch (statistic) {
+            case MINE_BLOCK -> materialLabel + " mined";
+            case CRAFT_ITEM -> materialLabel + " crafted";
+            case USE_ITEM -> materialLabel + " used";
+            case BREAK_ITEM -> materialLabel + " broken";
+            case PICKUP -> materialLabel + " collected";
+            case DROP -> materialLabel + " dropped";
+            default -> this.prettyWords(statistic.name()) + " " + materialLabel;
+        };
+    }
+
+    private String entityRequirementLabel(final Statistic statistic, final EntityType entityType) {
+        final String entityLabel = this.prettyWords(entityType.name());
+        return switch (statistic) {
+            case KILL_ENTITY -> entityLabel + " killed";
+            case ENTITY_KILLED_BY -> "Killed by " + entityLabel;
+            default -> this.prettyWords(statistic.name()) + " " + entityLabel;
+        };
+    }
+
+    private String customCounterLabel(final String counterKey) {
+        if (counterKey == null || counterKey.isBlank()) {
+            return "Progress";
+        }
+        return switch (counterKey) {
+            case "blocks_placed" -> "Blocks placed";
+            case "blocks_placed.survival" -> "Blocks placed in survival";
+            default -> this.prettyWords(counterKey);
+        };
+    }
+
+    private String formatRequirementValue(final Statistic statistic, final long value) {
+        return switch (statistic) {
+            case WALK_ONE_CM, SPRINT_ONE_CM, SWIM_ONE_CM, AVIATE_ONE_CM -> this.formatBlocksFromCentimetres(value);
+            case PLAY_ONE_MINUTE, TIME_SINCE_DEATH, TIME_SINCE_REST -> this.formatTicksDuration(value);
+            default -> this.formatCount(value);
+        };
+    }
+
+    private String formatBlocksFromCentimetres(final long centimetres) {
+        final double blocks = centimetres / 100.0D;
+        final DecimalFormat format = new DecimalFormat(blocks >= 1000.0D ? "#,##0" : "#,##0.#", DecimalFormatSymbols.getInstance(Locale.US));
+        return format.format(blocks) + " blocks";
+    }
+
+    private String formatTicksDuration(final long ticks) {
+        long totalSeconds = Math.max(0L, ticks / 20L);
+        final long days = totalSeconds / 86_400L;
+        totalSeconds %= 86_400L;
+        final long hours = totalSeconds / 3_600L;
+        totalSeconds %= 3_600L;
+        final long minutes = totalSeconds / 60L;
+        final long seconds = totalSeconds % 60L;
+
+        if (days > 0L) {
+            return days + "d " + hours + "h";
+        }
+        if (hours > 0L) {
+            return hours + "h " + minutes + "m";
+        }
+        if (minutes > 0L) {
+            return minutes + "m " + seconds + "s";
+        }
+        return seconds + "s";
+    }
+
+    private String formatCount(final long value) {
+        return NumberFormat.getIntegerInstance(Locale.US).format(value);
     }
 
     private Map<String, String> buildEntitlementDisplayNames(final StoreProductsConfig storeProductsConfig) {
