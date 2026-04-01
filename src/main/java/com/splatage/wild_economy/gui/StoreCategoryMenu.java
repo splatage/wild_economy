@@ -1,14 +1,12 @@
 package com.splatage.wild_economy.gui;
 
 import com.splatage.wild_economy.config.EconomyConfig;
-import com.splatage.wild_economy.economy.EconomyFormatter;
 import com.splatage.wild_economy.store.eligibility.StoreEligibilityResult;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
 import com.splatage.wild_economy.store.model.StoreProductType;
 import com.splatage.wild_economy.store.service.StoreService;
 import com.splatage.wild_economy.store.state.StoreOwnershipState;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.bukkit.Material;
@@ -26,6 +24,7 @@ public final class StoreCategoryMenu {
     private final StoreService storeService;
     private final EconomyConfig economyConfig;
     private final PlayerInfoItemFactory playerInfoItemFactory;
+    private final StorePresentationFormatter presentationFormatter;
     private ShopMenuRouter shopMenuRouter;
 
     public StoreCategoryMenu(
@@ -36,6 +35,7 @@ public final class StoreCategoryMenu {
         this.storeService = Objects.requireNonNull(storeService, "storeService");
         this.economyConfig = Objects.requireNonNull(economyConfig, "economyConfig");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
+        this.presentationFormatter = new StorePresentationFormatter();
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -61,12 +61,12 @@ public final class StoreCategoryMenu {
         }
 
         if (page > 0) {
-            inventory.setItem(45, this.button(Material.ARROW, "Previous"));
+            inventory.setItem(45, this.button(Material.ARROW, this.presentationFormatter.previousButtonName()));
         }
         inventory.setItem(48, this.playerInfoItemFactory.create(player));
-        inventory.setItem(49, this.button(Material.BARRIER, "Back"));
+        inventory.setItem(49, this.button(Material.BARRIER, this.presentationFormatter.backButtonName()));
         if ((page + 1) * PAGE_SIZE < products.size()) {
-            inventory.setItem(53, this.button(Material.ARROW, "Next"));
+            inventory.setItem(53, this.button(Material.ARROW, this.presentationFormatter.nextButtonName()));
         }
 
         player.openInventory(inventory);
@@ -113,60 +113,24 @@ public final class StoreCategoryMenu {
         final ItemMeta meta = stack.getItemMeta();
 
         if (meta != null) {
-            meta.setDisplayName(product.displayName());
             final StoreEligibilityResult eligibility = this.storeService.getProductEligibility(player, product.productId());
+            final StoreOwnershipState ownershipState = product.type() == StoreProductType.XP_WITHDRAWAL
+                    ? StoreOwnershipState.NOT_OWNED
+                    : this.storeService.getOwnershipState(player.getUniqueId(), product.entitlementKey());
 
-            final List<String> lore = new ArrayList<>();
-            lore.addAll(this.shortLore(product));
-            if (!product.lore().isEmpty()) {
-                lore.add("");
-            }
-            if (product.type() == StoreProductType.XP_WITHDRAWAL) {
-                lore.add("XP Cost: " + product.xpCostPoints());
-                lore.add("Type: XP_WITHDRAWAL");
-                lore.add("Throw to redeem");
-            } else {
-                final StoreOwnershipState ownershipState = this.storeService.getOwnershipState(
-                        player.getUniqueId(),
-                        product.entitlementKey()
-                );
-
-                lore.add("Price: " + EconomyFormatter.format(product.price(), this.economyConfig));
-                lore.add("Type: " + product.type().name());
-                lore.add(this.ownershipLine(ownershipState));
-            }
-            if (!eligibility.acquirable()) {
-                lore.add("");
-                if (eligibility.blockedMessage() != null && !eligibility.blockedMessage().isBlank()) {
-                    lore.add(eligibility.blockedMessage());
-                }
-                lore.addAll(eligibility.progressLines());
-                if (eligibility.inspirationalMessage() != null && !eligibility.inspirationalMessage().isBlank()) {
-                    lore.add(eligibility.inspirationalMessage());
-                }
-            }
-            lore.add("Click to view");
-
-            meta.setLore(lore);
+            meta.setDisplayName(this.presentationFormatter.productDisplayName(product));
+            meta.setLore(this.presentationFormatter.tileLore(
+                    product,
+                    eligibility,
+                    ownershipState,
+                    this.economyConfig,
+                    TILE_LORE_LINE_LIMIT
+            ));
+            this.presentationFormatter.applyMenuFlags(meta);
             stack.setItemMeta(meta);
         }
 
         return stack;
-    }
-
-    private List<String> shortLore(final StoreProduct product) {
-        return product.lore().stream()
-                .limit(TILE_LORE_LINE_LIMIT)
-                .toList();
-    }
-
-    private String ownershipLine(final StoreOwnershipState ownershipState) {
-        return switch (ownershipState) {
-            case OWNED -> "Ownership: Unlocked";
-            case LOADING -> "Ownership: Checking...";
-            case LOAD_FAILED -> "Ownership: Unavailable";
-            case NOT_OWNED -> "Ownership: Not unlocked";
-        };
     }
 
     private ItemStack button(final Material material, final String name) {
@@ -174,6 +138,7 @@ public final class StoreCategoryMenu {
         final ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(name);
+            this.presentationFormatter.applyMenuFlags(meta);
             stack.setItemMeta(meta);
         }
         return stack;

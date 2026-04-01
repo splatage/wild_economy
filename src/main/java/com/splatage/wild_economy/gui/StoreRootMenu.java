@@ -3,7 +3,6 @@ package com.splatage.wild_economy.gui;
 import com.splatage.wild_economy.store.eligibility.StoreEligibilityResult;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.service.StoreService;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -20,6 +19,7 @@ public final class StoreRootMenu {
 
     private final StoreService storeService;
     private final PlayerInfoItemFactory playerInfoItemFactory;
+    private final StorePresentationFormatter presentationFormatter;
     private ShopMenuRouter shopMenuRouter;
 
     public StoreRootMenu(
@@ -28,6 +28,7 @@ public final class StoreRootMenu {
     ) {
         this.storeService = Objects.requireNonNull(storeService, "storeService");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
+        this.presentationFormatter = new StorePresentationFormatter();
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -43,12 +44,12 @@ public final class StoreRootMenu {
             final StoreEligibilityResult eligibility = this.storeService.getCategoryEligibility(player, category.categoryId());
             inventory.setItem(
                     category.slot(),
-                    this.button(this.resolveMaterial(category.iconKey()), category.displayName(), eligibility)
+                    this.button(this.resolveMaterial(category.iconKey()), this.presentationFormatter.categoryDisplayName(category), this.presentationFormatter.rootCategoryLore(category, eligibility))
             );
         }
 
         inventory.setItem(21, this.playerInfoItemFactory.create(player));
-        inventory.setItem(26, this.button(Material.BARRIER, "Close", null));
+        inventory.setItem(26, this.button(Material.BARRIER, this.presentationFormatter.closeButtonName(), null));
 
         player.openInventory(inventory);
     }
@@ -90,22 +91,15 @@ public final class StoreRootMenu {
         }
     }
 
-    private ItemStack button(final Material material, final String name, final StoreEligibilityResult eligibility) {
+    private ItemStack button(final Material material, final String name, final List<String> lore) {
         final ItemStack stack = new ItemStack(material);
         final ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(name);
-            if (eligibility != null && !eligibility.acquirable()) {
-                final List<String> lore = new ArrayList<>();
-                if (eligibility.blockedMessage() != null && !eligibility.blockedMessage().isBlank()) {
-                    lore.add(eligibility.blockedMessage());
-                }
-                lore.addAll(eligibility.progressLines());
-                if (eligibility.inspirationalMessage() != null && !eligibility.inspirationalMessage().isBlank()) {
-                    lore.add(eligibility.inspirationalMessage());
-                }
+            if (lore != null && !lore.isEmpty()) {
                 meta.setLore(lore);
             }
+            this.presentationFormatter.applyMenuFlags(meta);
             stack.setItemMeta(meta);
         }
         return stack;
