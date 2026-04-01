@@ -6,6 +6,8 @@ import com.splatage.wild_economy.exchange.domain.ItemKey;
 import com.splatage.wild_economy.exchange.domain.ItemPolicyMode;
 import com.splatage.wild_economy.economy.model.MoneyAmount;
 import com.splatage.wild_economy.store.model.StoreAction;
+import com.splatage.wild_economy.title.model.TitleOption;
+import com.splatage.wild_economy.title.model.TitleSource;
 import com.splatage.wild_economy.store.model.StoreActionType;
 import com.splatage.wild_economy.store.model.StoreCategory;
 import com.splatage.wild_economy.store.model.StoreProduct;
@@ -199,6 +201,40 @@ public final class ConfigLoader {
         }
 
        return new StoreProductsConfig(categories, products);
+    }
+
+    public TitleSettingsConfig loadTitleSettingsConfig() {
+        final FileConfiguration config = this.loadYaml("title-settings.yml");
+        final ConfigurationSection titlesSection = this.requireSection(
+                config,
+                "titles",
+                "title-settings.yml is missing the 'titles' section"
+        );
+
+        final Map<String, TitleOption> titles = new LinkedHashMap<>();
+        for (final String titleKey : titlesSection.getKeys(false)) {
+            final ConfigurationSection section = titlesSection.getConfigurationSection(titleKey);
+            if (section == null) {
+                continue;
+            }
+            titles.put(titleKey, new TitleOption(
+                    titleKey,
+                    this.requireNonBlank(section, "display-name", "title option '" + titleKey + "'"),
+                    this.requireNonBlank(section, "title-text", "title option '" + titleKey + "'"),
+                    this.requireNonBlank(section, "icon", "title option '" + titleKey + "'"),
+                    section.contains("slot") ? this.requireNonNegativeInt(section, "slot", "title option '" + titleKey + "'") : null,
+                    this.parseTitleSource(this.requireNonBlank(section, "source", "title option '" + titleKey + "'"), titleKey),
+                    this.getOptionalString(section, "family"),
+                    section.contains("tier") ? this.requireNonNegativeInt(section, "tier", "title option '" + titleKey + "'") : null,
+                    section.getInt("priority", 0),
+                    List.copyOf(section.getStringList("lore")),
+                    this.parseStoreRequirements(section, "title option '" + titleKey + "'"),
+                    this.parseStoreVisibilityWhenUnmet(this.getOptionalString(section, "visibility-when-unmet"), "title option '" + titleKey + "'"),
+                    this.getOptionalString(section, "locked-message")
+            ));
+        }
+
+        return new TitleSettingsConfig(titles);
     }
 
     public ExchangeItemsConfig loadExchangeItemsConfig() {
@@ -573,6 +609,17 @@ public final class ConfigLoader {
             );
         }
         return value;
+    }
+
+    private TitleSource parseTitleSource(final String rawValue, final String titleKey) {
+        try {
+            return TitleSource.valueOf(rawValue.trim().toUpperCase(Locale.ROOT).replace('-', '_'));
+        } catch (final IllegalArgumentException exception) {
+            throw new IllegalStateException(
+                    "title-settings.yml title option '" + titleKey + "' has invalid source '" + rawValue + "'",
+                    exception
+            );
+        }
     }
 
     private StoreProductType parseStoreProductType(final String rawValue, final String productId) {

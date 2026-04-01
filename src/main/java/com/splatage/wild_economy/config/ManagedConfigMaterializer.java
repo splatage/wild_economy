@@ -25,6 +25,10 @@ public final class ManagedConfigMaterializer {
             "Review store products in store-products.yml, then run /shopadmin reload after any edits."
         ),
         new ManagedConfigFile(
+            "title-settings.yml",
+            "Review title settings in title-settings.yml, then run /shopadmin reload after any edits."
+        ),
+        new ManagedConfigFile(
             "exchange-items.yml",
             "Review live catalog overrides, then run /shopadmin reload after any edits."
         ),

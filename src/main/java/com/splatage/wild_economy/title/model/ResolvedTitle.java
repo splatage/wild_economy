@@ -3,21 +3,19 @@ package com.splatage.wild_economy.title.model;
 import java.util.Objects;
 
 public record ResolvedTitle(
-    String key,
-    String renderedText,
-    TitleSource source,
-    String family,
-    Integer tier
+        String key,
+        String text,
+        TitleSource source,
+        String family
 ) {
-    public static final ResolvedTitle EMPTY = new ResolvedTitle("", "", TitleSource.EVENT, null, null);
-
     public ResolvedTitle {
-        key = Objects.requireNonNull(key, "key");
-        renderedText = Objects.requireNonNull(renderedText, "renderedText");
-        source = Objects.requireNonNull(source, "source");
+        key = Objects.requireNonNullElse(key, "");
+        text = Objects.requireNonNullElse(text, "");
+        Objects.requireNonNull(source, "source");
+        family = Objects.requireNonNullElse(family, "");
     }
 
-    public boolean isEmpty() {
-        return this.renderedText.isBlank();
+    public static ResolvedTitle empty() {
+        return new ResolvedTitle("", "", TitleSource.EVENT, "");
     }
 }

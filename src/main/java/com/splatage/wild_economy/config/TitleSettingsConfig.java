@@ -1,24 +1,23 @@
 package com.splatage.wild_economy.config;
 
 import com.splatage.wild_economy.title.model.TitleOption;
-import java.util.LinkedHashMap;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public record TitleSettingsConfig(
-    Map<String, TitleOption> options
-) {
+public record TitleSettingsConfig(Map<String, TitleOption> titles) {
+
     public static final TitleSettingsConfig EMPTY = new TitleSettingsConfig(Map.of());
 
     public TitleSettingsConfig {
-        options = Map.copyOf(Objects.requireNonNull(options, "options"));
+        titles = Map.copyOf(Objects.requireNonNull(titles, "titles"));
     }
 
-    public Map<String, TitleOption> optionsByPath() {
-        final Map<String, TitleOption> ordered = new LinkedHashMap<>();
-        options.values().stream()
-            .sorted(TitleOption.DISPLAY_ORDER)
-            .forEach(option -> ordered.put(option.key(), option));
-        return ordered;
+    public List<TitleOption> orderedTitles() {
+        return this.titles.values().stream()
+                .sorted(Comparator.comparingInt(TitleOption::priority).reversed()
+                        .thenComparing(TitleOption::displayName, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 }

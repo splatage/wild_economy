@@ -9,6 +9,7 @@ import com.splatage.wild_economy.economy.service.EconomyService;
 import com.splatage.wild_economy.exchange.supplier.SupplierScope;
 import com.splatage.wild_economy.exchange.supplier.SupplierStatsService;
 import com.splatage.wild_economy.exchange.supplier.TopSupplierEntry;
+import com.splatage.wild_economy.title.service.ResolvedTitleService;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -27,19 +28,22 @@ public final class WildEconomyExpansion extends PlaceholderExpansion {
     private final BaltopService baltopService;
     private final SupplierStatsService supplierStatsService;
     private final EconomyConfig economyConfig;
+    private final ResolvedTitleService resolvedTitleService;
 
     public WildEconomyExpansion(
         final WildEconomyPlugin plugin,
         final EconomyService economyService,
         final BaltopService baltopService,
         final SupplierStatsService supplierStatsService,
-        final EconomyConfig economyConfig
+        final EconomyConfig economyConfig,
+        final ResolvedTitleService resolvedTitleService
     ) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.economyService = Objects.requireNonNull(economyService, "economyService");
         this.baltopService = Objects.requireNonNull(baltopService, "baltopService");
         this.supplierStatsService = Objects.requireNonNull(supplierStatsService, "supplierStatsService");
         this.economyConfig = Objects.requireNonNull(economyConfig, "economyConfig");
+        this.resolvedTitleService = Objects.requireNonNull(resolvedTitleService, "resolvedTitleService");
     }
 
     @Override
@@ -83,8 +87,28 @@ public final class WildEconomyExpansion extends PlaceholderExpansion {
             case "top_supplier_weekly_total" -> this.resolveTopSupplierTotal(SupplierScope.WEEKLY);
             case "top_supplier_alltime_name", "top_supplier_all_time_name" -> this.resolveTopSupplierName(SupplierScope.ALL_TIME);
             case "top_supplier_alltime_total", "top_supplier_all_time_total" -> this.resolveTopSupplierTotal(SupplierScope.ALL_TIME);
+            case "title" -> this.resolveActiveTitle(player);
+            case "title_key" -> this.resolveResolvedTitleField(player, Field.KEY);
+            case "title_source" -> this.resolveResolvedTitleField(player, Field.SOURCE);
+            case "title_family" -> this.resolveResolvedTitleField(player, Field.FAMILY);
             default -> this.resolveBaltopPlaceholder(normalized);
         };
+    }
+
+    private String resolveActiveTitle(final OfflinePlayer player) {
+        return this.resolvedTitleService.getResolvedTitle(player)
+                .map(resolved -> resolved.text())
+                .orElse("");
+    }
+
+    private String resolveResolvedTitleField(final OfflinePlayer player, final Field field) {
+        return this.resolvedTitleService.getResolvedTitle(player)
+                .map(resolved -> switch (field) {
+                    case KEY -> resolved.key();
+                    case SOURCE -> resolved.source().name().toLowerCase(Locale.ROOT);
+                    case FAMILY -> resolved.family();
+                })
+                .orElse("");
     }
 
     private String resolveBalance(final OfflinePlayer player) {
@@ -199,5 +223,11 @@ public final class WildEconomyExpansion extends PlaceholderExpansion {
             return null;
         }
         return entries.get(indexInPage);
+    }
+
+    private enum Field {
+        KEY,
+        SOURCE,
+        FAMILY
     }
 }
