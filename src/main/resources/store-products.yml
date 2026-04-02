@@ -15,9 +15,9 @@ categories:
     icon: NETHER_STAR
     slot: 11
 
-  cosmetics:
-    display-name: "Cosmetics"
-    icon: GLOW_ITEM_FRAME
+  titles:
+    display-name: "Titles"
+    icon: NAME_TAG
     slot: 12
 
   perks:

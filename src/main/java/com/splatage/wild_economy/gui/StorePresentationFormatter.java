@@ -345,6 +345,7 @@ public final class StorePresentationFormatter {
             case "relic_hall" -> "§r§d";
             case "spawners" -> "§r§6";
             case "ranks" -> "§r§e";
+            case "titles" -> "§r§d";
             case "perks" -> "§r§b";
             case "tools" -> "§r§6";
             case "xp_bottles" -> "§r§5";
