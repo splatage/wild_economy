@@ -732,6 +732,21 @@ titles:
       all-of:
       - type: ENTITLEMENT
         entitlement: prestige.gearwright.5
+  all_time_market_laureate:
+    display-name: Best of All Time — Market Laureate
+    title-text: Market Laureate
+    icon: NETHER_STAR
+    source: BEST_OF_ALL_TIME
+    family: market
+    priority: 460
+    lore:
+    - Reserved for a player whose overall market legacy stands above the rest.
+    - Award this when the server agrees the whole economy bears their mark.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.market_laureate
   all_time_breadmaster:
     display-name: Best of All Time — Breadmaster
     title-text: Breadmaster
@@ -740,7 +755,8 @@ titles:
     family: bread
     priority: 455
     lore:
-    - Wear the Breadmaster title once it has been awarded to you.
+    - Reserved for the player whose bread trade became the standard everyone else chased.
+    - Award this when their baking legacy is beyond dispute.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -749,12 +765,13 @@ titles:
   all_time_grand_mason:
     display-name: Best of All Time — Grand Mason
     title-text: Grand Mason
-    icon: STONECUTTER
+    icon: STONE_BRICKS
     source: BEST_OF_ALL_TIME
     family: masonry
     priority: 455
     lore:
-    - Wear the Grand Mason title once it has been awarded to you.
+    - Reserved for the builder whose stone and masonry legacy defines the market.
+    - Award this when their craft record clearly stands alone.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -768,7 +785,8 @@ titles:
     family: smithing
     priority: 455
     lore:
-    - Wear the Ironmaster title once it has been awarded to you.
+    - Reserved for the player whose iron and smithing throughput became the benchmark.
+    - Award this when their industrial legacy outlasts everyone else.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -777,12 +795,13 @@ titles:
   all_time_tide_merchant:
     display-name: Best of All Time — Tide Merchant
     title-text: Tide Merchant
-    icon: TRIDENT
+    icon: COD
     source: BEST_OF_ALL_TIME
     family: fishing
     priority: 455
     lore:
-    - Wear the Tide Merchant title once it has been awarded to you.
+    - Reserved for the player whose ocean trade and fishing legacy ruled the waters.
+    - Award this when their maritime market record is unmatched.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -796,7 +815,8 @@ titles:
     family: apiary
     priority: 455
     lore:
-    - Wear the Apiarch title once it has been awarded to you.
+    - Reserved for the keeper whose bee and honey legacy became part of server history.
+    - Award this when their apiary record is truly enduring.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -810,7 +830,8 @@ titles:
     family: timber
     priority: 455
     lore:
-    - Wear the Timberlord title once it has been awarded to you.
+    - Reserved for the player whose timber trade and forestry legacy shaped the server.
+    - Award this when their wood market record stands tallest.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -819,12 +840,13 @@ titles:
   all_time_quartermaster:
     display-name: Best of All Time — Quartermaster
     title-text: Quartermaster
-    icon: CHEST
+    icon: BARREL
     source: BEST_OF_ALL_TIME
     family: provisioning
     priority: 455
     lore:
-    - Wear the Quartermaster title once it has been awarded to you.
+    - Reserved for the supplier who kept everyone else stocked, fed, and moving.
+    - Award this when their provisioning legacy is beyond argument.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -838,7 +860,8 @@ titles:
     family: industry
     priority: 455
     lore:
-    - Wear the Master Gearwright title once it has been awarded to you.
+    - Reserved for the engineer whose redstone and machine trade defined the era.
+    - Award this when their industrial ingenuity became server legend.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -852,7 +875,8 @@ titles:
     family: wool
     priority: 455
     lore:
-    - Wear the Wool Magnate title once it has been awarded to you.
+    - Reserved for the player whose wool empire clothed the market.
+    - Award this when their textile legacy outlasts every rival.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -866,7 +890,8 @@ titles:
     family: orchard
     priority: 455
     lore:
-    - Wear the Orchard Laureate title once it has been awarded to you.
+    - Reserved for the grower whose orchard and fruit trade became a lasting standard.
+    - Award this when their harvest record feels untouchable.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -875,31 +900,153 @@ titles:
   all_time_herd_lord:
     display-name: Best of All Time — Herd Lord
     title-text: Herd Lord
-    icon: LEAD
+    icon: LEATHER
     source: BEST_OF_ALL_TIME
     family: livestock
     priority: 455
     lore:
-    - Wear the Herd Lord title once it has been awarded to you.
+    - Reserved for the rancher whose livestock trade dominated the long game.
+    - Award this when their herdcraft legacy is impossible to ignore.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: ENTITLEMENT
         entitlement: title.best_of_all_time.herd_lord
-  all_time_market_laureate:
-    display-name: Best of All Time — Market Laureate
-    title-text: Market Laureate
-    icon: EMERALD
+  all_time_diamond_baron:
+    display-name: Best of All Time — Diamond Baron
+    title-text: Diamond Baron
+    icon: DIAMOND
     source: BEST_OF_ALL_TIME
-    family: market
-    priority: 460
+    family: mining
+    priority: 455
     lore:
-    - Wear the Market Laureate title once it has been awarded to you.
+    - Reserved for the player whose diamond trade became part of market folklore.
+    - Award this when their gem legacy still outshines every rival.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: ENTITLEMENT
-        entitlement: title.best_of_all_time.market_laureate
+        entitlement: title.best_of_all_time.diamond_baron
+  all_time_emerald_sovereign:
+    display-name: Best of All Time — Emerald Sovereign
+    title-text: Emerald Sovereign
+    icon: EMERALD
+    source: BEST_OF_ALL_TIME
+    family: trading
+    priority: 455
+    lore:
+    - Reserved for the merchant whose emerald trade came to define prosperity.
+    - Award this when their trading legacy stands above the rest.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.emerald_sovereign
+  all_time_redstone_savant:
+    display-name: Best of All Time — Redstone Savant
+    title-text: Redstone Savant
+    icon: REDSTONE_BLOCK
+    source: BEST_OF_ALL_TIME
+    family: circuitry
+    priority: 455
+    lore:
+    - Reserved for the inventor whose circuitry trade rewired the market.
+    - Award this when their redstone legacy feels era-defining.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.redstone_savant
+  all_time_rail_tycoon:
+    display-name: Best of All Time — Rail Tycoon
+    title-text: Rail Tycoon
+    icon: RAIL
+    source: BEST_OF_ALL_TIME
+    family: logistics
+    priority: 455
+    lore:
+    - Reserved for the player whose transport lines and rail trade moved the server.
+    - Award this when their logistics empire is the stuff of legend.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.rail_tycoon
+  all_time_pearl_regent:
+    display-name: Best of All Time — Pearl Regent
+    title-text: Pearl Regent
+    icon: ENDER_PEARL
+    source: BEST_OF_ALL_TIME
+    family: end
+    priority: 455
+    lore:
+    - Reserved for the trader whose ender pearl market mastery was second to none.
+    - Award this when their end-trade legacy still commands respect.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.pearl_regent
+  all_time_brewmaster:
+    display-name: Best of All Time — Brewmaster
+    title-text: Brewmaster
+    icon: BREWING_STAND
+    source: BEST_OF_ALL_TIME
+    family: brewing
+    priority: 455
+    lore:
+    - Reserved for the alchemist whose brewing trade supplied half the realm.
+    - Award this when their potion legacy is the one people still remember.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.brewmaster
+  all_time_nether_broker:
+    display-name: Best of All Time — Nether Broker
+    title-text: Nether Broker
+    icon: BLAZE_ROD
+    source: BEST_OF_ALL_TIME
+    family: nether
+    priority: 455
+    lore:
+    - Reserved for the player whose Nether trade turned danger into lasting wealth.
+    - Award this when their infernal market legacy is undeniable.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.nether_broker
+  all_time_glasswright_prime:
+    display-name: Best of All Time — Glasswright Prime
+    title-text: Glasswright Prime
+    icon: GLASS
+    source: BEST_OF_ALL_TIME
+    family: glass
+    priority: 455
+    lore:
+    - Reserved for the artisan whose glasswork and trade defined a whole building era.
+    - Award this when their clear-handed legacy still frames the world.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.glasswright_prime
+  all_time_prismarine_prince:
+    display-name: Best of All Time — Prismarine Prince
+    title-text: Prismarine Prince
+    icon: PRISMARINE
+    source: BEST_OF_ALL_TIME
+    family: oceanic
+    priority: 455
+    lore:
+    - Reserved for the player whose prismarine and monument spoils ruled the deep market.
+    - Award this when their oceanic trade legacy is unmatched.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.prismarine_prince
   achievement_dragonslayer:
     display-name: Achievement — Dragonslayer
     title-text: Dragonslayer
@@ -908,21 +1055,68 @@ titles:
     family: combat
     priority: 420
     lore:
-    - Wear the Dragonslayer title after earning the matching achievement.
+    - Earned by slaying the Ender Dragon and claiming a place among true server victors.
+    - A title for players who closed the chapter everyone else only prepared for.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: ADVANCEMENT
         advancement: minecraft:end/kill_dragon
+  achievement_bastion_breaker:
+    display-name: Achievement — Bastion Breaker
+    title-text: Bastion Breaker
+    icon: POLISHED_BLACKSTONE_BRICKS
+    source: ACHIEVEMENT
+    family: combat
+    priority: 410
+    lore:
+    - Earned by finding a bastion and stepping willingly into Piglin strongholds.
+    - A title for players who treat the Nether like hostile territory to be mastered.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ADVANCEMENT
+        advancement: minecraft:nether/find_bastion
+  achievement_netherite_seeker:
+    display-name: Achievement — Netherite Seeker
+    title-text: Netherite Seeker
+    icon: ANCIENT_DEBRIS
+    source: ACHIEVEMENT
+    family: survival
+    priority: 405
+    lore:
+    - Earned by uncovering ancient debris and proving you can mine where the world resists.
+    - A title for deep prospectors who went below the easy wealth.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ADVANCEMENT
+        advancement: minecraft:nether/obtain_ancient_debris
+  achievement_witherbound:
+    display-name: Achievement — Witherbound
+    title-text: Witherbound
+    icon: WITHER_SKELETON_SKULL
+    source: ACHIEVEMENT
+    family: combat
+    priority: 400
+    lore:
+    - Earned by summoning the Wither and choosing to face one of the realm’s worst ideas.
+    - A title for players who turned preparation into calamity on purpose.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ADVANCEMENT
+        advancement: minecraft:nether/summon_wither
   achievement_gateway_walker:
     display-name: Achievement — Gateway Walker
     title-text: Gateway Walker
-    icon: ENDER_PEARL
+    icon: END_STONE
     source: ACHIEVEMENT
     family: exploration
     priority: 390
     lore:
-    - Wear the Gateway Walker title after earning the matching achievement.
+    - Earned by crossing the End gateway and refusing to stop at the first victory.
+    - A title for players who kept going after the dragon fell.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -936,21 +1130,38 @@ titles:
     family: industry
     priority: 380
     lore:
-    - Wear the Beaconwright title after earning the matching achievement.
+    - Earned by raising a full beacon and building power into the landscape itself.
+    - A title for players whose ambition glows for everyone else to see.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: ADVANCEMENT
-        advancement: minecraft:nether/create_beacon
+        advancement: minecraft:nether/create_full_beacon
+  achievement_end_city_raider:
+    display-name: Achievement — End City Raider
+    title-text: End City Raider
+    icon: PURPUR_BLOCK
+    source: ACHIEVEMENT
+    family: exploration
+    priority: 370
+    lore:
+    - Earned by finding an End City and bringing the outer void into reach.
+    - A title for raiders who did not stop at the edge of the known world.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ADVANCEMENT
+        advancement: minecraft:end/find_end_city
   achievement_monument_breaker:
     display-name: Achievement — Monument Breaker
     title-text: Monument Breaker
-    icon: PRISMARINE
+    icon: PRISMARINE_BRICKS
     source: ACHIEVEMENT
     family: combat
     priority: 360
     lore:
-    - Wear the Monument Breaker title after earning the matching achievement.
+    - Earned by breaking an ocean monument’s silence and bringing its treasures home.
+    - A title for players who turned the deep from mystery into conquered ground.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -966,13 +1177,14 @@ titles:
     family: combat
     priority: 350
     lore:
-    - Wear the Raidbreaker title after earning the matching achievement.
+    - Earned by winning a raid and holding the line when a village needed it.
+    - A title for defenders who did not blink when the horns sounded.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC
         statistic: RAID_WIN
-        min: 3
+        min: 1
   achievement_skyfarer:
     display-name: Achievement — Skyfarer
     title-text: Skyfarer
@@ -981,13 +1193,28 @@ titles:
     family: exploration
     priority: 340
     lore:
-    - Wear the Skyfarer title after earning the matching achievement.
+    - Earned by taking to the air and making distance feel smaller than it should.
+    - A title for players who learned to live above the terrain.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
-      - type: STATISTIC
-        statistic: AVIATE_ONE_CM
-        min: 500000
+      - type: ADVANCEMENT
+        advancement: minecraft:end/elytra
+  achievement_levitator:
+    display-name: Achievement — Levitator
+    title-text: Levitator
+    icon: SHULKER_SHELL
+    source: ACHIEVEMENT
+    family: exploration
+    priority: 338
+    lore:
+    - Earned by surviving levitation and treating the outer End like a testing ground.
+    - A title for players who stayed calm while gravity lost interest.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ADVANCEMENT
+        advancement: minecraft:end/levitate
   achievement_pathfinder:
     display-name: Achievement — Pathfinder
     title-text: Pathfinder
@@ -996,38 +1223,73 @@ titles:
     family: exploration
     priority: 330
     lore:
-    - Wear the Pathfinder title after earning the matching achievement.
+    - Earned by roaming far enough that travel itself becomes a kind of mastery.
+    - A title for players who map the world with footfall and return.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC
         statistic: WALK_ONE_CM
-        min: 2000000
+        min: 3000000
+  achievement_brewmaster_trial:
+    display-name: Achievement — Brewmaster
+    title-text: Brewmaster
+    icon: BREWING_STAND
+    source: ACHIEVEMENT
+    family: industry
+    priority: 325
+    lore:
+    - Earned by brewing potions and stepping beyond raw materials into preparation.
+    - A title for players who understand that readiness is crafted.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ADVANCEMENT
+        advancement: minecraft:nether/brew_potion
   achievement_deep_delver:
     display-name: Achievement — Deep Delver
     title-text: Deep Delver
-    icon: DIAMOND_PICKAXE
+    icon: DEEPSLATE
     source: ACHIEVEMENT
     family: survival
     priority: 320
     lore:
-    - Wear the Deep Delver title after earning the matching achievement.
+    - Earned by spending real time below the comfortable layers of the world.
+    - A title for miners who made the deep feel familiar.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC_MATERIAL
         statistic: MINE_BLOCK
         material: DEEPSLATE
-        min: 4096
+        min: 2048
+  achievement_trial_walker:
+    display-name: Achievement — Trial Walker
+    title-text: Trial Walker
+    icon: BREEZE_ROD
+    source: ACHIEVEMENT
+    family: combat
+    priority: 315
+    lore:
+    - Earned by bringing Breeze Rods home and proving you can survive the trial chambers.
+    - A title for players who came back carrying the wind itself.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC_MATERIAL
+        statistic: PICKUP
+        material: BREEZE_ROD
+        min: 16
   achievement_master_breeder:
     display-name: Achievement — Master Breeder
     title-text: Master Breeder
-    icon: WHEAT
+    icon: GOLDEN_CARROT
     source: ACHIEVEMENT
     family: survival
     priority: 300
     lore:
-    - Wear the Master Breeder title after earning the matching achievement.
+    - Earned by breeding enough animals that your husbandry stopped being casual.
+    - A title for players who turned care and patience into abundance.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -1042,13 +1304,13 @@ titles:
     family: combat
     priority: 290
     lore:
-    - Wear the Bullseye title after earning the matching achievement.
+    - Earned by landing the kind of shot people remember and talk about later.
+    - A title for marksmen whose accuracy is too deliberate to ignore.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
-      - type: STATISTIC
-        statistic: TARGET_HIT
-        min: 100
+      - type: ADVANCEMENT
+        advancement: minecraft:adventure/bullseye
   achievement_village_friend:
     display-name: Achievement — Village Friend
     title-text: Village Friend
@@ -1057,13 +1319,13 @@ titles:
     family: village
     priority: 280
     lore:
-    - Wear the Village Friend title after earning the matching achievement.
+    - Earned by becoming the kind of player villages are glad to see alive.
+    - A title for those who protect, trade, and belong among them.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
-      - type: STATISTIC
-        statistic: TRADED_WITH_VILLAGER
-        min: 250
+      - type: ADVANCEMENT
+        advancement: minecraft:adventure/hero_of_the_village
   achievement_survivor:
     display-name: Achievement — Survivor
     title-text: Survivor
@@ -1072,7 +1334,8 @@ titles:
     family: survival
     priority: 270
     lore:
-    - Wear the Survivor title after earning the matching achievement.
+    - Earned by staying alive long enough that survival becomes reputation.
+    - A title for players who keep returning from things that should have ended them.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
@@ -1087,28 +1350,126 @@ titles:
     family: combat
     priority: 260
     lore:
-    - Wear the Monster Hunter title after earning the matching achievement.
+    - Earned by making hostile mobs a routine problem rather than a real threat.
+    - A title for players who have spent serious nights in bad company.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
-      - type: STATISTIC
-        statistic: MOB_KILLS
-        min: 500
+      - type: ADVANCEMENT
+        advancement: minecraft:adventure/kill_a_mob
   achievement_ocean_walker:
     display-name: Achievement — Ocean Walker
     title-text: Ocean Walker
-    icon: HEART_OF_THE_SEA
+    icon: TURTLE_HELMET
     source: ACHIEVEMENT
     family: exploration
     priority: 250
     lore:
-    - Wear the Ocean Walker title after earning the matching achievement.
+    - Earned by putting enough distance behind you in the water to claim the sea as road.
+    - A title for players who treat the ocean like traversable ground.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC
         statistic: SWIM_ONE_CM
         min: 1000000
+  achievement_beekeeper:
+    display-name: Achievement — Beekeeper
+    title-text: Beekeeper
+    icon: HONEYCOMB
+    source: ACHIEVEMENT
+    family: survival
+    priority: 245
+    lore:
+    - Earned by working long enough with bees that honey stops being novelty and becomes craft.
+    - A title for patient keepers of warm, living industry.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC_MATERIAL
+        statistic: PICKUP
+        material: HONEYCOMB
+        min: 64
+  achievement_railmaster:
+    display-name: Achievement — Railmaster
+    title-text: Railmaster
+    icon: RAIL
+    source: ACHIEVEMENT
+    family: industry
+    priority: 240
+    lore:
+    - Earned by crafting enough rail to turn scattered places into a connected world.
+    - A title for players who understand that distance can be engineered away.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC_MATERIAL
+        statistic: CRAFT_ITEM
+        material: RAIL
+        min: 256
+  achievement_homesteader:
+    display-name: Achievement — Homesteader
+    title-text: Homesteader
+    icon: BRICKS
+    source: ACHIEVEMENT
+    family: survival
+    priority: 235
+    lore:
+    - Earned by placing enough blocks in survival that the world now clearly bears your hand.
+    - A title for builders whose presence changed the land.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: CUSTOM_COUNTER
+        counter: blocks_placed.survival
+        min: 5000
+  achievement_treeline_keeper:
+    display-name: Achievement — Treeline Keeper
+    title-text: Treeline Keeper
+    icon: OAK_SAPLING
+    source: ACHIEVEMENT
+    family: survival
+    priority: 230
+    lore:
+    - Earned by harvesting enough timber that the forest became part of your daily work.
+    - A title for players whose axes and pathways shaped the woods.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC_MATERIAL
+        statistic: MINE_BLOCK
+        material: OAK_LOG
+        min: 512
+  achievement_cataloguer:
+    display-name: Achievement — Cataloguer
+    title-text: Cataloguer
+    icon: BOOK
+    source: ACHIEVEMENT
+    family: exploration
+    priority: 225
+    lore:
+    - Earned by seeing enough of the world that simple travel turned into deliberate completionism.
+    - A title for players who did not leave whole biomes unexplored.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ADVANCEMENT
+        advancement: minecraft:adventure/adventuring_time
+  achievement_animal_keeper:
+    display-name: Achievement — Animal Keeper
+    title-text: Animal Keeper
+    icon: LEAD
+    source: ACHIEVEMENT
+    family: village
+    priority: 220
+    lore:
+    - Earned by taming an animal and starting the quieter side of mastery.
+    - A title for players who built companionship into survival.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: ADVANCEMENT
+        advancement: minecraft:husbandry/tame_an_animal
   time_newcomer:
     display-name: Time on Server — Newcomer
     title-text: Newcomer
@@ -1117,13 +1478,30 @@ titles:
     family: tenure
     priority: 10
     lore:
-    - Wear the Newcomer title after spending serious time on the server.
+    - Unlocked after your first real hour on the server.
+    - A quiet mark that your story here has begun.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC
         statistic: PLAY_ONE_MINUTE
         min: 72000
+  time_regular:
+    display-name: Time on Server — Regular
+    title-text: Regular
+    icon: CLOCK
+    source: TIME_ON_SERVER
+    family: presence
+    priority: 15
+    lore:
+    - Unlocked after enough steady time that people begin to recognise you.
+    - A title for players who have become familiar faces.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 432000
   time_resident:
     display-name: Time on Server — Resident
     title-text: Resident
@@ -1132,13 +1510,30 @@ titles:
     family: tenure
     priority: 20
     lore:
-    - Wear the Resident title after spending serious time on the server.
+    - Unlocked after settling in long enough to feel at home.
+    - A title for players who have stayed past the first burst of novelty.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC
         statistic: PLAY_ONE_MINUTE
         min: 864000
+  time_hearthside:
+    display-name: Time on Server — Hearthside
+    title-text: Hearthside
+    icon: CAMPFIRE
+    source: TIME_ON_SERVER
+    family: presence
+    priority: 25
+    lore:
+    - Unlocked after enough evenings that the server starts to feel lived in.
+    - A title for players whose presence has become part of the atmosphere.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 1296000
   time_settler:
     display-name: Time on Server — Settler
     title-text: Settler
@@ -1147,13 +1542,30 @@ titles:
     family: tenure
     priority: 30
     lore:
-    - Wear the Settler title after spending serious time on the server.
+    - Unlocked after a full day of life on the server.
+    - A title for players who have clearly put roots down.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC
         statistic: PLAY_ONE_MINUTE
         min: 1728000
+  time_familiar:
+    display-name: Time on Server — Familiar
+    title-text: Familiar
+    icon: LANTERN
+    source: TIME_ON_SERVER
+    family: presence
+    priority: 35
+    lore:
+    - Unlocked after enough shared time that your name feels established.
+    - A title for players who are no longer passing through.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 2592000
   time_wayfarer:
     display-name: Time on Server — Wayfarer
     title-text: Wayfarer
@@ -1162,13 +1574,30 @@ titles:
     family: tenure
     priority: 40
     lore:
-    - Wear the Wayfarer title after spending serious time on the server.
+    - Unlocked after days of travel, work, and return.
+    - A title for players who have truly spent time in the world.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC
         statistic: PLAY_ONE_MINUTE
         min: 5184000
+  time_old_hand:
+    display-name: Time on Server — Old Hand
+    title-text: Old Hand
+    icon: SPYGLASS
+    source: TIME_ON_SERVER
+    family: presence
+    priority: 45
+    lore:
+    - Unlocked after enough time that newer players begin to look to you as established.
+    - A title for those who know the rhythms of the place.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 6912000
   time_veteran:
     display-name: Time on Server — Veteran
     title-text: Veteran
@@ -1177,13 +1606,30 @@ titles:
     family: tenure
     priority: 50
     lore:
-    - Wear the Veteran title after spending serious time on the server.
+    - Unlocked after a full week of playtime.
+    - A title for players whose history now has real weight.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC
         statistic: PLAY_ONE_MINUTE
         min: 12096000
+  time_fixture:
+    display-name: Time on Server — Fixture
+    title-text: Fixture
+    icon: BELL
+    source: TIME_ON_SERVER
+    family: presence
+    priority: 55
+    lore:
+    - Unlocked after enough time that the server feels slightly different when you are absent.
+    - A title for players who have become part of the scenery in the best way.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 18144000
   time_elder:
     display-name: Time on Server — Elder
     title-text: Elder
@@ -1192,13 +1638,30 @@ titles:
     family: tenure
     priority: 60
     lore:
-    - Wear the Elder title after spending serious time on the server.
+    - Unlocked after two full weeks of playtime.
+    - A title for long-standing players whose time cannot be called casual.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC
         statistic: PLAY_ONE_MINUTE
         min: 24192000
+  time_old_guard:
+    display-name: Time on Server — Old Guard
+    title-text: Old Guard
+    icon: SHIELD
+    source: TIME_ON_SERVER
+    family: presence
+    priority: 65
+    lore:
+    - Unlocked after enough time that your presence reads as continuity.
+    - A title for players who have been here through changes and still remain.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 36288000
   time_legend:
     display-name: Time on Server — Legend
     title-text: Legend
@@ -1207,13 +1670,30 @@ titles:
     family: tenure
     priority: 70
     lore:
-    - Wear the Legend title after spending serious time on the server.
+    - Unlocked after a month of real playtime.
+    - A title for players whose longevity is part of their reputation.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC
         statistic: PLAY_ONE_MINUTE
         min: 51840000
+  time_ancient:
+    display-name: Time on Server — Ancient
+    title-text: Ancient
+    icon: AMETHYST_SHARD
+    source: TIME_ON_SERVER
+    family: presence
+    priority: 75
+    lore:
+    - Unlocked after time enough to feel almost archaeological.
+    - A title for players whose history here is long and difficult to match.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 77760000
   time_myth:
     display-name: Time on Server — Myth
     title-text: Myth
@@ -1222,10 +1702,27 @@ titles:
     family: tenure
     priority: 80
     lore:
-    - Wear the Myth title after spending serious time on the server.
+    - Unlocked after extraordinary time on the server.
+    - A title for players whose presence feels larger than ordinary memory.
     visibility-when-unmet: HIDE
     requirements:
       all-of:
       - type: STATISTIC
         statistic: PLAY_ONE_MINUTE
         min: 103680000
+  time_evergreen:
+    display-name: Time on Server — Evergreen
+    title-text: Evergreen
+    icon: FLOWERING_AZALEA
+    source: TIME_ON_SERVER
+    family: presence
+    priority: 85
+    lore:
+    - Unlocked after a rare depth of time that suggests you are simply part of the place now.
+    - A title for players whose presence endures season after season.
+    visibility-when-unmet: HIDE
+    requirements:
+      all-of:
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 155520000
