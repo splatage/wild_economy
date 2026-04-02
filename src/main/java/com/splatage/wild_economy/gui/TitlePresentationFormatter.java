@@ -157,6 +157,10 @@ public final class TitlePresentationFormatter {
     private String sourceLabel(final TitleSource source) {
         return switch (source) {
             case RELIC -> "Relic";
+            case BEST_OF_ALL_TIME -> "Best of all time";
+            case ACHIEVEMENT -> "Achievement";
+            case AUTHORITY -> "Authority";
+            case TIME_ON_SERVER -> "Time on server";
             case COMMERCE_MILESTONE -> "Commerce milestone";
             case COMMERCE_CROWN -> "Commerce crown";
             case SUPPORTER -> "Supporter";
@@ -170,6 +174,10 @@ public final class TitlePresentationFormatter {
         }
         return switch (option.source()) {
             case RELIC -> "§r§b";
+            case BEST_OF_ALL_TIME -> "§r§6";
+            case ACHIEVEMENT -> "§r§a";
+            case AUTHORITY -> "§r§c";
+            case TIME_ON_SERVER -> "§r§f";
             case COMMERCE_MILESTONE -> "§r§6";
             case COMMERCE_CROWN -> "§r§e";
             case SUPPORTER -> "§r§d";
@@ -189,7 +197,11 @@ public final class TitlePresentationFormatter {
             case "dawnkeeper" -> "§r§e";
             case "wildheart" -> "§r§6";
             case "gearwright" -> "§r§6";
-            case "bread" -> "§r§6";
+            case "bread", "provisioning", "market", "orchard", "timber", "wool", "apiary", "smithing", "industry", "masonry", "fishing", "livestock" -> "§r§6";
+            case "exploration", "survival", "village" -> "§r§a";
+            case "combat" -> "§r§c";
+            case "authority" -> "§r§c";
+            case "tenure" -> "§r§f";
             default -> TITLE;
         };
     }
