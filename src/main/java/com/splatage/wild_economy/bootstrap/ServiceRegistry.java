@@ -253,7 +253,8 @@ public final class ServiceRegistry {
                 this.storeService,
                 this.economyConfig,
                 this.xpBottleService,
-                this.economyService
+                this.economyService,
+                this.titleMenu
         );
         this.shopMenuRouter = guiComponents.shopMenuRouter();
         this.shopMenuListener = guiComponents.shopMenuListener();

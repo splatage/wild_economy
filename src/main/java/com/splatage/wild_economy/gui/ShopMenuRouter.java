@@ -12,6 +12,7 @@ import org.bukkit.inventory.InventoryHolder;
 public final class ShopMenuRouter {
 
     private static final String XP_BOTTLES_CATEGORY_ID = "xp_bottles";
+    private static final String TITLES_CATEGORY_ID = "titles";
 
     private final PlatformExecutor platformExecutor;
     private final ExchangeRootMenu exchangeRootMenu;
@@ -22,6 +23,7 @@ public final class ShopMenuRouter {
     private final StoreCategoryMenu storeCategoryMenu;
     private final StoreProductDetailMenu storeProductDetailMenu;
     private final XpBottleMenu xpBottleMenu;
+    private final TitleMenu titleMenu;
     private final TopSupplierMenu topSupplierMenu;
     private final MarketActivityMenu marketActivityMenu;
 
@@ -35,6 +37,7 @@ public final class ShopMenuRouter {
         final StoreCategoryMenu storeCategoryMenu,
         final StoreProductDetailMenu storeProductDetailMenu,
         final XpBottleMenu xpBottleMenu,
+        final TitleMenu titleMenu,
         final TopSupplierMenu topSupplierMenu,
         final MarketActivityMenu marketActivityMenu
     ) {
@@ -47,6 +50,7 @@ public final class ShopMenuRouter {
         this.storeCategoryMenu = Objects.requireNonNull(storeCategoryMenu, "storeCategoryMenu");
         this.storeProductDetailMenu = Objects.requireNonNull(storeProductDetailMenu, "storeProductDetailMenu");
         this.xpBottleMenu = Objects.requireNonNull(xpBottleMenu, "xpBottleMenu");
+        this.titleMenu = Objects.requireNonNull(titleMenu, "titleMenu");
         this.topSupplierMenu = Objects.requireNonNull(topSupplierMenu, "topSupplierMenu");
         this.marketActivityMenu = Objects.requireNonNull(marketActivityMenu, "marketActivityMenu");
     }
@@ -102,6 +106,10 @@ public final class ShopMenuRouter {
             this.openStoreXpBottles(player);
             return;
         }
+        if (TITLES_CATEGORY_ID.equals(categoryId)) {
+            this.openTitles(player, 0);
+            return;
+        }
         this.platformExecutor.runOnPlayer(player, () -> this.storeCategoryMenu.open(player, categoryId, page));
     }
 
@@ -111,6 +119,10 @@ public final class ShopMenuRouter {
 
     public void openStoreXpBottles(final Player player) {
         this.platformExecutor.runOnPlayer(player, () -> this.xpBottleMenu.open(player));
+    }
+
+    public void openTitles(final Player player, final int page) {
+        this.platformExecutor.runOnPlayer(player, () -> this.titleMenu.open(player, page));
     }
 
     public void openMarketActivityRoot(final Player player) {
@@ -184,6 +196,7 @@ public final class ShopMenuRouter {
         for (final Player player : Bukkit.getOnlinePlayers()) {
             final Inventory topInventory = player.getOpenInventory().getTopInventory();
             if (this.currentHolder(player) == null
+                && !(topInventory.getHolder() instanceof TitleMenuHolder)
                 && !this.topSupplierMenu.isTopSupplierInventory(topInventory)
                 && !this.marketActivityMenu.isMarketActivityInventory(topInventory)) {
                 continue;

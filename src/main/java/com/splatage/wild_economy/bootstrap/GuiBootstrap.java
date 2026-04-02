@@ -19,6 +19,7 @@ import com.splatage.wild_economy.gui.StoreCategoryMenu;
 import com.splatage.wild_economy.gui.StoreProductDetailMenu;
 import com.splatage.wild_economy.gui.StoreRootMenu;
 import com.splatage.wild_economy.gui.TopSupplierMenu;
+import com.splatage.wild_economy.gui.TitleMenu;
 import com.splatage.wild_economy.gui.XpBottleMenu;
 import com.splatage.wild_economy.gui.admin.AdminItemInspectorMenu;
 import com.splatage.wild_economy.gui.admin.AdminMenuListener;
@@ -51,7 +52,8 @@ final class GuiBootstrap {
             final StoreService storeService,
             final EconomyConfig economyConfig,
             final XpBottleService xpBottleService,
-            final EconomyService economyService
+            final EconomyService economyService,
+            final TitleMenu titleMenu
     ) {
         final LayoutIconResolver layoutIconResolver = new LayoutIconResolver();
         final TopSupplierMenu topSupplierMenu = new TopSupplierMenu(supplierStatsService, playerInfoItemFactory);
@@ -103,6 +105,7 @@ final class GuiBootstrap {
                 storeCategoryMenu,
                 storeProductDetailMenu,
                 xpBottleMenu,
+                titleMenu,
                 topSupplierMenu,
                 marketActivityMenu
         );
