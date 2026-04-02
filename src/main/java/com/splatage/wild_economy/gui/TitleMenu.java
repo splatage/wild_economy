@@ -22,7 +22,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 public final class TitleMenu {
 
     private static final int INVENTORY_SIZE = 54;
-    private static final int PAGE_SIZE = 45;
+
+    private final int pageSize;
 
     private final TitleSettingsConfig titleSettingsConfig;
     private final TitleEligibilityEvaluator titleEligibilityEvaluator;
@@ -35,12 +36,14 @@ public final class TitleMenu {
             final TitleSettingsConfig titleSettingsConfig,
             final TitleEligibilityEvaluator titleEligibilityEvaluator,
             final TitleSelectionService titleSelectionService,
-            final ResolvedTitleService resolvedTitleService
+            final ResolvedTitleService resolvedTitleService,
+            final int pageSize
     ) {
         this.titleSettingsConfig = Objects.requireNonNull(titleSettingsConfig, "titleSettingsConfig");
         this.titleEligibilityEvaluator = Objects.requireNonNull(titleEligibilityEvaluator, "titleEligibilityEvaluator");
         this.titleSelectionService = Objects.requireNonNull(titleSelectionService, "titleSelectionService");
         this.resolvedTitleService = Objects.requireNonNull(resolvedTitleService, "resolvedTitleService");
+        this.pageSize = Math.max(1, Math.min(45, pageSize));
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -85,7 +88,7 @@ public final class TitleMenu {
         if (rawSlot < 0 || rawSlot >= INVENTORY_SIZE) {
             return;
         }
-        if (rawSlot < PAGE_SIZE) {
+        if (rawSlot < this.pageSize) {
             for (final EvaluatedTitle evaluatedTitle : this.titlesForPage(player, page)) {
                 if (evaluatedTitle.pageSlot() == rawSlot) {
                     this.handleTitleSelection(player, page, evaluatedTitle);
@@ -200,18 +203,18 @@ public final class TitleMenu {
         for (final EvaluatedTitle evaluatedTitle : this.visibleTitles(player)) {
             maxSlot = Math.max(maxSlot, evaluatedTitle.absoluteSlot());
         }
-        return Math.max(0, maxSlot / PAGE_SIZE);
+        return Math.max(0, maxSlot / this.pageSize);
     }
 
     private List<EvaluatedTitle> titlesForPage(final Player player, final int page) {
         final List<EvaluatedTitle> pageTitles = new ArrayList<>();
         for (final EvaluatedTitle evaluatedTitle : this.visibleTitles(player)) {
-            if ((evaluatedTitle.absoluteSlot() / PAGE_SIZE) == page) {
+            if ((evaluatedTitle.absoluteSlot() / this.pageSize) == page) {
                 pageTitles.add(new EvaluatedTitle(
                         evaluatedTitle.option(),
                         evaluatedTitle.eligibility(),
                         evaluatedTitle.absoluteSlot(),
-                        evaluatedTitle.absoluteSlot() % PAGE_SIZE
+                        evaluatedTitle.absoluteSlot() % this.pageSize
                 ));
             }
         }
@@ -222,20 +225,13 @@ public final class TitleMenu {
     private List<EvaluatedTitle> visibleTitles(final Player player) {
         final List<EvaluatedTitle> visible = new ArrayList<>();
         int fallbackIndex = 0;
-        final List<TitleOption> ordered = this.titleSettingsConfig.titles().values().stream()
-                .sorted(
-                        Comparator.comparing((TitleOption option) -> option.slot() == null ? Integer.MAX_VALUE : option.slot())
-                                .thenComparing(TitleOption::key)
-                )
-                .toList();
-
-        for (final TitleOption option : ordered) {
+        for (final TitleOption option : this.titleSettingsConfig.orderedTitles()) {
             final StoreEligibilityResult eligibility = this.titleEligibilityEvaluator.evaluate(player, option);
             if (!eligibility.visible()) {
                 continue;
             }
-            final int absoluteSlot = option.slot() == null ? (PAGE_SIZE + fallbackIndex++) : Math.max(0, option.slot());
-            visible.add(new EvaluatedTitle(option, eligibility, absoluteSlot, absoluteSlot % PAGE_SIZE));
+            final int absoluteSlot = option.slot() == null ? (this.pageSize + fallbackIndex++) : Math.max(0, option.slot());
+            visible.add(new EvaluatedTitle(option, eligibility, absoluteSlot, absoluteSlot % this.pageSize));
         }
         return visible;
     }

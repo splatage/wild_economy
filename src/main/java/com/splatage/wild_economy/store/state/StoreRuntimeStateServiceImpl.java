@@ -93,7 +93,8 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
             return StoreOwnershipState.LOADING;
         }
         if (loadState == PlayerLoadState.LOAD_FAILED) {
-            return StoreOwnershipState.LOAD_FAILED;
+            this.ensurePlayerLoadedAsync(playerId);
+            return StoreOwnershipState.LOADING;
         }
         return state.hasEntitlement(entitlementKey) ? StoreOwnershipState.OWNED : StoreOwnershipState.NOT_OWNED;
     }
@@ -112,7 +113,11 @@ public final class StoreRuntimeStateServiceImpl implements StoreRuntimeStateServ
             this.ensurePlayerLoadedAsync(playerId);
             return null;
         }
-        if (loadState == PlayerLoadState.LOADING || loadState == PlayerLoadState.LOAD_FAILED) {
+        if (loadState == PlayerLoadState.LOADING) {
+            return null;
+        }
+        if (loadState == PlayerLoadState.LOAD_FAILED) {
+            this.ensurePlayerLoadedAsync(playerId);
             return null;
         }
         return state.entitlementRecord(entitlementKey);

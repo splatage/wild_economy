@@ -37,17 +37,16 @@ public final class ResolvedTitleServiceImpl implements ResolvedTitleService {
             return Optional.empty();
         }
         final UUID playerId = player.getUniqueId();
-        final ResolvedTitle cached = this.cache.get(playerId);
-        if (cached != null) {
-            return cached.text().isBlank() ? Optional.empty() : Optional.of(cached);
-        }
         final Player onlinePlayer = player.isOnline() ? Bukkit.getPlayer(playerId) : null;
-        if (onlinePlayer == null) {
+        if (onlinePlayer != null) {
+            final ResolvedTitle resolved = this.resolve(onlinePlayer);
+            return resolved.text().isBlank() ? Optional.empty() : Optional.of(resolved);
+        }
+        final ResolvedTitle cached = this.cache.get(playerId);
+        if (cached == null) {
             return Optional.empty();
         }
-        final ResolvedTitle resolved = this.resolve(onlinePlayer);
-        this.cache.put(playerId, resolved);
-        return resolved.text().isBlank() ? Optional.empty() : Optional.of(resolved);
+        return cached.text().isBlank() ? Optional.empty() : Optional.of(cached);
     }
 
     @Override

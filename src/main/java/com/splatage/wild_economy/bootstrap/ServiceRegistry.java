@@ -196,7 +196,8 @@ public final class ServiceRegistry {
                 this.titleSettingsConfig,
                 this.titleEligibilityEvaluator,
                 this.titleSelectionService,
-                this.resolvedTitleService
+                this.resolvedTitleService,
+                this.globalConfig.guiPageSize()
         );
         this.titleMenuListener = new TitleMenuListener(this.titleMenu);
 
@@ -251,6 +252,7 @@ public final class ServiceRegistry {
                 playerInfoItemFactory,
                 this.layoutBlueprint,
                 this.storeService,
+                this.globalConfig,
                 this.economyConfig,
                 this.xpBottleService,
                 this.economyService,
@@ -286,9 +288,12 @@ public final class ServiceRegistry {
 
     private void warmOnlineEconomySessions() {
         for (final Player onlinePlayer : this.plugin.getServer().getOnlinePlayers()) {
-            this.economyService.warmPlayerSession(onlinePlayer.getUniqueId(), onlinePlayer.getName());
+            this.economyService.invalidate(onlinePlayer.getUniqueId());
+            if (this.storeRuntimeStateService != null) {
+                this.storeRuntimeStateService.ensurePlayerLoadedAsync(onlinePlayer.getUniqueId());
+            }
             if (this.resolvedTitleService != null) {
-                this.resolvedTitleService.warm(onlinePlayer);
+                this.resolvedTitleService.invalidate(onlinePlayer.getUniqueId());
             }
         }
     }
@@ -442,6 +447,18 @@ public final class ServiceRegistry {
         if (this.storePlayerSessionListener != null) {
             HandlerList.unregisterAll(this.storePlayerSessionListener);
             this.storePlayerSessionListener = null;
+        }
+        if (this.storeProgressListener != null) {
+            HandlerList.unregisterAll(this.storeProgressListener);
+            this.storeProgressListener = null;
+        }
+        if (this.titleSessionListener != null) {
+            HandlerList.unregisterAll(this.titleSessionListener);
+            this.titleSessionListener = null;
+        }
+        if (this.titleMenuListener != null) {
+            HandlerList.unregisterAll(this.titleMenuListener);
+            this.titleMenuListener = null;
         }
         if (this.xpBottleRedeemListener != null) {
             HandlerList.unregisterAll(this.xpBottleRedeemListener);

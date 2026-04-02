@@ -2,6 +2,7 @@ package com.splatage.wild_economy.bootstrap;
 
 import com.splatage.wild_economy.WildEconomyPlugin;
 import com.splatage.wild_economy.config.EconomyConfig;
+import com.splatage.wild_economy.config.GlobalConfig;
 import com.splatage.wild_economy.economy.service.EconomyService;
 import com.splatage.wild_economy.exchange.activity.MarketActivityService;
 import com.splatage.wild_economy.exchange.service.ExchangeService;
@@ -50,6 +51,7 @@ final class GuiBootstrap {
             final PlayerInfoItemFactory playerInfoItemFactory,
             final LayoutBlueprint layoutBlueprint,
             final StoreService storeService,
+            final GlobalConfig globalConfig,
             final EconomyConfig economyConfig,
             final XpBottleService xpBottleService,
             final EconomyService economyService,
@@ -86,7 +88,8 @@ final class GuiBootstrap {
         final StoreCategoryMenu storeCategoryMenu = new StoreCategoryMenu(
                 storeService,
                 economyConfig,
-                playerInfoItemFactory
+                playerInfoItemFactory,
+                globalConfig.guiPageSize()
         );
         final StoreProductDetailMenu storeProductDetailMenu = new StoreProductDetailMenu(
                 storeService,

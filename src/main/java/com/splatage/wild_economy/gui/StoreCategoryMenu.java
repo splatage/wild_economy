@@ -18,8 +18,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public final class StoreCategoryMenu {
 
-    private static final int PAGE_SIZE = 45;
     private static final int TILE_LORE_LINE_LIMIT = 2;
+
+    private final int pageSize;
 
     private final StoreService storeService;
     private final EconomyConfig economyConfig;
@@ -30,12 +31,14 @@ public final class StoreCategoryMenu {
     public StoreCategoryMenu(
         final StoreService storeService,
         final EconomyConfig economyConfig,
-        final PlayerInfoItemFactory playerInfoItemFactory
+        final PlayerInfoItemFactory playerInfoItemFactory,
+        final int pageSize
     ) {
         this.storeService = Objects.requireNonNull(storeService, "storeService");
         this.economyConfig = Objects.requireNonNull(economyConfig, "economyConfig");
         this.playerInfoItemFactory = Objects.requireNonNull(playerInfoItemFactory, "playerInfoItemFactory");
         this.presentationFormatter = new StorePresentationFormatter();
+        this.pageSize = Math.max(1, Math.min(45, pageSize));
     }
 
     public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
@@ -50,9 +53,9 @@ public final class StoreCategoryMenu {
         final Inventory inventory = holder.createInventory(54, "Store - " + category.displayName());
 
         final List<StoreProduct> products = this.storeService.getVisibleProducts(player, categoryId);
-        final int start = Math.max(0, page) * PAGE_SIZE;
+        final int start = Math.max(0, page) * this.pageSize;
 
-        for (int slot = 0; slot < PAGE_SIZE; slot++) {
+        for (int slot = 0; slot < this.pageSize; slot++) {
             final int index = start + slot;
             if (index >= products.size()) {
                 break;
@@ -65,7 +68,7 @@ public final class StoreCategoryMenu {
         }
         inventory.setItem(48, this.playerInfoItemFactory.create(player));
         inventory.setItem(49, this.button(Material.BARRIER, this.presentationFormatter.backButtonName()));
-        if ((page + 1) * PAGE_SIZE < products.size()) {
+        if ((page + 1) * this.pageSize < products.size()) {
             inventory.setItem(53, this.button(Material.ARROW, this.presentationFormatter.nextButtonName()));
         }
 
@@ -79,9 +82,9 @@ public final class StoreCategoryMenu {
         }
 
         final int rawSlot = event.getRawSlot();
-        if (rawSlot >= 0 && rawSlot < PAGE_SIZE) {
+        if (rawSlot >= 0 && rawSlot < this.pageSize) {
             final List<StoreProduct> products = this.storeService.getVisibleProducts(player, categoryId);
-            final int index = Math.max(0, page) * PAGE_SIZE + rawSlot;
+            final int index = Math.max(0, page) * this.pageSize + rawSlot;
             if (index >= 0 && index < products.size()) {
                 this.shopMenuRouter.openStoreDetail(player, categoryId, page, products.get(index).productId());
             }
@@ -97,7 +100,7 @@ public final class StoreCategoryMenu {
             case 49 -> this.shopMenuRouter.goBack(player);
             case 53 -> {
                 final List<StoreProduct> products = this.storeService.getVisibleProducts(player, categoryId);
-                final int nextStart = (page + 1) * PAGE_SIZE;
+                final int nextStart = (page + 1) * this.pageSize;
                 if (nextStart < products.size()) {
                     this.shopMenuRouter.openStoreCategory(player, categoryId, page + 1);
                 }
