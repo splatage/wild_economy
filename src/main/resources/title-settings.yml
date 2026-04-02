@@ -1,1333 +1,1231 @@
 # Title settings
 #
-# Titles are cosmetic selectors only. They do not re-run relic progression.
-# Relic titles are hidden until the matching relic entitlement exists.
-# Best of all time and authority titles are entitlement-awarded and hidden until granted.
+# The chooser lets players either use their default title placeholder or override it
+# with another title they have already earned.
+#
+# Resolution order for %wildeco_title%:
+# 1. selected earned title, if still eligible
+# 2. default-title-placeholder expanded for the player
+# 3. blank
+#
+# Relic titles are entitlement-only and hidden until earned.
 # The old ConditionalTextPlaceholders splatage-member-rank ladder is superseded by %wildeco_title%.
+default-title-placeholder: '%vault_group%'
 titles:
-  # Relic — Stormbound
   stormbound_galefoot:
-    display-name: "Stormbound I — Galefoot"
-    title-text: "Galefoot"
-    icon: "DIAMOND_BOOTS"
+    display-name: Stormbound I — Galefoot
+    title-text: Galefoot
+    icon: DIAMOND_BOOTS
     slot: 0
-    source: "RELIC"
-    family: "stormbound"
+    source: RELIC
+    family: stormbound
     tier: 1
     priority: 110
     lore:
-      - "Wear the earned Galefoot title from the Stormbound path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Galefoot title from the Stormbound path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.stormbound.1"
+      - type: ENTITLEMENT
+        entitlement: prestige.stormbound.1
   stormbound_galecrest:
-    display-name: "Stormbound II — Galecrest"
-    title-text: "Galecrest"
-    icon: "DIAMOND_HELMET"
+    display-name: Stormbound II — Galecrest
+    title-text: Galecrest
+    icon: DIAMOND_HELMET
     slot: 9
-    source: "RELIC"
-    family: "stormbound"
+    source: RELIC
+    family: stormbound
     tier: 2
     priority: 120
     lore:
-      - "Wear the earned Galecrest title from the Stormbound path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Galecrest title from the Stormbound path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.stormbound.2"
+      - type: ENTITLEMENT
+        entitlement: prestige.stormbound.2
   stormbound_tempeststride:
-    display-name: "Stormbound III — Tempeststride"
-    title-text: "Tempeststride"
-    icon: "DIAMOND_LEGGINGS"
+    display-name: Stormbound III — Tempeststride
+    title-text: Tempeststride
+    icon: DIAMOND_LEGGINGS
     slot: 18
-    source: "RELIC"
-    family: "stormbound"
+    source: RELIC
+    family: stormbound
     tier: 3
     priority: 130
     lore:
-      - "Wear the earned Tempeststride title from the Stormbound path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Tempeststride title from the Stormbound path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.stormbound.3"
+      - type: ENTITLEMENT
+        entitlement: prestige.stormbound.3
   stormbound_heart_of_the_storm:
-    display-name: "Stormbound IV — Heart of the Storm"
-    title-text: "Heart of the Storm"
-    icon: "DIAMOND_CHESTPLATE"
+    display-name: Stormbound IV — Heart of the Storm
+    title-text: Heart of the Storm
+    icon: DIAMOND_CHESTPLATE
     slot: 27
-    source: "RELIC"
-    family: "stormbound"
+    source: RELIC
+    family: stormbound
     tier: 4
     priority: 140
     lore:
-      - "Wear the earned Heart of the Storm title from the Stormbound path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Heart of the Storm title from the Stormbound path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.stormbound.4"
+      - type: ENTITLEMENT
+        entitlement: prestige.stormbound.4
   stormbound_crown_of_thunder:
-    display-name: "Stormbound V — Crown of Thunder"
-    title-text: "Crown of Thunder"
-    icon: "BOLT_ARMOR_TRIM_SMITHING_TEMPLATE"
+    display-name: Stormbound V — Crown of Thunder
+    title-text: Crown of Thunder
+    icon: BOLT_ARMOR_TRIM_SMITHING_TEMPLATE
     slot: 36
-    source: "RELIC"
-    family: "stormbound"
+    source: RELIC
+    family: stormbound
     tier: 5
     priority: 150
     lore:
-      - "Wear the earned Crown of Thunder title from the Stormbound path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Crown of Thunder title from the Stormbound path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.stormbound.5"
-
-  # Relic — Earthshaper
+      - type: ENTITLEMENT
+        entitlement: prestige.stormbound.5
   earthshaper_quarryborn:
-    display-name: "Earthshaper I — Quarryborn"
-    title-text: "Quarryborn"
-    icon: "IRON_PICKAXE"
+    display-name: Earthshaper I — Quarryborn
+    title-text: Quarryborn
+    icon: IRON_PICKAXE
     slot: 1
-    source: "RELIC"
-    family: "earthshaper"
+    source: RELIC
+    family: earthshaper
     tier: 1
     priority: 110
     lore:
-      - "Wear the earned Quarryborn title from the Earthshaper path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Quarryborn title from the Earthshaper path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.earthshaper.1"
+      - type: ENTITLEMENT
+        entitlement: prestige.earthshaper.1
   earthshaper_delvers_step:
-    display-name: "Earthshaper II — Delver's Step"
-    title-text: "Delver's Step"
-    icon: "DIAMOND_HELMET"
+    display-name: Earthshaper II — Delver's Step
+    title-text: Delver's Step
+    icon: DIAMOND_HELMET
     slot: 10
-    source: "RELIC"
-    family: "earthshaper"
+    source: RELIC
+    family: earthshaper
     tier: 2
     priority: 120
     lore:
-      - "Wear the earned Delver's Step title from the Earthshaper path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Delver's Step title from the Earthshaper path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.earthshaper.2"
+      - type: ENTITLEMENT
+        entitlement: prestige.earthshaper.2
   earthshaper_deeproad:
-    display-name: "Earthshaper III — Deeproad"
-    title-text: "Deeproad"
-    icon: "DIAMOND_LEGGINGS"
+    display-name: Earthshaper III — Deeproad
+    title-text: Deeproad
+    icon: DIAMOND_LEGGINGS
     slot: 19
-    source: "RELIC"
-    family: "earthshaper"
+    source: RELIC
+    family: earthshaper
     tier: 3
     priority: 130
     lore:
-      - "Wear the earned Deeproad title from the Earthshaper path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Deeproad title from the Earthshaper path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.earthshaper.3"
+      - type: ENTITLEMENT
+        entitlement: prestige.earthshaper.3
   earthshaper_mountainheart:
-    display-name: "Earthshaper IV — Mountainheart"
-    title-text: "Mountainheart"
-    icon: "DIAMOND_CHESTPLATE"
+    display-name: Earthshaper IV — Mountainheart
+    title-text: Mountainheart
+    icon: DIAMOND_CHESTPLATE
     slot: 28
-    source: "RELIC"
-    family: "earthshaper"
+    source: RELIC
+    family: earthshaper
     tier: 4
     priority: 140
     lore:
-      - "Wear the earned Mountainheart title from the Earthshaper path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Mountainheart title from the Earthshaper path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.earthshaper.4"
+      - type: ENTITLEMENT
+        entitlement: prestige.earthshaper.4
   earthshaper_throne_of_stone:
-    display-name: "Earthshaper V — Throne of Stone"
-    title-text: "Throne of Stone"
-    icon: "WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE"
+    display-name: Earthshaper V — Throne of Stone
+    title-text: Throne of Stone
+    icon: WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE
     slot: 37
-    source: "RELIC"
-    family: "earthshaper"
+    source: RELIC
+    family: earthshaper
     tier: 5
     priority: 150
     lore:
-      - "Wear the earned Throne of Stone title from the Earthshaper path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Throne of Stone title from the Earthshaper path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.earthshaper.5"
-
-  # Relic — Cinderlord
+      - type: ENTITLEMENT
+        entitlement: prestige.earthshaper.5
   cinderlord_ashstep:
-    display-name: "Cinderlord I — Ashstep"
-    title-text: "Ashstep"
-    icon: "GOLDEN_BOOTS"
+    display-name: Cinderlord I — Ashstep
+    title-text: Ashstep
+    icon: GOLDEN_BOOTS
     slot: 2
-    source: "RELIC"
-    family: "cinderlord"
+    source: RELIC
+    family: cinderlord
     tier: 1
     priority: 110
     lore:
-      - "Wear the earned Ashstep title from the Cinderlord path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Ashstep title from the Cinderlord path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.cinderlord.1"
+      - type: ENTITLEMENT
+        entitlement: prestige.cinderlord.1
   cinderlord_emberveil:
-    display-name: "Cinderlord II — Emberveil"
-    title-text: "Emberveil"
-    icon: "GOLDEN_HELMET"
+    display-name: Cinderlord II — Emberveil
+    title-text: Emberveil
+    icon: GOLDEN_HELMET
     slot: 11
-    source: "RELIC"
-    family: "cinderlord"
+    source: RELIC
+    family: cinderlord
     tier: 2
     priority: 120
     lore:
-      - "Wear the earned Emberveil title from the Cinderlord path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Emberveil title from the Cinderlord path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.cinderlord.2"
+      - type: ENTITLEMENT
+        entitlement: prestige.cinderlord.2
   cinderlord_magmabound:
-    display-name: "Cinderlord III — Magmabound"
-    title-text: "Magmabound"
-    icon: "DIAMOND_LEGGINGS"
+    display-name: Cinderlord III — Magmabound
+    title-text: Magmabound
+    icon: DIAMOND_LEGGINGS
     slot: 20
-    source: "RELIC"
-    family: "cinderlord"
+    source: RELIC
+    family: cinderlord
     tier: 3
     priority: 130
     lore:
-      - "Wear the earned Magmabound title from the Cinderlord path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Magmabound title from the Cinderlord path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.cinderlord.3"
+      - type: ENTITLEMENT
+        entitlement: prestige.cinderlord.3
   cinderlord_furnaceheart:
-    display-name: "Cinderlord IV — Furnaceheart"
-    title-text: "Furnaceheart"
-    icon: "DIAMOND_CHESTPLATE"
+    display-name: Cinderlord IV — Furnaceheart
+    title-text: Furnaceheart
+    icon: DIAMOND_CHESTPLATE
     slot: 29
-    source: "RELIC"
-    family: "cinderlord"
+    source: RELIC
+    family: cinderlord
     tier: 4
     priority: 140
     lore:
-      - "Wear the earned Furnaceheart title from the Cinderlord path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Furnaceheart title from the Cinderlord path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.cinderlord.4"
+      - type: ENTITLEMENT
+        entitlement: prestige.cinderlord.4
   cinderlord_throne_of_cinders:
-    display-name: "Cinderlord V — Throne of Cinders"
-    title-text: "Throne of Cinders"
-    icon: "SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE"
+    display-name: Cinderlord V — Throne of Cinders
+    title-text: Throne of Cinders
+    icon: SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE
     slot: 38
-    source: "RELIC"
-    family: "cinderlord"
+    source: RELIC
+    family: cinderlord
     tier: 5
     priority: 150
     lore:
-      - "Wear the earned Throne of Cinders title from the Cinderlord path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Throne of Cinders title from the Cinderlord path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.cinderlord.5"
-
-  # Relic — Tidecaller
+      - type: ENTITLEMENT
+        entitlement: prestige.cinderlord.5
   tidecaller_foamstep:
-    display-name: "Tidecaller I — Foamstep"
-    title-text: "Foamstep"
-    icon: "DIAMOND_BOOTS"
+    display-name: Tidecaller I — Foamstep
+    title-text: Foamstep
+    icon: DIAMOND_BOOTS
     slot: 3
-    source: "RELIC"
-    family: "tidecaller"
+    source: RELIC
+    family: tidecaller
     tier: 1
     priority: 110
     lore:
-      - "Wear the earned Foamstep title from the Tidecaller path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Foamstep title from the Tidecaller path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.tidecaller.1"
+      - type: ENTITLEMENT
+        entitlement: prestige.tidecaller.1
   tidecaller_reefcrown:
-    display-name: "Tidecaller II — Reefcrown"
-    title-text: "Reefcrown"
-    icon: "DIAMOND_HELMET"
+    display-name: Tidecaller II — Reefcrown
+    title-text: Reefcrown
+    icon: DIAMOND_HELMET
     slot: 12
-    source: "RELIC"
-    family: "tidecaller"
+    source: RELIC
+    family: tidecaller
     tier: 2
     priority: 120
     lore:
-      - "Wear the earned Reefcrown title from the Tidecaller path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Reefcrown title from the Tidecaller path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.tidecaller.2"
+      - type: ENTITLEMENT
+        entitlement: prestige.tidecaller.2
   tidecaller_abysswalker:
-    display-name: "Tidecaller III — Abysswalker"
-    title-text: "Abysswalker"
-    icon: "DIAMOND_LEGGINGS"
+    display-name: Tidecaller III — Abysswalker
+    title-text: Abysswalker
+    icon: DIAMOND_LEGGINGS
     slot: 21
-    source: "RELIC"
-    family: "tidecaller"
+    source: RELIC
+    family: tidecaller
     tier: 3
     priority: 130
     lore:
-      - "Wear the earned Abysswalker title from the Tidecaller path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Abysswalker title from the Tidecaller path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.tidecaller.3"
+      - type: ENTITLEMENT
+        entitlement: prestige.tidecaller.3
   tidecaller_heart_of_the_current:
-    display-name: "Tidecaller IV — Heart of the Current"
-    title-text: "Heart of the Current"
-    icon: "DIAMOND_CHESTPLATE"
+    display-name: Tidecaller IV — Heart of the Current
+    title-text: Heart of the Current
+    icon: DIAMOND_CHESTPLATE
     slot: 30
-    source: "RELIC"
-    family: "tidecaller"
+    source: RELIC
+    family: tidecaller
     tier: 4
     priority: 140
     lore:
-      - "Wear the earned Heart of the Current title from the Tidecaller path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Heart of the Current title from the Tidecaller path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.tidecaller.4"
+      - type: ENTITLEMENT
+        entitlement: prestige.tidecaller.4
   tidecaller_throne_of_the_tide:
-    display-name: "Tidecaller V — Throne of the Tide"
-    title-text: "Throne of the Tide"
-    icon: "TIDE_ARMOR_TRIM_SMITHING_TEMPLATE"
+    display-name: Tidecaller V — Throne of the Tide
+    title-text: Throne of the Tide
+    icon: TIDE_ARMOR_TRIM_SMITHING_TEMPLATE
     slot: 39
-    source: "RELIC"
-    family: "tidecaller"
+    source: RELIC
+    family: tidecaller
     tier: 5
     priority: 150
     lore:
-      - "Wear the earned Throne of the Tide title from the Tidecaller path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Throne of the Tide title from the Tidecaller path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.tidecaller.5"
-
-  # Relic — Thornwarden
+      - type: ENTITLEMENT
+        entitlement: prestige.tidecaller.5
   thornwarden_rootstep:
-    display-name: "Thornwarden I — Rootstep"
-    title-text: "Rootstep"
-    icon: "DIAMOND_BOOTS"
+    display-name: Thornwarden I — Rootstep
+    title-text: Rootstep
+    icon: DIAMOND_BOOTS
     slot: 4
-    source: "RELIC"
-    family: "thornwarden"
+    source: RELIC
+    family: thornwarden
     tier: 1
     priority: 110
     lore:
-      - "Wear the earned Rootstep title from the Thornwarden path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Rootstep title from the Thornwarden path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.thornwarden.1"
+      - type: ENTITLEMENT
+        entitlement: prestige.thornwarden.1
   thornwarden_bloomcrown:
-    display-name: "Thornwarden II — Bloomcrown"
-    title-text: "Bloomcrown"
-    icon: "DIAMOND_HELMET"
+    display-name: Thornwarden II — Bloomcrown
+    title-text: Bloomcrown
+    icon: DIAMOND_HELMET
     slot: 13
-    source: "RELIC"
-    family: "thornwarden"
+    source: RELIC
+    family: thornwarden
     tier: 2
     priority: 120
     lore:
-      - "Wear the earned Bloomcrown title from the Thornwarden path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Bloomcrown title from the Thornwarden path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.thornwarden.2"
+      - type: ENTITLEMENT
+        entitlement: prestige.thornwarden.2
   thornwarden_briarwoven:
-    display-name: "Thornwarden III — Briarwoven"
-    title-text: "Briarwoven"
-    icon: "DIAMOND_LEGGINGS"
+    display-name: Thornwarden III — Briarwoven
+    title-text: Briarwoven
+    icon: DIAMOND_LEGGINGS
     slot: 22
-    source: "RELIC"
-    family: "thornwarden"
+    source: RELIC
+    family: thornwarden
     tier: 3
     priority: 130
     lore:
-      - "Wear the earned Briarwoven title from the Thornwarden path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Briarwoven title from the Thornwarden path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.thornwarden.3"
+      - type: ENTITLEMENT
+        entitlement: prestige.thornwarden.3
   thornwarden_heartwood:
-    display-name: "Thornwarden IV — Heartwood"
-    title-text: "Heartwood"
-    icon: "DIAMOND_CHESTPLATE"
+    display-name: Thornwarden IV — Heartwood
+    title-text: Heartwood
+    icon: DIAMOND_CHESTPLATE
     slot: 31
-    source: "RELIC"
-    family: "thornwarden"
+    source: RELIC
+    family: thornwarden
     tier: 4
     priority: 140
     lore:
-      - "Wear the earned Heartwood title from the Thornwarden path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Heartwood title from the Thornwarden path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.thornwarden.4"
+      - type: ENTITLEMENT
+        entitlement: prestige.thornwarden.4
   thornwarden_crown_of_the_grove:
-    display-name: "Thornwarden V — Crown of the Grove"
-    title-text: "Crown of the Grove"
-    icon: "WILD_ARMOR_TRIM_SMITHING_TEMPLATE"
+    display-name: Thornwarden V — Crown of the Grove
+    title-text: Crown of the Grove
+    icon: WILD_ARMOR_TRIM_SMITHING_TEMPLATE
     slot: 40
-    source: "RELIC"
-    family: "thornwarden"
+    source: RELIC
+    family: thornwarden
     tier: 5
     priority: 150
     lore:
-      - "Wear the earned Crown of the Grove title from the Thornwarden path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Crown of the Grove title from the Thornwarden path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.thornwarden.5"
-
-  # Relic — Voidwarden
+      - type: ENTITLEMENT
+        entitlement: prestige.thornwarden.5
   voidwarden_riftstep:
-    display-name: "Voidwarden I — Riftstep"
-    title-text: "Riftstep"
-    icon: "DIAMOND_BOOTS"
+    display-name: Voidwarden I — Riftstep
+    title-text: Riftstep
+    icon: DIAMOND_BOOTS
     slot: 5
-    source: "RELIC"
-    family: "voidwarden"
+    source: RELIC
+    family: voidwarden
     tier: 1
     priority: 110
     lore:
-      - "Wear the earned Riftstep title from the Voidwarden path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Riftstep title from the Voidwarden path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.voidwarden.1"
+      - type: ENTITLEMENT
+        entitlement: prestige.voidwarden.1
   voidwarden_horizon_crown:
-    display-name: "Voidwarden II — Horizon Crown"
-    title-text: "Horizon Crown"
-    icon: "DIAMOND_HELMET"
+    display-name: Voidwarden II — Horizon Crown
+    title-text: Horizon Crown
+    icon: DIAMOND_HELMET
     slot: 14
-    source: "RELIC"
-    family: "voidwarden"
+    source: RELIC
+    family: voidwarden
     tier: 2
     priority: 120
     lore:
-      - "Wear the earned Horizon Crown title from the Voidwarden path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Horizon Crown title from the Voidwarden path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.voidwarden.2"
+      - type: ENTITLEMENT
+        entitlement: prestige.voidwarden.2
   voidwarden_starwoven:
-    display-name: "Voidwarden III — Starwoven"
-    title-text: "Starwoven"
-    icon: "DIAMOND_LEGGINGS"
+    display-name: Voidwarden III — Starwoven
+    title-text: Starwoven
+    icon: DIAMOND_LEGGINGS
     slot: 23
-    source: "RELIC"
-    family: "voidwarden"
+    source: RELIC
+    family: voidwarden
     tier: 3
     priority: 130
     lore:
-      - "Wear the earned Starwoven title from the Voidwarden path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Starwoven title from the Voidwarden path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.voidwarden.3"
+      - type: ENTITLEMENT
+        entitlement: prestige.voidwarden.3
   voidwarden_eclipseheart:
-    display-name: "Voidwarden IV — Eclipseheart"
-    title-text: "Eclipseheart"
-    icon: "DIAMOND_CHESTPLATE"
+    display-name: Voidwarden IV — Eclipseheart
+    title-text: Eclipseheart
+    icon: DIAMOND_CHESTPLATE
     slot: 32
-    source: "RELIC"
-    family: "voidwarden"
+    source: RELIC
+    family: voidwarden
     tier: 4
     priority: 140
     lore:
-      - "Wear the earned Eclipseheart title from the Voidwarden path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Eclipseheart title from the Voidwarden path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.voidwarden.4"
+      - type: ENTITLEMENT
+        entitlement: prestige.voidwarden.4
   voidwarden_throne_of_silence:
-    display-name: "Voidwarden V — Throne of Silence"
-    title-text: "Throne of Silence"
-    icon: "SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE"
+    display-name: Voidwarden V — Throne of Silence
+    title-text: Throne of Silence
+    icon: SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE
     slot: 41
-    source: "RELIC"
-    family: "voidwarden"
+    source: RELIC
+    family: voidwarden
     tier: 5
     priority: 150
     lore:
-      - "Wear the earned Throne of Silence title from the Voidwarden path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Throne of Silence title from the Voidwarden path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.voidwarden.5"
-
-  # Relic — Dawnkeeper
+      - type: ENTITLEMENT
+        entitlement: prestige.voidwarden.5
   dawnkeeper_lightstep:
-    display-name: "Dawnkeeper I — Lightstep"
-    title-text: "Lightstep"
-    icon: "DIAMOND_BOOTS"
+    display-name: Dawnkeeper I — Lightstep
+    title-text: Lightstep
+    icon: DIAMOND_BOOTS
     slot: 6
-    source: "RELIC"
-    family: "dawnkeeper"
+    source: RELIC
+    family: dawnkeeper
     tier: 1
     priority: 110
     lore:
-      - "Wear the earned Lightstep title from the Dawnkeeper path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Lightstep title from the Dawnkeeper path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.dawnkeeper.1"
+      - type: ENTITLEMENT
+        entitlement: prestige.dawnkeeper.1
   dawnkeeper_watchhelm:
-    display-name: "Dawnkeeper II — Watchhelm"
-    title-text: "Watchhelm"
-    icon: "DIAMOND_HELMET"
+    display-name: Dawnkeeper II — Watchhelm
+    title-text: Watchhelm
+    icon: DIAMOND_HELMET
     slot: 15
-    source: "RELIC"
-    family: "dawnkeeper"
+    source: RELIC
+    family: dawnkeeper
     tier: 2
     priority: 120
     lore:
-      - "Wear the earned Watchhelm title from the Dawnkeeper path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Watchhelm title from the Dawnkeeper path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.dawnkeeper.2"
+      - type: ENTITLEMENT
+        entitlement: prestige.dawnkeeper.2
   dawnkeeper_oathwoven:
-    display-name: "Dawnkeeper III — Oathwoven"
-    title-text: "Oathwoven"
-    icon: "DIAMOND_LEGGINGS"
+    display-name: Dawnkeeper III — Oathwoven
+    title-text: Oathwoven
+    icon: DIAMOND_LEGGINGS
     slot: 24
-    source: "RELIC"
-    family: "dawnkeeper"
+    source: RELIC
+    family: dawnkeeper
     tier: 3
     priority: 130
     lore:
-      - "Wear the earned Oathwoven title from the Dawnkeeper path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Oathwoven title from the Dawnkeeper path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.dawnkeeper.3"
+      - type: ENTITLEMENT
+        entitlement: prestige.dawnkeeper.3
   dawnkeeper_sunward:
-    display-name: "Dawnkeeper IV — Sunward"
-    title-text: "Sunward"
-    icon: "DIAMOND_CHESTPLATE"
+    display-name: Dawnkeeper IV — Sunward
+    title-text: Sunward
+    icon: DIAMOND_CHESTPLATE
     slot: 33
-    source: "RELIC"
-    family: "dawnkeeper"
+    source: RELIC
+    family: dawnkeeper
     tier: 4
     priority: 140
     lore:
-      - "Wear the earned Sunward title from the Dawnkeeper path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Sunward title from the Dawnkeeper path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.dawnkeeper.4"
+      - type: ENTITLEMENT
+        entitlement: prestige.dawnkeeper.4
   dawnkeeper_crown_of_dawn:
-    display-name: "Dawnkeeper V — Crown of Dawn"
-    title-text: "Crown of Dawn"
-    icon: "SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE"
+    display-name: Dawnkeeper V — Crown of Dawn
+    title-text: Crown of Dawn
+    icon: SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE
     slot: 42
-    source: "RELIC"
-    family: "dawnkeeper"
+    source: RELIC
+    family: dawnkeeper
     tier: 5
     priority: 150
     lore:
-      - "Wear the earned Crown of Dawn title from the Dawnkeeper path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Crown of Dawn title from the Dawnkeeper path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.dawnkeeper.5"
-
-  # Relic — Wildheart
+      - type: ENTITLEMENT
+        entitlement: prestige.dawnkeeper.5
   wildheart_longstride:
-    display-name: "Wildheart I — Longstride"
-    title-text: "Longstride"
-    icon: "DIAMOND_BOOTS"
+    display-name: Wildheart I — Longstride
+    title-text: Longstride
+    icon: DIAMOND_BOOTS
     slot: 7
-    source: "RELIC"
-    family: "wildheart"
+    source: RELIC
+    family: wildheart
     tier: 1
     priority: 110
     lore:
-      - "Wear the earned Longstride title from the Wildheart path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Longstride title from the Wildheart path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.wildheart.1"
+      - type: ENTITLEMENT
+        entitlement: prestige.wildheart.1
   wildheart_horncrest:
-    display-name: "Wildheart II — Horncrest"
-    title-text: "Horncrest"
-    icon: "DIAMOND_HELMET"
+    display-name: Wildheart II — Horncrest
+    title-text: Horncrest
+    icon: DIAMOND_HELMET
     slot: 16
-    source: "RELIC"
-    family: "wildheart"
+    source: RELIC
+    family: wildheart
     tier: 2
     priority: 120
     lore:
-      - "Wear the earned Horncrest title from the Wildheart path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Horncrest title from the Wildheart path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.wildheart.2"
+      - type: ENTITLEMENT
+        entitlement: prestige.wildheart.2
   wildheart_packrunner:
-    display-name: "Wildheart III — Packrunner"
-    title-text: "Packrunner"
-    icon: "DIAMOND_LEGGINGS"
+    display-name: Wildheart III — Packrunner
+    title-text: Packrunner
+    icon: DIAMOND_LEGGINGS
     slot: 25
-    source: "RELIC"
-    family: "wildheart"
+    source: RELIC
+    family: wildheart
     tier: 3
     priority: 130
     lore:
-      - "Wear the earned Packrunner title from the Wildheart path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Packrunner title from the Wildheart path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.wildheart.3"
+      - type: ENTITLEMENT
+        entitlement: prestige.wildheart.3
   wildheart_beasthide:
-    display-name: "Wildheart IV — Beasthide"
-    title-text: "Beasthide"
-    icon: "DIAMOND_CHESTPLATE"
+    display-name: Wildheart IV — Beasthide
+    title-text: Beasthide
+    icon: DIAMOND_CHESTPLATE
     slot: 34
-    source: "RELIC"
-    family: "wildheart"
+    source: RELIC
+    family: wildheart
     tier: 4
     priority: 140
     lore:
-      - "Wear the earned Beasthide title from the Wildheart path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Beasthide title from the Wildheart path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.wildheart.4"
+      - type: ENTITLEMENT
+        entitlement: prestige.wildheart.4
   wildheart_throne_of_the_wild:
-    display-name: "Wildheart V — Throne of the Wild"
-    title-text: "Throne of the Wild"
-    icon: "VEX_ARMOR_TRIM_SMITHING_TEMPLATE"
+    display-name: Wildheart V — Throne of the Wild
+    title-text: Throne of the Wild
+    icon: VEX_ARMOR_TRIM_SMITHING_TEMPLATE
     slot: 43
-    source: "RELIC"
-    family: "wildheart"
+    source: RELIC
+    family: wildheart
     tier: 5
     priority: 150
     lore:
-      - "Wear the earned Throne of the Wild title from the Wildheart path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Throne of the Wild title from the Wildheart path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.wildheart.5"
-
-  # Relic — Gearwright
+      - type: ENTITLEMENT
+        entitlement: prestige.wildheart.5
   gearwright_railstep:
-    display-name: "Gearwright I — Railstep"
-    title-text: "Railstep"
-    icon: "DIAMOND_BOOTS"
+    display-name: Gearwright I — Railstep
+    title-text: Railstep
+    icon: DIAMOND_BOOTS
     slot: 8
-    source: "RELIC"
-    family: "gearwright"
+    source: RELIC
+    family: gearwright
     tier: 1
     priority: 110
     lore:
-      - "Wear the earned Railstep title from the Gearwright path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Railstep title from the Gearwright path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.gearwright.1"
+      - type: ENTITLEMENT
+        entitlement: prestige.gearwright.1
   gearwright_cogmind:
-    display-name: "Gearwright II — Cogmind"
-    title-text: "Cogmind"
-    icon: "DIAMOND_HELMET"
+    display-name: Gearwright II — Cogmind
+    title-text: Cogmind
+    icon: DIAMOND_HELMET
     slot: 17
-    source: "RELIC"
-    family: "gearwright"
+    source: RELIC
+    family: gearwright
     tier: 2
     priority: 120
     lore:
-      - "Wear the earned Cogmind title from the Gearwright path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Cogmind title from the Gearwright path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.gearwright.2"
+      - type: ENTITLEMENT
+        entitlement: prestige.gearwright.2
   gearwright_circuitweave:
-    display-name: "Gearwright III — Circuitweave"
-    title-text: "Circuitweave"
-    icon: "DIAMOND_LEGGINGS"
+    display-name: Gearwright III — Circuitweave
+    title-text: Circuitweave
+    icon: DIAMOND_LEGGINGS
     slot: 26
-    source: "RELIC"
-    family: "gearwright"
+    source: RELIC
+    family: gearwright
     tier: 3
     priority: 130
     lore:
-      - "Wear the earned Circuitweave title from the Gearwright path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Circuitweave title from the Gearwright path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.gearwright.3"
+      - type: ENTITLEMENT
+        entitlement: prestige.gearwright.3
   gearwright_enginecore:
-    display-name: "Gearwright IV — Enginecore"
-    title-text: "Enginecore"
-    icon: "DIAMOND_CHESTPLATE"
+    display-name: Gearwright IV — Enginecore
+    title-text: Enginecore
+    icon: DIAMOND_CHESTPLATE
     slot: 35
-    source: "RELIC"
-    family: "gearwright"
+    source: RELIC
+    family: gearwright
     tier: 4
     priority: 140
     lore:
-      - "Wear the earned Enginecore title from the Gearwright path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Enginecore title from the Gearwright path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.gearwright.4"
+      - type: ENTITLEMENT
+        entitlement: prestige.gearwright.4
   gearwright_crown_of_brass:
-    display-name: "Gearwright V — Crown of Brass"
-    title-text: "Crown of Brass"
-    icon: "SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE"
+    display-name: Gearwright V — Crown of Brass
+    title-text: Crown of Brass
+    icon: SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE
     slot: 44
-    source: "RELIC"
-    family: "gearwright"
+    source: RELIC
+    family: gearwright
     tier: 5
     priority: 150
     lore:
-      - "Wear the earned Crown of Brass title from the Gearwright path."
-    visibility-when-unmet: "HIDE"
+    - Wear the earned Crown of Brass title from the Gearwright path.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "prestige.gearwright.5"
-
-  # Best of All Time
+      - type: ENTITLEMENT
+        entitlement: prestige.gearwright.5
   all_time_breadmaster:
-    display-name: "Best of All Time — Breadmaster"
-    title-text: "Breadmaster"
-    icon: "BREAD"
-    source: "BEST_OF_ALL_TIME"
-    family: "bread"
+    display-name: Best of All Time — Breadmaster
+    title-text: Breadmaster
+    icon: BREAD
+    source: BEST_OF_ALL_TIME
+    family: bread
     priority: 455
     lore:
-      - "Wear the Breadmaster title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Breadmaster title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.breadmaster"
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.breadmaster
   all_time_grand_mason:
-    display-name: "Best of All Time — Grand Mason"
-    title-text: "Grand Mason"
-    icon: "STONECUTTER"
-    source: "BEST_OF_ALL_TIME"
-    family: "masonry"
+    display-name: Best of All Time — Grand Mason
+    title-text: Grand Mason
+    icon: STONECUTTER
+    source: BEST_OF_ALL_TIME
+    family: masonry
     priority: 455
     lore:
-      - "Wear the Grand Mason title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Grand Mason title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.grand_mason"
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.grand_mason
   all_time_ironmaster:
-    display-name: "Best of All Time — Ironmaster"
-    title-text: "Ironmaster"
-    icon: "IRON_INGOT"
-    source: "BEST_OF_ALL_TIME"
-    family: "smithing"
+    display-name: Best of All Time — Ironmaster
+    title-text: Ironmaster
+    icon: IRON_INGOT
+    source: BEST_OF_ALL_TIME
+    family: smithing
     priority: 455
     lore:
-      - "Wear the Ironmaster title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Ironmaster title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.ironmaster"
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.ironmaster
   all_time_tide_merchant:
-    display-name: "Best of All Time — Tide Merchant"
-    title-text: "Tide Merchant"
-    icon: "TRIDENT"
-    source: "BEST_OF_ALL_TIME"
-    family: "fishing"
+    display-name: Best of All Time — Tide Merchant
+    title-text: Tide Merchant
+    icon: TRIDENT
+    source: BEST_OF_ALL_TIME
+    family: fishing
     priority: 455
     lore:
-      - "Wear the Tide Merchant title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Tide Merchant title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.tide_merchant"
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.tide_merchant
   all_time_apiarch:
-    display-name: "Best of All Time — Apiarch"
-    title-text: "Apiarch"
-    icon: "HONEYCOMB"
-    source: "BEST_OF_ALL_TIME"
-    family: "apiary"
+    display-name: Best of All Time — Apiarch
+    title-text: Apiarch
+    icon: HONEYCOMB
+    source: BEST_OF_ALL_TIME
+    family: apiary
     priority: 455
     lore:
-      - "Wear the Apiarch title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Apiarch title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.apiarch"
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.apiarch
   all_time_timberlord:
-    display-name: "Best of All Time — Timberlord"
-    title-text: "Timberlord"
-    icon: "OAK_LOG"
-    source: "BEST_OF_ALL_TIME"
-    family: "timber"
+    display-name: Best of All Time — Timberlord
+    title-text: Timberlord
+    icon: OAK_LOG
+    source: BEST_OF_ALL_TIME
+    family: timber
     priority: 455
     lore:
-      - "Wear the Timberlord title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Timberlord title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.timberlord"
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.timberlord
   all_time_quartermaster:
-    display-name: "Best of All Time — Quartermaster"
-    title-text: "Quartermaster"
-    icon: "CHEST"
-    source: "BEST_OF_ALL_TIME"
-    family: "provisioning"
+    display-name: Best of All Time — Quartermaster
+    title-text: Quartermaster
+    icon: CHEST
+    source: BEST_OF_ALL_TIME
+    family: provisioning
     priority: 455
     lore:
-      - "Wear the Quartermaster title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Quartermaster title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.quartermaster"
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.quartermaster
   all_time_master_gearwright:
-    display-name: "Best of All Time — Master Gearwright"
-    title-text: "Master Gearwright"
-    icon: "REDSTONE"
-    source: "BEST_OF_ALL_TIME"
-    family: "industry"
+    display-name: Best of All Time — Master Gearwright
+    title-text: Master Gearwright
+    icon: REDSTONE
+    source: BEST_OF_ALL_TIME
+    family: industry
     priority: 455
     lore:
-      - "Wear the Master Gearwright title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Master Gearwright title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.master_gearwright"
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.master_gearwright
   all_time_wool_magnate:
-    display-name: "Best of All Time — Wool Magnate"
-    title-text: "Wool Magnate"
-    icon: "WHITE_WOOL"
-    source: "BEST_OF_ALL_TIME"
-    family: "wool"
+    display-name: Best of All Time — Wool Magnate
+    title-text: Wool Magnate
+    icon: WHITE_WOOL
+    source: BEST_OF_ALL_TIME
+    family: wool
     priority: 455
     lore:
-      - "Wear the Wool Magnate title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Wool Magnate title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.wool_magnate"
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.wool_magnate
   all_time_orchard_laureate:
-    display-name: "Best of All Time — Orchard Laureate"
-    title-text: "Orchard Laureate"
-    icon: "APPLE"
-    source: "BEST_OF_ALL_TIME"
-    family: "orchard"
+    display-name: Best of All Time — Orchard Laureate
+    title-text: Orchard Laureate
+    icon: APPLE
+    source: BEST_OF_ALL_TIME
+    family: orchard
     priority: 455
     lore:
-      - "Wear the Orchard Laureate title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Orchard Laureate title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.orchard_laureate"
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.orchard_laureate
   all_time_herd_lord:
-    display-name: "Best of All Time — Herd Lord"
-    title-text: "Herd Lord"
-    icon: "LEAD"
-    source: "BEST_OF_ALL_TIME"
-    family: "livestock"
+    display-name: Best of All Time — Herd Lord
+    title-text: Herd Lord
+    icon: LEAD
+    source: BEST_OF_ALL_TIME
+    family: livestock
     priority: 455
     lore:
-      - "Wear the Herd Lord title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Herd Lord title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.herd_lord"
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.herd_lord
   all_time_market_laureate:
-    display-name: "Best of All Time — Market Laureate"
-    title-text: "Market Laureate"
-    icon: "EMERALD"
-    source: "BEST_OF_ALL_TIME"
-    family: "market"
+    display-name: Best of All Time — Market Laureate
+    title-text: Market Laureate
+    icon: EMERALD
+    source: BEST_OF_ALL_TIME
+    family: market
     priority: 460
     lore:
-      - "Wear the Market Laureate title once it has been awarded to you."
-    visibility-when-unmet: "HIDE"
+    - Wear the Market Laureate title once it has been awarded to you.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "title.best_of_all_time.market_laureate"
-
-  # Achievement Titles
+      - type: ENTITLEMENT
+        entitlement: title.best_of_all_time.market_laureate
   achievement_dragonslayer:
-    display-name: "Achievement — Dragonslayer"
-    title-text: "Dragonslayer"
-    icon: "DRAGON_HEAD"
-    source: "ACHIEVEMENT"
-    family: "combat"
+    display-name: Achievement — Dragonslayer
+    title-text: Dragonslayer
+    icon: DRAGON_HEAD
+    source: ACHIEVEMENT
+    family: combat
     priority: 420
     lore:
-      - "Wear the Dragonslayer title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Dragonslayer title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ADVANCEMENT"
-          advancement: "minecraft:end/kill_dragon"
+      - type: ADVANCEMENT
+        advancement: minecraft:end/kill_dragon
   achievement_gateway_walker:
-    display-name: "Achievement — Gateway Walker"
-    title-text: "Gateway Walker"
-    icon: "ENDER_PEARL"
-    source: "ACHIEVEMENT"
-    family: "exploration"
+    display-name: Achievement — Gateway Walker
+    title-text: Gateway Walker
+    icon: ENDER_PEARL
+    source: ACHIEVEMENT
+    family: exploration
     priority: 390
     lore:
-      - "Wear the Gateway Walker title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Gateway Walker title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ADVANCEMENT"
-          advancement: "minecraft:end/enter_end_gateway"
+      - type: ADVANCEMENT
+        advancement: minecraft:end/enter_end_gateway
   achievement_beaconwright:
-    display-name: "Achievement — Beaconwright"
-    title-text: "Beaconwright"
-    icon: "BEACON"
-    source: "ACHIEVEMENT"
-    family: "industry"
+    display-name: Achievement — Beaconwright
+    title-text: Beaconwright
+    icon: BEACON
+    source: ACHIEVEMENT
+    family: industry
     priority: 380
     lore:
-      - "Wear the Beaconwright title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Beaconwright title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "ADVANCEMENT"
-          advancement: "minecraft:nether/create_beacon"
+      - type: ADVANCEMENT
+        advancement: minecraft:nether/create_beacon
   achievement_monument_breaker:
-    display-name: "Achievement — Monument Breaker"
-    title-text: "Monument Breaker"
-    icon: "PRISMARINE"
-    source: "ACHIEVEMENT"
-    family: "combat"
+    display-name: Achievement — Monument Breaker
+    title-text: Monument Breaker
+    icon: PRISMARINE
+    source: ACHIEVEMENT
+    family: combat
     priority: 360
     lore:
-      - "Wear the Monument Breaker title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Monument Breaker title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC_ENTITY"
-          statistic: "KILL_ENTITY"
-          entity: "ELDER_GUARDIAN"
-          min: 1
+      - type: STATISTIC_ENTITY
+        statistic: KILL_ENTITY
+        entity: ELDER_GUARDIAN
+        min: 1
   achievement_raidbreaker:
-    display-name: "Achievement — Raidbreaker"
-    title-text: "Raidbreaker"
-    icon: "TOTEM_OF_UNDYING"
-    source: "ACHIEVEMENT"
-    family: "combat"
+    display-name: Achievement — Raidbreaker
+    title-text: Raidbreaker
+    icon: TOTEM_OF_UNDYING
+    source: ACHIEVEMENT
+    family: combat
     priority: 350
     lore:
-      - "Wear the Raidbreaker title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Raidbreaker title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "RAID_WIN"
-          min: 3
+      - type: STATISTIC
+        statistic: RAID_WIN
+        min: 3
   achievement_skyfarer:
-    display-name: "Achievement — Skyfarer"
-    title-text: "Skyfarer"
-    icon: "ELYTRA"
-    source: "ACHIEVEMENT"
-    family: "exploration"
+    display-name: Achievement — Skyfarer
+    title-text: Skyfarer
+    icon: ELYTRA
+    source: ACHIEVEMENT
+    family: exploration
     priority: 340
     lore:
-      - "Wear the Skyfarer title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Skyfarer title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "AVIATE_ONE_CM"
-          min: 500000
+      - type: STATISTIC
+        statistic: AVIATE_ONE_CM
+        min: 500000
   achievement_pathfinder:
-    display-name: "Achievement — Pathfinder"
-    title-text: "Pathfinder"
-    icon: "COMPASS"
-    source: "ACHIEVEMENT"
-    family: "exploration"
+    display-name: Achievement — Pathfinder
+    title-text: Pathfinder
+    icon: COMPASS
+    source: ACHIEVEMENT
+    family: exploration
     priority: 330
     lore:
-      - "Wear the Pathfinder title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Pathfinder title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "WALK_ONE_CM"
-          min: 2000000
+      - type: STATISTIC
+        statistic: WALK_ONE_CM
+        min: 2000000
   achievement_deep_delver:
-    display-name: "Achievement — Deep Delver"
-    title-text: "Deep Delver"
-    icon: "DIAMOND_PICKAXE"
-    source: "ACHIEVEMENT"
-    family: "survival"
+    display-name: Achievement — Deep Delver
+    title-text: Deep Delver
+    icon: DIAMOND_PICKAXE
+    source: ACHIEVEMENT
+    family: survival
     priority: 320
     lore:
-      - "Wear the Deep Delver title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Deep Delver title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC_MATERIAL"
-          statistic: "MINE_BLOCK"
-          material: "DEEPSLATE"
-          min: 4096
+      - type: STATISTIC_MATERIAL
+        statistic: MINE_BLOCK
+        material: DEEPSLATE
+        min: 4096
   achievement_master_breeder:
-    display-name: "Achievement — Master Breeder"
-    title-text: "Master Breeder"
-    icon: "WHEAT"
-    source: "ACHIEVEMENT"
-    family: "survival"
+    display-name: Achievement — Master Breeder
+    title-text: Master Breeder
+    icon: WHEAT
+    source: ACHIEVEMENT
+    family: survival
     priority: 300
     lore:
-      - "Wear the Master Breeder title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Master Breeder title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "ANIMALS_BRED"
-          min: 100
+      - type: STATISTIC
+        statistic: ANIMALS_BRED
+        min: 100
   achievement_bullseye:
-    display-name: "Achievement — Bullseye"
-    title-text: "Bullseye"
-    icon: "TARGET"
-    source: "ACHIEVEMENT"
-    family: "combat"
+    display-name: Achievement — Bullseye
+    title-text: Bullseye
+    icon: TARGET
+    source: ACHIEVEMENT
+    family: combat
     priority: 290
     lore:
-      - "Wear the Bullseye title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Bullseye title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "TARGET_HIT"
-          min: 100
+      - type: STATISTIC
+        statistic: TARGET_HIT
+        min: 100
   achievement_village_friend:
-    display-name: "Achievement — Village Friend"
-    title-text: "Village Friend"
-    icon: "EMERALD"
-    source: "ACHIEVEMENT"
-    family: "village"
+    display-name: Achievement — Village Friend
+    title-text: Village Friend
+    icon: EMERALD
+    source: ACHIEVEMENT
+    family: village
     priority: 280
     lore:
-      - "Wear the Village Friend title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Village Friend title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "TRADED_WITH_VILLAGER"
-          min: 250
+      - type: STATISTIC
+        statistic: TRADED_WITH_VILLAGER
+        min: 250
   achievement_survivor:
-    display-name: "Achievement — Survivor"
-    title-text: "Survivor"
-    icon: "SHIELD"
-    source: "ACHIEVEMENT"
-    family: "survival"
+    display-name: Achievement — Survivor
+    title-text: Survivor
+    icon: SHIELD
+    source: ACHIEVEMENT
+    family: survival
     priority: 270
     lore:
-      - "Wear the Survivor title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Survivor title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "TIME_SINCE_DEATH"
-          min: 288000
+      - type: STATISTIC
+        statistic: TIME_SINCE_DEATH
+        min: 288000
   achievement_monster_hunter:
-    display-name: "Achievement — Monster Hunter"
-    title-text: "Monster Hunter"
-    icon: "IRON_SWORD"
-    source: "ACHIEVEMENT"
-    family: "combat"
+    display-name: Achievement — Monster Hunter
+    title-text: Monster Hunter
+    icon: IRON_SWORD
+    source: ACHIEVEMENT
+    family: combat
     priority: 260
     lore:
-      - "Wear the Monster Hunter title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Monster Hunter title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "MOB_KILLS"
-          min: 500
+      - type: STATISTIC
+        statistic: MOB_KILLS
+        min: 500
   achievement_ocean_walker:
-    display-name: "Achievement — Ocean Walker"
-    title-text: "Ocean Walker"
-    icon: "HEART_OF_THE_SEA"
-    source: "ACHIEVEMENT"
-    family: "exploration"
+    display-name: Achievement — Ocean Walker
+    title-text: Ocean Walker
+    icon: HEART_OF_THE_SEA
+    source: ACHIEVEMENT
+    family: exploration
     priority: 250
     lore:
-      - "Wear the Ocean Walker title after earning the matching achievement."
-    visibility-when-unmet: "HIDE"
+    - Wear the Ocean Walker title after earning the matching achievement.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "SWIM_ONE_CM"
-          min: 1000000
-
-  # Authority Titles
-  authority_member:
-    display-name: "Authority — Member"
-    title-text: "Member"
-    icon: "IRON_INGOT"
-    source: "AUTHORITY"
-    family: "authority"
-    priority: 140
-    lore:
-      - "Wear the Member authority title when you hold that role."
-    visibility-when-unmet: "HIDE"
-    requirements:
-      all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "rank.member"
-  authority_vip:
-    display-name: "Authority — VIP"
-    title-text: "VIP"
-    icon: "GOLD_INGOT"
-    source: "AUTHORITY"
-    family: "authority"
-    priority: 150
-    lore:
-      - "Wear the VIP authority title when you hold that role."
-    visibility-when-unmet: "HIDE"
-    requirements:
-      all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "rank.vip"
-  authority_staff:
-    display-name: "Authority — Staff"
-    title-text: "Staff"
-    icon: "PAPER"
-    source: "AUTHORITY"
-    family: "authority"
-    priority: 160
-    lore:
-      - "Wear the Staff authority title when you hold that role."
-    visibility-when-unmet: "HIDE"
-    requirements:
-      all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "authority.staff"
-  authority_moderator:
-    display-name: "Authority — Moderator"
-    title-text: "Moderator"
-    icon: "SHIELD"
-    source: "AUTHORITY"
-    family: "authority"
-    priority: 170
-    lore:
-      - "Wear the Moderator authority title when you hold that role."
-    visibility-when-unmet: "HIDE"
-    requirements:
-      all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "authority.moderator"
-  authority_admin:
-    display-name: "Authority — Admin"
-    title-text: "Admin"
-    icon: "COMMAND_BLOCK"
-    source: "AUTHORITY"
-    family: "authority"
-    priority: 180
-    lore:
-      - "Wear the Admin authority title when you hold that role."
-    visibility-when-unmet: "HIDE"
-    requirements:
-      all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "authority.admin"
-  authority_owner:
-    display-name: "Authority — Owner"
-    title-text: "Owner"
-    icon: "NETHER_STAR"
-    source: "AUTHORITY"
-    family: "authority"
-    priority: 190
-    lore:
-      - "Wear the Owner authority title when you hold that role."
-    visibility-when-unmet: "HIDE"
-    requirements:
-      all-of:
-        - type: "ENTITLEMENT"
-          entitlement: "authority.owner"
-
-  # Time on Server
+      - type: STATISTIC
+        statistic: SWIM_ONE_CM
+        min: 1000000
   time_newcomer:
-    display-name: "Time on Server — Newcomer"
-    title-text: "Newcomer"
-    icon: "CLOCK"
-    source: "TIME_ON_SERVER"
-    family: "tenure"
+    display-name: Time on Server — Newcomer
+    title-text: Newcomer
+    icon: CLOCK
+    source: TIME_ON_SERVER
+    family: tenure
     priority: 10
     lore:
-      - "Wear the Newcomer title after spending serious time on the server."
-    visibility-when-unmet: "HIDE"
+    - Wear the Newcomer title after spending serious time on the server.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "PLAY_ONE_MINUTE"
-          min: 72000
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 72000
   time_resident:
-    display-name: "Time on Server — Resident"
-    title-text: "Resident"
-    icon: "CLOCK"
-    source: "TIME_ON_SERVER"
-    family: "tenure"
+    display-name: Time on Server — Resident
+    title-text: Resident
+    icon: CLOCK
+    source: TIME_ON_SERVER
+    family: tenure
     priority: 20
     lore:
-      - "Wear the Resident title after spending serious time on the server."
-    visibility-when-unmet: "HIDE"
+    - Wear the Resident title after spending serious time on the server.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "PLAY_ONE_MINUTE"
-          min: 864000
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 864000
   time_settler:
-    display-name: "Time on Server — Settler"
-    title-text: "Settler"
-    icon: "CLOCK"
-    source: "TIME_ON_SERVER"
-    family: "tenure"
+    display-name: Time on Server — Settler
+    title-text: Settler
+    icon: CLOCK
+    source: TIME_ON_SERVER
+    family: tenure
     priority: 30
     lore:
-      - "Wear the Settler title after spending serious time on the server."
-    visibility-when-unmet: "HIDE"
+    - Wear the Settler title after spending serious time on the server.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "PLAY_ONE_MINUTE"
-          min: 1728000
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 1728000
   time_wayfarer:
-    display-name: "Time on Server — Wayfarer"
-    title-text: "Wayfarer"
-    icon: "CLOCK"
-    source: "TIME_ON_SERVER"
-    family: "tenure"
+    display-name: Time on Server — Wayfarer
+    title-text: Wayfarer
+    icon: CLOCK
+    source: TIME_ON_SERVER
+    family: tenure
     priority: 40
     lore:
-      - "Wear the Wayfarer title after spending serious time on the server."
-    visibility-when-unmet: "HIDE"
+    - Wear the Wayfarer title after spending serious time on the server.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "PLAY_ONE_MINUTE"
-          min: 5184000
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 5184000
   time_veteran:
-    display-name: "Time on Server — Veteran"
-    title-text: "Veteran"
-    icon: "CLOCK"
-    source: "TIME_ON_SERVER"
-    family: "tenure"
+    display-name: Time on Server — Veteran
+    title-text: Veteran
+    icon: CLOCK
+    source: TIME_ON_SERVER
+    family: tenure
     priority: 50
     lore:
-      - "Wear the Veteran title after spending serious time on the server."
-    visibility-when-unmet: "HIDE"
+    - Wear the Veteran title after spending serious time on the server.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "PLAY_ONE_MINUTE"
-          min: 12096000
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 12096000
   time_elder:
-    display-name: "Time on Server — Elder"
-    title-text: "Elder"
-    icon: "CLOCK"
-    source: "TIME_ON_SERVER"
-    family: "tenure"
+    display-name: Time on Server — Elder
+    title-text: Elder
+    icon: CLOCK
+    source: TIME_ON_SERVER
+    family: tenure
     priority: 60
     lore:
-      - "Wear the Elder title after spending serious time on the server."
-    visibility-when-unmet: "HIDE"
+    - Wear the Elder title after spending serious time on the server.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "PLAY_ONE_MINUTE"
-          min: 24192000
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 24192000
   time_legend:
-    display-name: "Time on Server — Legend"
-    title-text: "Legend"
-    icon: "CLOCK"
-    source: "TIME_ON_SERVER"
-    family: "tenure"
+    display-name: Time on Server — Legend
+    title-text: Legend
+    icon: CLOCK
+    source: TIME_ON_SERVER
+    family: tenure
     priority: 70
     lore:
-      - "Wear the Legend title after spending serious time on the server."
-    visibility-when-unmet: "HIDE"
+    - Wear the Legend title after spending serious time on the server.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "PLAY_ONE_MINUTE"
-          min: 51840000
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 51840000
   time_myth:
-    display-name: "Time on Server — Myth"
-    title-text: "Myth"
-    icon: "CLOCK"
-    source: "TIME_ON_SERVER"
-    family: "tenure"
+    display-name: Time on Server — Myth
+    title-text: Myth
+    icon: CLOCK
+    source: TIME_ON_SERVER
+    family: tenure
     priority: 80
     lore:
-      - "Wear the Myth title after spending serious time on the server."
-    visibility-when-unmet: "HIDE"
+    - Wear the Myth title after spending serious time on the server.
+    visibility-when-unmet: HIDE
     requirements:
       all-of:
-        - type: "STATISTIC"
-          statistic: "PLAY_ONE_MINUTE"
-          min: 103680000
+      - type: STATISTIC
+        statistic: PLAY_ONE_MINUTE
+        min: 103680000

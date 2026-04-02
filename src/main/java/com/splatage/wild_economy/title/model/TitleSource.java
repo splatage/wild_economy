@@ -1,6 +1,7 @@
 package com.splatage.wild_economy.title.model;
 
 public enum TitleSource {
+    DEFAULT,
     RELIC,
     BEST_OF_ALL_TIME,
     ACHIEVEMENT,

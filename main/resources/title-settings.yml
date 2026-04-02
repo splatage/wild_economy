@@ -1,3 +1,16 @@
+# Title settings
+#
+# The chooser lets players either use their default title placeholder or override it
+# with another title they have already earned.
+#
+# Resolution order for %wildeco_title%:
+# 1. selected earned title, if still eligible
+# 2. default-title-placeholder expanded for the player
+# 3. blank
+#
+# Relic titles are entitlement-only and hidden until earned.
+# The old ConditionalTextPlaceholders splatage-member-rank ladder is superseded by %wildeco_title%.
+default-title-placeholder: '%vault_group%'
 titles:
   stormbound_galefoot:
     display-name: Stormbound I — Galefoot
@@ -1430,101 +1443,6 @@ titles:
       - type: STATISTIC
         statistic: RAID_WIN
         min: '3'
-  authority_member:
-    display-name: Authority — Member
-    title-text: Member
-    icon: IRON_INGOT
-    slot: 0
-    source: AUTHORITY
-    section: AUTHORITY
-    family: authority
-    tier: 1
-    priority: 10
-    lore:
-    - Display your Member title.
-    - Available to players with the Member group.
-    visibility-when-unmet: SHOW_LOCKED
-    locked-message: Granted to players who hold the Member authority level.
-    requirements:
-      all-of:
-      - type: PERMISSION
-        node: group.member
-  authority_vip:
-    display-name: Authority — VIP
-    title-text: VIP
-    icon: GOLD_INGOT
-    slot: 1
-    source: AUTHORITY
-    section: AUTHORITY
-    family: authority
-    tier: 2
-    priority: 20
-    lore:
-    - Display your VIP title.
-    - Available to players with the VIP group.
-    visibility-when-unmet: SHOW_LOCKED
-    locked-message: Granted to players who hold the VIP authority level.
-    requirements:
-      all-of:
-      - type: PERMISSION
-        node: group.vip
-  authority_staff:
-    display-name: Authority — Staff
-    title-text: Staff
-    icon: BOOK
-    slot: 2
-    source: AUTHORITY
-    section: AUTHORITY
-    family: authority
-    tier: 3
-    priority: 30
-    lore:
-    - Display your Staff title.
-    - Available to players with the Staff group.
-    visibility-when-unmet: SHOW_LOCKED
-    locked-message: Granted to players who hold the Staff authority level.
-    requirements:
-      all-of:
-      - type: PERMISSION
-        node: group.staff
-  authority_admin:
-    display-name: Authority — Admin
-    title-text: Admin
-    icon: COMMAND_BLOCK
-    slot: 3
-    source: AUTHORITY
-    section: AUTHORITY
-    family: authority
-    tier: 4
-    priority: 40
-    lore:
-    - Display your Admin title.
-    - Available to players with the Admin group.
-    visibility-when-unmet: SHOW_LOCKED
-    locked-message: Granted to players who hold the Admin authority level.
-    requirements:
-      all-of:
-      - type: PERMISSION
-        node: group.admin
-  authority_owner:
-    display-name: Authority — Owner
-    title-text: Owner
-    icon: NETHER_STAR
-    slot: 4
-    source: AUTHORITY
-    section: AUTHORITY
-    family: authority
-    tier: 5
-    priority: 50
-    lore:
-    - Display your Owner title.
-    - Available to players with the Owner group.
-    visibility-when-unmet: SHOW_LOCKED
-    locked-message: Granted to players who hold the Owner authority level.
-    requirements:
-      all-of:
-      - type: PERMISSION
-        node: group.owner
   time_novice:
     display-name: Time — Novice
     title-text: Novice

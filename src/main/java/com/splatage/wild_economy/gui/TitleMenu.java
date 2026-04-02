@@ -70,7 +70,7 @@ public final class TitleMenu {
         }
         inventory.setItem(48, this.button(Material.BARRIER, this.presentationFormatter.closeButtonName(), null));
         inventory.setItem(49, this.summaryItem(player));
-        inventory.setItem(50, this.clearItem(player));
+        inventory.setItem(50, this.defaultItem(player));
         if (safePage < this.maxPage(player)) {
             inventory.setItem(53, this.button(Material.ARROW, this.presentationFormatter.nextButtonName(), null));
         }
@@ -115,7 +115,12 @@ public final class TitleMenu {
                 this.titleSelectionService.clearSelectedTitleKey(player);
                 this.resolvedTitleService.invalidate(player.getUniqueId());
                 this.resolvedTitleService.warm(player);
-                player.sendMessage("Your active title has been cleared. Automatic title selection is now in effect.");
+                final String defaultTitleText = this.resolvedTitleService.getDefaultTitleText(player);
+                if (defaultTitleText.isBlank()) {
+                    player.sendMessage("Your earned title override has been cleared.");
+                } else {
+                    player.sendMessage("You are now using your default title: " + defaultTitleText + ".");
+                }
                 this.open(player, page);
             }
             case 53 -> {
@@ -141,7 +146,10 @@ public final class TitleMenu {
         this.titleSelectionService.setSelectedTitleKey(player, evaluatedTitle.option().key());
         this.resolvedTitleService.invalidate(player.getUniqueId());
         this.resolvedTitleService.warm(player);
-        player.sendMessage("Active title set to " + evaluatedTitle.option().titleText() + ".");
+        final String activeTitle = this.resolvedTitleService.getResolvedTitle(player)
+                .map(ResolvedTitle::text)
+                .orElse(evaluatedTitle.option().titleText());
+        player.sendMessage("Active title set to " + activeTitle + ".");
         this.open(player, page);
     }
 
@@ -165,21 +173,32 @@ public final class TitleMenu {
             final Optional<ResolvedTitle> resolvedTitle = this.resolvedTitleService.getResolvedTitle(player);
             final Optional<TitleOption> selectedTitle = this.titleSelectionService.getSelectedTitleKey(player)
                     .map(this.titleSettingsConfig.titles()::get);
+            final boolean usingSelectedOverride = selectedTitle
+                    .map(option -> {
+                        final StoreEligibilityResult eligibility = this.titleEligibilityEvaluator.evaluate(player, option);
+                        return eligibility.visible() && eligibility.acquirable();
+                    })
+                    .orElse(false);
             meta.setDisplayName(this.presentationFormatter.summaryDisplayName());
-            meta.setLore(this.presentationFormatter.summaryLore(resolvedTitle, selectedTitle));
+            meta.setLore(this.presentationFormatter.summaryLore(
+                    resolvedTitle,
+                    selectedTitle,
+                    this.resolvedTitleService.getDefaultTitleText(player),
+                    usingSelectedOverride
+            ));
             this.presentationFormatter.applyMenuFlags(meta);
             stack.setItemMeta(meta);
         }
         return stack;
     }
 
-    private ItemStack clearItem(final Player player) {
-        final boolean automaticMode = this.titleSelectionService.getSelectedTitleKey(player).isEmpty();
-        final Material material = automaticMode ? Material.GRAY_STAINED_GLASS_PANE : Material.BARRIER;
+    private ItemStack defaultItem(final Player player) {
+        final boolean usingDefaultTitle = this.titleSelectionService.getSelectedTitleKey(player).isEmpty();
+        final Material material = usingDefaultTitle ? Material.GRAY_STAINED_GLASS_PANE : Material.OAK_SIGN;
         return this.button(
                 material,
-                this.presentationFormatter.clearButtonName(automaticMode),
-                this.presentationFormatter.clearButtonLore(automaticMode)
+                this.presentationFormatter.clearButtonName(usingDefaultTitle),
+                this.presentationFormatter.clearButtonLore(usingDefaultTitle, this.resolvedTitleService.getDefaultTitleText(player))
         );
     }
 
@@ -196,7 +215,6 @@ public final class TitleMenu {
         }
         return stack;
     }
-
 
     private int maxPage(final Player player) {
         int maxSlot = -1;

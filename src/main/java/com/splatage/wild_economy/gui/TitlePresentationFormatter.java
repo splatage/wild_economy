@@ -73,23 +73,35 @@ public final class TitlePresentationFormatter {
         lore.add(RESET);
         lore.add(active ? POSITIVE + "Currently active"
                 : eligibility.acquirable()
-                ? PROMPT + "Click to make this your active title"
+                ? PROMPT + "Click to use this title"
                 : NEGATIVE + "Locked");
         return lore;
     }
 
     public String summaryDisplayName() {
-        return "§r§bTitle Settings";
+        return "§r§bTitle Selection";
     }
 
-    public List<String> summaryLore(final Optional<ResolvedTitle> resolvedTitle, final Optional<TitleOption> selectedTitle) {
+    public List<String> summaryLore(
+            final Optional<ResolvedTitle> resolvedTitle,
+            final Optional<TitleOption> selectedTitle,
+            final String defaultTitleText,
+            final boolean usingSelectedOverride
+    ) {
         final List<String> lore = new ArrayList<>();
         lore.add(LABEL + "Current: " + (resolvedTitle.isPresent()
                 ? VALUE + this.translate(resolvedTitle.get().text())
                 : FLAVOR + "None"));
-        lore.add(LABEL + "Selection: " + (selectedTitle.isPresent()
-                ? VALUE + this.translate(selectedTitle.get().displayName())
-                : FLAVOR + "Automatic best available"));
+        lore.add(LABEL + "Default: " + (defaultTitleText == null || defaultTitleText.isBlank()
+                ? FLAVOR + "None"
+                : VALUE + this.translate(defaultTitleText)));
+        lore.add(LABEL + "Mode: " + (usingSelectedOverride
+                ? VALUE + "Using earned override"
+                : VALUE + "Using default title"));
+        selectedTitle.ifPresent(option -> lore.add(LABEL + "Override: " + VALUE + this.translate(option.displayName())));
+        if (selectedTitle.isPresent() && !usingSelectedOverride) {
+            lore.add(WARNING + "Selected override is unavailable; default title is active.");
+        }
         resolvedTitle.ifPresent(title -> {
             lore.add(LABEL + "Source: " + VALUE + this.sourceLabel(title.source()));
             if (title.family() != null && !title.family().isBlank()) {
@@ -97,24 +109,27 @@ public final class TitlePresentationFormatter {
             }
         });
         lore.add(RESET);
-        lore.add(FLAVOR + "Choose any earned title to display.");
+        lore.add(FLAVOR + "Choose an earned title to override your default.");
         return lore;
     }
 
-    public String clearButtonName(final boolean automaticMode) {
-        return automaticMode ? "§r§7Automatic selection" : "§r§cClear active title";
+    public String clearButtonName(final boolean usingDefaultTitle) {
+        return usingDefaultTitle ? "§r§7Using Default Title" : "§r§eUse Default Title";
     }
 
-    public List<String> clearButtonLore(final boolean automaticMode) {
-        if (automaticMode) {
+    public List<String> clearButtonLore(final boolean usingDefaultTitle, final String defaultTitleText) {
+        final String shownDefault = defaultTitleText == null || defaultTitleText.isBlank()
+                ? FLAVOR + "No default title configured"
+                : VALUE + this.translate(defaultTitleText);
+        if (usingDefaultTitle) {
             return List.of(
-                    FLAVOR + "No manual title is selected.",
-                    FLAVOR + "The highest-priority eligible title is used."
+                    LABEL + "Current default: " + shownDefault,
+                    FLAVOR + "You are already using your default title."
             );
         }
         return List.of(
-                FLAVOR + "Remove your manual selection.",
-                FLAVOR + "The highest-priority eligible title will be used."
+                LABEL + "Default title: " + shownDefault,
+                FLAVOR + "Clear your earned override and return to your default title."
         );
     }
 
@@ -156,6 +171,7 @@ public final class TitlePresentationFormatter {
 
     private String sourceLabel(final TitleSource source) {
         return switch (source) {
+            case DEFAULT -> "Default";
             case RELIC -> "Relic";
             case BEST_OF_ALL_TIME -> "Best of all time";
             case ACHIEVEMENT -> "Achievement";
@@ -173,6 +189,7 @@ public final class TitlePresentationFormatter {
             return this.familyAccent(option.family());
         }
         return switch (option.source()) {
+            case DEFAULT -> "§r§7";
             case RELIC -> "§r§b";
             case BEST_OF_ALL_TIME -> "§r§6";
             case ACHIEVEMENT -> "§r§a";
@@ -198,10 +215,8 @@ public final class TitlePresentationFormatter {
             case "wildheart" -> "§r§6";
             case "gearwright" -> "§r§6";
             case "bread", "provisioning", "market", "orchard", "timber", "wool", "apiary", "smithing", "industry", "masonry", "fishing", "livestock" -> "§r§6";
-            case "exploration", "survival", "village" -> "§r§a";
-            case "combat" -> "§r§c";
-            case "authority" -> "§r§c";
-            case "tenure" -> "§r§f";
+            case "exploration", "survival", "village", "combat" -> "§r§a";
+            case "tenure", "activity" -> "§r§f";
             default -> TITLE;
         };
     }

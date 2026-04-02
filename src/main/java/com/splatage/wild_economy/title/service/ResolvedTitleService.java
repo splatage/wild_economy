@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 
 public interface ResolvedTitleService {
     Optional<ResolvedTitle> getResolvedTitle(OfflinePlayer player);
+    String getDefaultTitleText(Player player);
     void warm(Player player);
     void invalidate(UUID playerId);
 }

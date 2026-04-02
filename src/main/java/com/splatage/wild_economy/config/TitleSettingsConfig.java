@@ -7,11 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public record TitleSettingsConfig(Map<String, TitleOption> titles) {
+public record TitleSettingsConfig(String defaultTitlePlaceholder, Map<String, TitleOption> titles) {
 
-    public static final TitleSettingsConfig EMPTY = new TitleSettingsConfig(Map.of());
+    public static final TitleSettingsConfig EMPTY = new TitleSettingsConfig("", Map.of());
 
     public TitleSettingsConfig {
+        defaultTitlePlaceholder = Objects.requireNonNullElse(defaultTitlePlaceholder, "");
         titles = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(Objects.requireNonNull(titles, "titles")));
     }
 

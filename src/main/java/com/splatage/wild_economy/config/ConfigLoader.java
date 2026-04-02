@@ -205,6 +205,7 @@ public final class ConfigLoader {
 
     public TitleSettingsConfig loadTitleSettingsConfig() {
         final FileConfiguration config = this.loadYaml("title-settings.yml");
+        final String defaultTitlePlaceholder = this.getOptionalString(config, "default-title-placeholder");
         final ConfigurationSection titlesSection = this.requireSection(
                 config,
                 "titles",
@@ -234,7 +235,7 @@ public final class ConfigLoader {
             ));
         }
 
-        return new TitleSettingsConfig(titles);
+        return new TitleSettingsConfig(defaultTitlePlaceholder, titles);
     }
 
     public ExchangeItemsConfig loadExchangeItemsConfig() {

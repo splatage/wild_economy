@@ -52,7 +52,12 @@ public final class TitleCommand implements CommandExecutor {
         this.titleSelectionService.clearSelectedTitleKey(player);
         this.resolvedTitleService.invalidate(player.getUniqueId());
         this.resolvedTitleService.warm(player);
-        player.sendMessage("Your active title has been cleared. Automatic title selection is now in effect.");
+        final String defaultTitleText = this.resolvedTitleService.getDefaultTitleText(player);
+        if (defaultTitleText.isBlank()) {
+            player.sendMessage("Your earned title override has been cleared.");
+        } else {
+            player.sendMessage("You are now using your default title: " + defaultTitleText + ".");
+        }
         return true;
     }
 }

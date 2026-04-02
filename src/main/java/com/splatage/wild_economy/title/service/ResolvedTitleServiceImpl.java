@@ -5,6 +5,7 @@ import com.splatage.wild_economy.store.eligibility.StoreEligibilityResult;
 import com.splatage.wild_economy.title.eligibility.TitleEligibilityEvaluator;
 import com.splatage.wild_economy.title.model.ResolvedTitle;
 import com.splatage.wild_economy.title.model.TitleOption;
+import com.splatage.wild_economy.title.model.TitleSource;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -19,16 +20,19 @@ public final class ResolvedTitleServiceImpl implements ResolvedTitleService {
     private final TitleSettingsConfig titleSettingsConfig;
     private final TitleEligibilityEvaluator titleEligibilityEvaluator;
     private final TitleSelectionService titleSelectionService;
+    private final TitleTextResolver titleTextResolver;
     private final Map<UUID, ResolvedTitle> cache = new ConcurrentHashMap<>();
 
     public ResolvedTitleServiceImpl(
             final TitleSettingsConfig titleSettingsConfig,
             final TitleEligibilityEvaluator titleEligibilityEvaluator,
-            final TitleSelectionService titleSelectionService
+            final TitleSelectionService titleSelectionService,
+            final TitleTextResolver titleTextResolver
     ) {
         this.titleSettingsConfig = Objects.requireNonNull(titleSettingsConfig, "titleSettingsConfig");
         this.titleEligibilityEvaluator = Objects.requireNonNull(titleEligibilityEvaluator, "titleEligibilityEvaluator");
         this.titleSelectionService = Objects.requireNonNull(titleSelectionService, "titleSelectionService");
+        this.titleTextResolver = Objects.requireNonNull(titleTextResolver, "titleTextResolver");
     }
 
     @Override
@@ -50,6 +54,14 @@ public final class ResolvedTitleServiceImpl implements ResolvedTitleService {
     }
 
     @Override
+    public String getDefaultTitleText(final Player player) {
+        if (player == null) {
+            return "";
+        }
+        return this.resolveDefaultTitle(player).text();
+    }
+
+    @Override
     public void warm(final Player player) {
         this.cache.put(player.getUniqueId(), this.resolve(player));
     }
@@ -66,17 +78,27 @@ public final class ResolvedTitleServiceImpl implements ResolvedTitleService {
             if (selected != null) {
                 final StoreEligibilityResult evaluation = this.titleEligibilityEvaluator.evaluate(player, selected);
                 if (evaluation.visible() && evaluation.acquirable()) {
-                    return new ResolvedTitle(selected.key(), selected.titleText(), selected.source(), selected.family());
+                    return this.resolveSelectedTitle(player, selected);
                 }
             }
         }
+        return this.resolveDefaultTitle(player);
+    }
 
-        for (final TitleOption option : this.titleSettingsConfig.orderedTitles()) {
-            final StoreEligibilityResult evaluation = this.titleEligibilityEvaluator.evaluate(player, option);
-            if (evaluation.visible() && evaluation.acquirable()) {
-                return new ResolvedTitle(option.key(), option.titleText(), option.source(), option.family());
-            }
+    private ResolvedTitle resolveSelectedTitle(final Player player, final TitleOption option) {
+        return new ResolvedTitle(
+                option.key(),
+                this.titleTextResolver.resolve(player, option.titleText()),
+                option.source(),
+                option.family()
+        );
+    }
+
+    private ResolvedTitle resolveDefaultTitle(final Player player) {
+        final String text = this.titleTextResolver.resolve(player, this.titleSettingsConfig.defaultTitlePlaceholder());
+        if (text.isBlank()) {
+            return ResolvedTitle.empty();
         }
-        return ResolvedTitle.empty();
+        return new ResolvedTitle("", text, TitleSource.DEFAULT, "");
     }
 }

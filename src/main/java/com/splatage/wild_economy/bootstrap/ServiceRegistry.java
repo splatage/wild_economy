@@ -64,6 +64,7 @@ import com.splatage.wild_economy.store.listener.StorePlayerSessionListener;
 import com.splatage.wild_economy.config.TitleSettingsConfig;
 import com.splatage.wild_economy.title.eligibility.TitleEligibilityEvaluator;
 import com.splatage.wild_economy.title.eligibility.TitleEligibilityEvaluatorImpl;
+import com.splatage.wild_economy.title.service.PlaceholderApiTitleTextResolver;
 import com.splatage.wild_economy.title.listener.TitleSessionListener;
 import com.splatage.wild_economy.title.service.PersistentDataTitleSelectionService;
 import com.splatage.wild_economy.title.service.ResolvedTitleService;
@@ -190,7 +191,8 @@ public final class ServiceRegistry {
         this.resolvedTitleService = new ResolvedTitleServiceImpl(
                 this.titleSettingsConfig,
                 this.titleEligibilityEvaluator,
-                this.titleSelectionService
+                this.titleSelectionService,
+                new PlaceholderApiTitleTextResolver(this.plugin)
         );
         this.titleMenu = new TitleMenu(
                 this.titleSettingsConfig,
