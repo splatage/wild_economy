@@ -29,6 +29,7 @@ public final class TitleMenu {
     private final TitleSelectionService titleSelectionService;
     private final ResolvedTitleService resolvedTitleService;
     private final TitlePresentationFormatter presentationFormatter = new TitlePresentationFormatter();
+    private ShopMenuRouter shopMenuRouter;
 
     public TitleMenu(
             final TitleSettingsConfig titleSettingsConfig,
@@ -40,6 +41,10 @@ public final class TitleMenu {
         this.titleEligibilityEvaluator = Objects.requireNonNull(titleEligibilityEvaluator, "titleEligibilityEvaluator");
         this.titleSelectionService = Objects.requireNonNull(titleSelectionService, "titleSelectionService");
         this.resolvedTitleService = Objects.requireNonNull(resolvedTitleService, "resolvedTitleService");
+    }
+
+    public void setShopMenuRouter(final ShopMenuRouter shopMenuRouter) {
+        this.shopMenuRouter = shopMenuRouter;
     }
 
     public void open(final Player player, final int page) {
@@ -96,7 +101,13 @@ public final class TitleMenu {
                     this.open(player, page - 1);
                 }
             }
-            case 48 -> player.closeInventory();
+            case 48 -> {
+                if (this.shopMenuRouter != null) {
+                    this.shopMenuRouter.openStoreRoot(player);
+                } else {
+                    player.closeInventory();
+                }
+            }
             case 50 -> {
                 this.titleSelectionService.clearSelectedTitleKey(player);
                 this.resolvedTitleService.invalidate(player.getUniqueId());

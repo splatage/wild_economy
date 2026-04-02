@@ -120,6 +120,7 @@ final class GuiBootstrap {
         xpBottleMenu.setShopMenuRouter(shopMenuRouter);
         topSupplierMenu.setShopMenuRouter(shopMenuRouter);
         marketActivityMenu.setShopMenuRouter(shopMenuRouter);
+        titleMenu.setShopMenuRouter(shopMenuRouter);
 
         final ShopMenuListener shopMenuListener = new ShopMenuListener(
                 exchangeLayoutBrowseService,
